@@ -2,9 +2,8 @@
 
 <a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
     <img src="https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter" />
-</a>
-<img src="https://img.shields.io/badge/-United Nations-009EDB?style=flat&logo=unitednations&logoColor=white"/>
-<img src="https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=white"/>
+</a> <img src="https://img.shields.io/badge/-United Nations-009EDB?style=flat&logo=unitednations&logoColor=white"/> <img src="https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=white"/>
+
 <!-- we need to add a Correlaid badge :) -->
 
 Analysis of the language patterns and themes in [UN noon briefings](https://www.un.org/sg/en/content/noon-briefing-highlight) using large language models (LLMs). This project aims to identify trends and insights on global issues, policy developments, and emerging challenges, facilitating more informed decision-making and analysis.
