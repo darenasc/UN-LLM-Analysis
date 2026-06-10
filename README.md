@@ -55,6 +55,10 @@ pipenv install -d Pipfile
   - [`gradio`](https://gradio.app) library, similar to streamlit, to create graphical user interfaces with programs
 - Documentation
   - [mkdocs](https://www.mkdocs.org) library to generate documentation
+  - [Make a README](https://www.makeareadme.com) how to write a `README`
+  - [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) how to maintain a `CHANGELOG.md` for the project
+  - [Contributing guidelines](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors) information from GitHub
+  - [mermaid](https://mermaid.js.org/intro/) for markdown diagrams, useful to include in READMEs and documentation
 - Deployment
   - [GitHub CI/CD](https://github.com/resources/articles/ci-cd) continuous integration and continuous deployment or delivery overview
   - [GitHub actions](https://github.blog/enterprise-software/ci-cd/build-ci-cd-pipeline-github-actions-four-steps/) how to use GitHub actions to implement a pipeline for CI/CD
