@@ -20,7 +20,6 @@ All types of contributions are encouraged and valued. See the [Table of Contents
   - [Reporting Bugs](#reporting-bugs)
   - [Suggesting Enhancements](#suggesting-enhancements)
   - [Your First Code Contribution](#your-first-code-contribution)
-    - [Environment Setup](#environment-setup)
   - [Improving The Documentation](#improving-the-documentation)
 - [Styleguides](#styleguides)
   - [Commit Messages](#commit-messages)
@@ -135,7 +134,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/darena
 
 ### Your First Code Contribution
 
-#### Environment Setup
+Environment Setup
 
 ```bash
 git clone git@github.com:darenasc/correlaid-mentoring-project.git
@@ -149,7 +148,6 @@ pipenv install -d Pipfile # installs the libraries in the Pipfile of the reposit
 ```bash
 pipenv install pandas # to install a library, in this case called pandas
 pipenv uninstall pandas # to uninstall a library, in this case called pandas
-
 ```
 
 Before start working on the Python code, make sure you create a new branch for your work, that is branched off from the `main` branch. With `git checkout main` you change to the main branch, and then make sure that you have the latest version of the respository with `git pull`.
@@ -161,20 +159,29 @@ With you new branch just created feel free to add, delete, modify the files of t
 ```bash
 git checkout main # to change to the main branch
 git pull # to pull the updates from the remote repository
-git branch -b <name_of_your_new_branch> # to create a new branch from the updated main branch
+git branch -b <name_of_your_new_branch> # to create a feature branch from the updated main branch
 
 # Now you can add, edit, remove files in the project to complete the task(s) in the issue
 
 git status # to check the recent changes
-
 git add . # to add all the files or
 git add file_1, file_2, ... file_n # to select the files to include in the commit
+git commit -m 'Add your (atomic) commit message here' # to create a new commit to the current feature branch
 
-git commit -m 'Add your (atomic) commit message here' # to create a new commit to the current branch
+# You can create multiple commits while working on an issue, just repeat the 
+# previous steps of status -> add -> commit and then repeat until finish
 
-# Once you finishe
+# Once you finish your work you can push the code to the remote respository
 git push # or if the branch exists in the remote repository
-git push --set-upstream origin <name_of_your_new_branch> # to create your branch in the remote repository
+git push --set-upstream origin <name_of_your_new_branch> # to create your feature branch in the remote repository
+
+# If the feature branch is ready to be merged into main, 
+# create a pull request (PR) in GitHub
+
+# And once the PR has been merged you can delete the feature branch
+git checkout main # change to the main branch
+git pull # pull the changes from the remote respository that will include the changes of the PR
+git branch -d <name_of_your_new_branch> # to delete the feature branch locally
 ```
 
 ### Improving The Documentation
