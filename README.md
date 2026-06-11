@@ -1,8 +1,8 @@
 # UN LLM Analysis
 
 [![](https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter)](https://cookiecutter-data-science.drivendata.org/)
-[![](https://img.shields.io/badge/-United_Nations-009EDB?style=flat&logo=unitednations&logoColor=white)](https://www.un.org/sg/en/content/noon-briefing-highlight)
 [![](https://img.shields.io/badge/CorrelAid-Mentoring_Project-3776AB?&logo=python&logoColor=white)](https://correlaid.org/en/)
+[![](https://img.shields.io/badge/-Noon_Briefings-009EDB?style=flat&logo=unitednations&logoColor=white)](https://www.un.org/sg/en/content/noon-briefing-highlight)
 
 Analysis of the language patterns and themes in [UN noon briefings](https://www.un.org/sg/en/content/noon-briefing-highlight) using large language models (LLMs). This project aims to identify trends and insights on global issues, policy developments, and emerging challenges, facilitating more informed decision-making and analysis.
 
@@ -20,9 +20,15 @@ pipenv shell
 pipenv install -d Pipfile
 ```
 
+See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and 
+start contributing to the project.
+
 ## Design
 
-<!-- to be added -->
+- [Slides from the first meeting on 08.06.2026 "Volunteer Project Correlaid"](https://docs.google.com/presentation/d/1eMzWXqI4xPCCzbhxbL_EYkOfEE-uKAT6_fdOmvRROlI/edit?usp=sharing)
+- [Scoping Document](https://docs.google.com/document/d/1BXssHaiz7N6zIianLfSOAW3zsMlipRtTeRzJ5Ryj-jA/edit?usp=sharing) based on [Data Science Project Scoping Guide](https://datasciencepublicpolicy.org/our-work/tools-guides/data-science-project-scoping-guide/)
+
+## Planning
 
 ## Resources
 

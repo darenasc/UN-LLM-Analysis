@@ -186,7 +186,8 @@ git branch -d <name_of_your_new_branch> # to delete the feature branch locally
 
 ### Improving The Documentation
 
-This project will generate documentation with [mkdocs](https://www.mkdocs.org).
+- Add docstrings in [google format](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) to your code.
+- This project will generate documentation with [mkdocs](https://www.mkdocs.org).
 
 ## Styleguides
 
