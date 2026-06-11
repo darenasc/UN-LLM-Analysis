@@ -33,9 +33,42 @@ start contributing to the project.
 
 ## Planning
 
+A generic data science project will look like the following. In theory, the 
+implmentation part is planned to last between 4 to 10 weeks. The Gantt chart 
+shows dependencies that, in practice, can progress in parallel with 
+communication among the assigned people.
+
+```mermaid
+gantt
+    title A Generic timeline for a Data Science project
+    dateFormat YYYY-MM-DD
+    tickInterval 1month
+    section Preparation
+      First call: done, milestone, 2026-06-01, 0d
+      Kickoff: done, milestone, kickoff, 2026-06-08, 0d
+      Scoping: scoping, after kickoff, 14d
+      Scoping document: milestone, after scoping, 0d
+      Software stack: after scoping, 14d
+      Planning: planning, after scoping, 2w
+      Project Plan: milestone, plan, after planning, 0d
+    section Implementation
+      Data Exploration: exploration, after plan, 2w
+      Database Design: database, after exploration, 2w
+      Data Collection: collection, after exploration, 3w
+      LLM pipelines: llms, after database, 3w
+      LLM evaluation: evaluation, after llms, 2w
+      Data visualizations: dataviz, after collection, 2w
+    section Deployment
+      Deployment: deploy, after collection llms dataviz evaluation, 2w
+      Documentation: after deploy, 1w
+    Finish: milestone, after kickoff 4month
+    Correlcon: 2026-11-13, 3d
+```
+
 ## Resources
 
 - [Noon briefing highlight](https://www.un.org/sg/en/content/noon-briefing-highlight)
+- [Data Science for Social Good Curriculum](https://dssg.github.io/hitchhikers-guide/curriculum/) with data science teaching material of multiple topics
 - Git
   - [Learn git branching](https://learngitbranching.js.org) is an app to learn the basics of working with git
   - [Git feature branch workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow) blogpost about a recommended way of working with git in collaborative projects
