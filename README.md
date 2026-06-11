@@ -6,6 +6,9 @@
 
 Analysis of the language patterns and themes in [UN noon briefings](https://www.un.org/sg/en/content/noon-briefing-highlight) using large language models (LLMs). This project aims to identify trends and insights on global issues, policy developments, and emerging challenges, facilitating more informed decision-making and analysis.
 
+> **Note**: The communications about the project are in the 
+> `#mentoring-project` channel on Correlaid's Slack.
+
 ## Usage
 
 Requirements:
@@ -34,10 +37,11 @@ start contributing to the project.
 
 - [Noon briefing highlight](https://www.un.org/sg/en/content/noon-briefing-highlight)
 - Git
-  - [Learn git branching](https://learngitbranching.js.org)
+  - [Learn git branching](https://learngitbranching.js.org) is an app to learn the basics of working with git
+  - [Git feature branch workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow) blogpost about a recommended way of working with git in collaborative projects
   - [pre-commit](https://pre-commit.com) library to help with the maintainability of the repository
 - Web scraping
-  - [Beautiful Soup Documentation](https://beautiful-soup-4.readthedocs.io/en/latest/#)
+  - [Beautiful Soup Documentation](https://beautiful-soup-4.readthedocs.io/en/latest/#) library to parse `HTML` code
   - [Beautiful Soup tutorial](https://realpython.com/beautiful-soup-web-scraper-python/)
   - [Another BeautifulSoup and Requests tutorial](https://medium.com/geekculture/part-1-crawling-a-website-using-beautifulsoup-and-requests-413ffb29dd8e)
 - LLM
@@ -47,7 +51,7 @@ start contributing to the project.
   - [Introduction to langchain Python 1h course](https://academy.langchain.com/courses/foundation-introduction-to-langchain-python)
   - [dspy](https://dspy.ai/getting-started/program-dont-prompt/) library to structure prompts to work with LLMs
 - Model evaluation
-  - [mlflow evaluation](https://mlflow.org/docs/latest/genai/eval-monitor/quickstart/)
+  - [mlflow evaluation](https://mlflow.org/docs/latest/genai/eval-monitor/quickstart/) library with useful features when evaluating LLM results
 - Databases
   - [sqlite3](https://realpython.com/ref/stdlib/sqlite3/) lightweight database included in Python.
   - [sqlialchemy](https://docs.sqlalchemy.org/en/21/dialects/sqlite.html) library to interact with databases.
