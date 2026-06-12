@@ -81,6 +81,7 @@ gantt
   - [Another BeautifulSoup and Requests tutorial](https://medium.com/geekculture/part-1-crawling-a-website-using-beautifulsoup-and-requests-413ffb29dd8e)
 - LLM
   - [Ollama](https://ollama.com/download) software to serve large language models locally
+  - [Using Ollama with Python: Step-by-Step Guide](https://cohorte.co/blog/using-ollama-with-python-step-by-step-guide)
   - [Ollama in Colab notebook](https://colab.research.google.com/github/5aharsh/collama/blob/main/Ollama_Setup.ipynb), [medium article](https://medium.com/@abonia/running-ollama-in-google-colab-free-tier-545609258453)
   - [langchain](https://docs.langchain.com/oss/python/langchain/overview) framework to create and operate agents
   - [Introduction to langchain Python 1h course](https://academy.langchain.com/courses/foundation-introduction-to-langchain-python)
