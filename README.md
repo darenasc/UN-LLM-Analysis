@@ -1,8 +1,10 @@
 # UN LLM Analysis
 
-[![](https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter)](https://cookiecutter-data-science.drivendata.org/)
-[![](https://img.shields.io/badge/CorrelAid-Mentoring_Project-3776AB?&logo=python&logoColor=white)](https://correlaid.org/en/)
-[![](https://img.shields.io/badge/-Noon_Briefings-009EDB?style=flat&logo=unitednations&logoColor=white)](https://www.un.org/sg/en/content/noon-briefing-highlight)
+[![CCDS](https://img.shields.io/badge/CCDS-Project%20template-328F97?logo=cookiecutter)](https://cookiecutter-data-science.drivendata.org/)
+[![CorrelAid](https://img.shields.io/badge/CorrelAid-Mentoring_Project-3776AB?&logo=python&logoColor=white)](https://correlaid.org/en/)
+[![UN Noon Briefings](https://img.shields.io/badge/-Noon_Briefings-009EDB?style=flat&logo=unitednations&logoColor=white)](https://www.un.org/sg/en/content/noon-briefing-highlight)
+[![Board](https://img.shields.io/badge/Board-black?logo=github)](https://github.com/users/darenasc/projects/6/views/2)
+[![Issues](https://img.shields.io/badge/Issues-black?logo=github)](https://github.com/darenasc/correlaid-mentoring-project/issues)
 
 Analysis of the language patterns and themes in [UN noon briefings](https://www.un.org/sg/en/content/noon-briefing-highlight) using large language models (LLMs). This project aims to identify trends and insights on global issues, policy developments, and emerging challenges, facilitating more informed decision-making and analysis.
 
