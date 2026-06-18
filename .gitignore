@@ -193,3 +193,7 @@ cython_debug/
 .vscode/settings.json
 
 .qodo/
+*.json
+*.png
+*.csv
+.idea/
