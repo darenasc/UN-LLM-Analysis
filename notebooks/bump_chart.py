@@ -28,6 +28,8 @@ CUSTOM_STOPWORDS = {
     "partner", "continue",
     "people", "nearly",
     "noon", "briefing", "highlight",
+    # new stop words to test bump chart
+    "international", "law", "right", "human", "council", "member", "security"
 }
 
 STOPWORDS = set(stopwords.words("english")).union(CUSTOM_STOPWORDS)
@@ -37,12 +39,11 @@ PROPER_NOUNS = [
     "demrepcongo",
     "occupiedpalestinianterritory",
     "gazastrip",
-    "securitycouncil",
     "worldfoodprogramme",
 ]
 
-TOP_N_PER_YEAR = 10      # how many top words to take from each year
-MAX_TRACKED_TERMS = 15   # how many unique terms to show on the final chart
+TOP_N_PER_YEAR = 15
+MAX_TRACKED_TERMS = 10
 
 
 def get_word_counts(text):
@@ -53,7 +54,6 @@ def get_word_counts(text):
     text = text.replace("democratic republic of congo", "demrepcongo")
     text = text.replace("democratic republic of the congo", "demrepcongo")
     text = text.replace("world food programme", "worldfoodprogramme")
-    text = text.replace("security council", "securitycouncil")
     text = text.replace("occupied palestinian territory", "occupiedpalestinianterritory")
     text = text.replace("occupied palestinian", "occupiedpalestinianterritory")
     text = text.replace("palestinian territory", "occupiedpalestinianterritory")
@@ -84,7 +84,6 @@ def get_word_counts(text):
 # Load data
 df = pd.read_csv("noon_briefings_clean.csv", parse_dates=["date"])
 df["year"] = df["date"].dt.year
-
 years = sorted(df["year"].unique())
 
 # Step 1: get top N words per year and their counts
@@ -101,13 +100,11 @@ for year in years:
     yearly_counts[year] = counts
     yearly_top[year] = [word for word, _ in Counter(counts).most_common(TOP_N_PER_YEAR)]
 
-# Step 2: build union of all top words, then cap at MAX_TRACKED_TERMS
-# by picking the words that appear most frequently across all years combined
+# Step 2: build union of top words, scored by total count across all years
 union_words = set()
 for words in yearly_top.values():
     union_words.update(words)
 
-# Score each word by its total count across all years
 total_counts = Counter()
 for year, counts in yearly_counts.items():
     for word in union_words:
@@ -115,21 +112,19 @@ for year, counts in yearly_counts.items():
 
 tracked_terms = [word for word, _ in total_counts.most_common(MAX_TRACKED_TERMS)]
 
-# Only keep terms that are in the top N in at least one year
+# Require terms to appear in top N in at least 2 years (not half)
 tracked_terms = [
     term for term in tracked_terms
-    if any(term in yearly_top[year] for year in yearly_top)
+    if sum(term in yearly_top[year] for year in yearly_top) >= 2
 ]
 
+print(f"Tracking {len(tracked_terms)} terms: {tracked_terms}")
+
 # Step 3: build rank matrix
-# rows = terms, columns = years
-# if a word doesn't appear in a year, assign rank = TOP_N_PER_YEAR + 1
 rank_matrix = {}
 for year in yearly_counts:
     counts = yearly_counts[year]
-    # rank all words in this year by frequency
     ranked = [word for word, _ in Counter(counts).most_common()]
-    # Replace the fallback rank with TOP_N_PER_YEAR + 1 (just below the cutoff)
     rank_matrix[year] = {
         word: ranked.index(word) + 1 if word in ranked[:TOP_N_PER_YEAR] else TOP_N_PER_YEAR + 1
         for word in tracked_terms
@@ -139,23 +134,65 @@ for year in yearly_counts:
 valid_years = list(yearly_counts.keys())
 fig, ax = plt.subplots(figsize=(16, 10))
 
-# Assign a colour to each term
 colours = cm.tab20(np.linspace(0, 1, len(tracked_terms)))
+
+# Track how many labels have been placed at each rank to offset them
+label_positions = Counter()
+
 
 for i, term in enumerate(tracked_terms):
     ranks = [rank_matrix[year][term] for year in valid_years]
-    ax.plot(valid_years, ranks, marker="o", label=term, color=colours[i], linewidth=2)
-    # Label at the end of each line
-    ax.text(valid_years[-1] + 0.1, ranks[-1], term, va="center", fontsize=8, color=colours[i])
+    final_rank = ranks[-1]
+    label_positions[final_rank] += 1
+    # Offset each label slightly if multiple terms share the same final rank
+    y_offset = (label_positions[final_rank] - 1) * 0.3
+    ax.text(
+        valid_years[-1] + 0.1,
+        final_rank + y_offset,
+        term,
+        va="center",
+        fontsize=8,
+        color=colours[i]
+    )
 
-# Invert y-axis so rank 1 is at the top
+    # Draw segment by segment so fallback segments can be styled differently
+    for j in range(len(valid_years) - 1):
+        is_fallback = (
+            ranks[j] == TOP_N_PER_YEAR + 1 or
+            ranks[j + 1] == TOP_N_PER_YEAR + 1
+        )
+        ax.plot(
+            valid_years[j:j + 2],
+            ranks[j:j + 2],
+            marker="o",
+            color=colours[i],
+            linewidth=2,
+            linestyle="--" if is_fallback else "-",
+            alpha=0.3 if is_fallback else 1.0
+        )
+
+    # Label at the right end of each line
+    ax.text(
+        valid_years[-1] + 0.1,
+        ranks[-1],
+        term,
+        va="center",
+        fontsize=8,
+        color=colours[i]
+    )
+
 ax.invert_yaxis()
+ax.set_ylim(TOP_N_PER_YEAR + 2, 0)
 ax.set_xlabel("Year")
 ax.set_ylabel("Rank")
 ax.set_title("Bump Chart: Word Rankings in UN Noon Briefings by Year")
 ax.set_xticks(valid_years)
+# Replace the rank 11 tick with "unranked" label
+ax.set_yticks(list(range(1, TOP_N_PER_YEAR + 1)) + [TOP_N_PER_YEAR + 1])
+ax.set_yticklabels(
+    [str(i) for i in range(1, TOP_N_PER_YEAR + 1)] + ["unranked"]
+)
 ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
-ax.set_ylim(TOP_N_PER_YEAR + 2, 0)  # invert and cap
 ax.grid(axis="y", linestyle="--", alpha=0.4)
 
 plt.tight_layout()

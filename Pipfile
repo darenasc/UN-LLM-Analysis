@@ -4,7 +4,6 @@ flake8 = "*"
 ipython = "*"
 isort = "*"
 jupyterlab = "*"
-matplotlib = "*"
 mkdocs = "*"
 notebook = "*"
 numpy = "*"
@@ -14,6 +13,10 @@ pytest = "*"
 python-dotenv = "*"
 scikit-learn = "*"
 "un_llm_analysis" ={editable = true, path = "."}
+pandas-stubs = "*"
+matplotlib = "*"
+wordcloud = "==1.9.6"
+nltk = "==3.9.4"
 
 [requires]
 python_version = "3.12"

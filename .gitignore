@@ -191,3 +191,5 @@ cython_debug/
 .pypirc
 
 .vscode/settings.json
+
+.qodo/
