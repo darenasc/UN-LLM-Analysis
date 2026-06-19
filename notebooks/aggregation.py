@@ -8,35 +8,12 @@ import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.util import bigrams
 import os
+from notebooks.constants import  CUSTOM_STOPWORDS, PROPER_NOUNS
 lemmatizer = WordNetLemmatizer()
 # Download stopwords if you don't have them already
 nltk.download("stopwords")
 nltk.download("wordnet")
-CUSTOM_STOPWORDS = {
-    # generic filler words
-    "also", "today", "secretary", "general", "secretarygeneral", "united", "nations",
-    "said", "including", "according", "saying", "says",
-    "noted", "added", "stressed", "told", "called", "reported",
-    "un", "new", "one", "two", "three", "would", "could", "per", "met", "meet", "meeting", "many", "must",
-    "should", "million", "number", "took", "led"
-    # time references — adding "last" removes all "last x" bigrams at once
-    "last", "lastly", "lasting",
-    # humanitarian cluster
-    "humanitarian",
-    # coordination cluster
-    "coordination", "coordinator", "coordinators",
-    # office/affairs cluster
-    "office", "affair", "affairs", "ocha",
-    # world food programme fragments
-    "programme", "food",
-    # other noise bigrams
-    "partner", "continue",
-    # people-related noise
-    "people", "nearly",
-    # noon briefing noise
-    "noon", "briefing", "highlight",
 
-}
 
 STOPWORDS = set(stopwords.words("english")).union(CUSTOM_STOPWORDS)
 
@@ -51,14 +28,7 @@ df["year"] = df["date"].dt.year
 ### --- VISUALISATION FOR 2025 ONLY ---
 # Filter to last calendar year
 
-proper_nouns = [
-    "worldhealthorganization",
-    "demrepcongo",
-    "occupiedpalestinianterritory",
-    "gazastrip",
-    "securitycouncil",
-    "worldfoodprogramme",
-]
+proper_nouns = PROPER_NOUNS
 
 for STUDIED_YEAR in sorted(df["year"].unique()):
     df_filtered = df[df["year"] == STUDIED_YEAR]
@@ -81,7 +51,6 @@ for STUDIED_YEAR in sorted(df["year"].unique()):
     all_text = all_text.replace("democratic republic of congo", "demrepcongo")
     all_text = all_text.replace("democratic republic of the congo", "demrepcongo")
     all_text = all_text.replace("world food programme", "worldfoodprogramme")
-    all_text = all_text.replace("security council", "securitycouncil")
     all_text = all_text.replace("occupied palestinian territory", "occupiedpalestinianterritory")
     all_text = all_text.replace("occupied palestinian", "occupiedpalestinianterritory")
     all_text = all_text.replace("palestinian territory", "occupiedpalestinianterritory")
@@ -90,6 +59,7 @@ for STUDIED_YEAR in sorted(df["year"].unique()):
     all_text = all_text.replace("world health organization", "worldhealthorganization")
     all_text = all_text.replace("world health", "worldhealthorganization")
     all_text = all_text.replace("health organization", "worldhealthorganization")
+    all_text = all_text.replace("woman child", "womanchild")
 
     # Lemmatize and filter
     words = [
@@ -100,7 +70,7 @@ for STUDIED_YEAR in sorted(df["year"].unique()):
 
     # Bigrams
     bigram_list = list(bigrams(words))
-    bigram_strings = [f"{w1} {w2}" for w1, w2 in bigram_list]
+    bigram_strings = [f"{w1} {w2}" for w1, w2 in bigram_list if w1 != w2]
     word_counts = Counter(bigram_strings)
 
     # Add proper nouns as unigrams
