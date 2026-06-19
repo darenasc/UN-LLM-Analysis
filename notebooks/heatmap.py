@@ -7,7 +7,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.util import bigrams
 import os
 
-from notebooks.constants import STOPWORDS, PROPER_NOUNS
+from notebooks.constants import STOPWORDS, PROPER_NOUNS, MERGED_TERMS, ALL_VARIANTS
 
 lemmatizer = WordNetLemmatizer()
 nltk.download("stopwords")
@@ -21,18 +21,7 @@ def get_word_counts(text):
     """Clean text and return bigram + proper noun counts."""
     text = text.lower()
     text = re.sub(r"[^a-z\s]", "", text)
-
-    text = text.replace("democratic republic of congo", "demrepcongo")
-    text = text.replace("democratic republic of the congo", "demrepcongo")
-    text = text.replace("world food programme", "worldfoodprogramme")
-    text = text.replace("occupied palestinian territory", "occupiedpalestinianterritory")
-    text = text.replace("occupied palestinian", "occupiedpalestinianterritory")
-    text = text.replace("palestinian territory", "occupiedpalestinianterritory")
-    text = text.replace("west bank", "occupiedpalestinianterritory")
-    text = text.replace("gaza strip", "gazastrip")
-    text = text.replace("world health organization", "worldhealthorganization")
-    text = text.replace("world health", "worldhealthorganization")
-    text = text.replace("health organization", "worldhealthorganization")
+    text = re.sub(r"\s+", " ", text)  # collapse all whitespace types to single spaces
 
     words = [
         lemmatizer.lemmatize(word)
@@ -40,9 +29,30 @@ def get_word_counts(text):
         if word not in STOPWORDS and len(word) > 2
     ]
 
+    # Apply phrase merges AFTER stopword filtering. Stopword removal can bring
+    # two unrelated words next to each other (e.g. "local de facto authority"
+    # becomes "local authority" once "de facto" is filtered out), creating a
+    # false bigram that a raw-text replace would never catch. Checking
+    # adjacency directly on the filtered word list catches both genuine
+    # adjacency in the source text and this stopword-collapse case.
+    merged_words = []
+    i = 0
+    while i < len(words):
+        matched = False
+        for variant_words, merged_token in ALL_VARIANTS:
+            if words[i:i + len(variant_words)] == variant_words:
+                merged_words.append(merged_token)
+                i += len(variant_words)
+                matched = True
+                break
+        if not matched:
+            merged_words.append(words[i])
+            i += 1
+
+    words = merged_words
+
     bigram_list = list(bigrams(words))
-    bigram_strings = [f"{w1} {w2}" for w1, w2 in bigram_list]
-    #print([b for b in bigram_strings if "member" in b])
+    bigram_strings = [f"{w1} {w2}" for w1, w2 in bigram_list if w1 != w2]
     counts = Counter(bigram_strings)
 
     unigram_counts = Counter(words)

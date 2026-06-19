@@ -8,74 +8,68 @@ import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.util import bigrams
 import os
-from notebooks.constants import  CUSTOM_STOPWORDS, PROPER_NOUNS
+from notebooks.constants import CUSTOM_STOPWORDS, PROPER_NOUNS, ALL_VARIANTS
+
 lemmatizer = WordNetLemmatizer()
-# Download stopwords if you don't have them already
 nltk.download("stopwords")
 nltk.download("wordnet")
 
-
 STOPWORDS = set(stopwords.words("english")).union(CUSTOM_STOPWORDS)
-
 
 # Load the cleaned data
 df = pd.read_csv("noon_briefings_clean.csv", parse_dates=["date"])
-
-# Add a year column for filtering
 df["year"] = df["date"].dt.year
 
-
-### --- VISUALISATION FOR 2025 ONLY ---
-# Filter to last calendar year
-
-proper_nouns = PROPER_NOUNS
+### --- VISUALISATION FOR EACH YEAR ---
 
 for STUDIED_YEAR in sorted(df["year"].unique()):
     df_filtered = df[df["year"] == STUDIED_YEAR]
 
-    # Skip years with very little data
     if len(df_filtered) < 10:
         print(f"Skipping {STUDIED_YEAR} — not enough data")
         continue
 
     print(f"Processing {STUDIED_YEAR}...")
 
-    # Combine all text into one big string
     all_text = " ".join(df_filtered["text"].dropna().tolist())
 
-    # Lowercase and clean first
     all_text = all_text.lower()
     all_text = re.sub(r"[^a-z\s]", "", all_text)
+    all_text = re.sub(r"\s+", " ", all_text)
 
-    # Replacements
-    all_text = all_text.replace("democratic republic of congo", "demrepcongo")
-    all_text = all_text.replace("democratic republic of the congo", "demrepcongo")
-    all_text = all_text.replace("world food programme", "worldfoodprogramme")
-    all_text = all_text.replace("occupied palestinian territory", "occupiedpalestinianterritory")
-    all_text = all_text.replace("occupied palestinian", "occupiedpalestinianterritory")
-    all_text = all_text.replace("palestinian territory", "occupiedpalestinianterritory")
-    all_text = all_text.replace("west bank", "occupiedpalestinianterritory")
-    all_text = all_text.replace("gaza strip", "gazastrip")
-    all_text = all_text.replace("world health organization", "worldhealthorganization")
-    all_text = all_text.replace("world health", "worldhealthorganization")
-    all_text = all_text.replace("health organization", "worldhealthorganization")
-    all_text = all_text.replace("woman child", "womanchild")
-
-    # Lemmatize and filter
     words = [
         lemmatizer.lemmatize(word)
         for word in all_text.split()
         if word not in STOPWORDS and len(word) > 2
     ]
 
+    # Apply phrase merges AFTER stopword filtering, on the filtered word list,
+    # so longer/more specific phrases are matched before shorter fragments
+    # and stopword removal can't accidentally create false adjacency.
+    merged_words = []
+    i = 0
+    while i < len(words):
+        matched = False
+        for variant_words, merged_token in ALL_VARIANTS:
+            if words[i:i + len(variant_words)] == variant_words:
+                merged_words.append(merged_token)
+                i += len(variant_words)
+                matched = True
+                break
+        if not matched:
+            merged_words.append(words[i])
+            i += 1
+
+    words = merged_words
+
     # Bigrams
     bigram_list = list(bigrams(words))
     bigram_strings = [f"{w1} {w2}" for w1, w2 in bigram_list if w1 != w2]
     word_counts = Counter(bigram_strings)
 
-    # Add proper nouns as unigrams
+    # Add proper nouns as unigrams (only tokens listed in PROPER_NOUNS are tracked)
     unigram_counts = Counter(words)
-    for term in proper_nouns:
+    for term in PROPER_NOUNS:
         if term in unigram_counts:
             word_counts[term] = unigram_counts[term]
 
@@ -100,5 +94,5 @@ for STUDIED_YEAR in sorted(df["year"].unique()):
     plt.tight_layout()
     os.makedirs("../reports/figures", exist_ok=True)
     plt.savefig(f"../reports/figures/wordcloud_{STUDIED_YEAR}.png", dpi=150)
-    plt.close()  # close instead of show to avoid blocking the loop
+    plt.close()
     print(f"  Saved wordcloud_{STUDIED_YEAR}.png")
