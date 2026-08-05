@@ -2,7 +2,6 @@ import argparse
 import subprocess
 import sys
 
-
 def run_script(script_name):
     """
     Run a Python script as a subprocess and stop the pipeline if it fails.
@@ -42,7 +41,7 @@ def main():
 
     if args.scrape:
         run_script("scrape.py")
-        run_script("csv_to_json.py")  # only needed if you're converting fresh scrape output
+
 
     run_script("extract_text_to_df.py")
     run_script("aggregation.py")

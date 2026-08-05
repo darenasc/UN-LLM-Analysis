@@ -194,6 +194,5 @@ cython_debug/
 
 .qodo/
 *.json
-*.png
 *.csv
 .idea/

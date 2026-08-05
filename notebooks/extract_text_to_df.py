@@ -12,7 +12,7 @@ all_sections = []
 # Loop over every briefing record
 for record in records:
     date = record["date"]
-    url = record["url"]
+    url = record["page_url"]
     text = record["text"]
 
     # Split the full text into individual lines and strip whitespace

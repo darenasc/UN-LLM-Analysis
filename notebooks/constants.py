@@ -1,3 +1,4 @@
+from datetime import date
 from nltk.corpus import stopwords
 
 CUSTOM_STOPWORDS = {
@@ -108,3 +109,9 @@ ALL_VARIANTS = sorted(
     key=lambda x: len(x[0]),
     reverse=True
 )
+
+SATURDAY = 5
+BACKUP_EVERY_X_ITERATIONS = 50
+BASE_URL = "https://www.un.org/sg/en/content/noon-briefing-highlight"
+START_DATE = date(2021, 1, 1)
+END_DATE = date.today()
