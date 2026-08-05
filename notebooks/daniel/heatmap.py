@@ -7,7 +7,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.util import bigrams
 import os
 
-from notebooks.constants import STOPWORDS, PROPER_NOUNS, MERGED_TERMS, ALL_VARIANTS
+from notebooks.daniel.constants import STOPWORDS, PROPER_NOUNS, ALL_VARIANTS
 
 lemmatizer = WordNetLemmatizer()
 nltk.download("stopwords")
@@ -150,6 +150,6 @@ ax.set_ylabel("Term")
 
 plt.colorbar(im, ax=ax, label="Relative frequency (normalised by year)")
 plt.tight_layout()
-os.makedirs("../reports/figures", exist_ok=True)
-plt.savefig("../reports/figures/heatmap.png", dpi=150)
+os.makedirs("reports/figures", exist_ok=True)
+plt.savefig("reports/figures/heatmap.png", dpi=150)
 plt.show()

@@ -153,6 +153,13 @@ Then create your own branch to work on the code you want to include to the repos
 
 With you new branch just created feel free to add, delete, modify the files of the project. There is a good practice of writing [atomic commits](https://medium.com/@sandrodz/a-developers-guide-to-atomic-git-commits-c7b873b39223), meaning, small commits that contains meaningful changes. So when you are working on a task from an issue, you can create multiple commits to complete the work. 
 
+If it's the first time using `git` in the project, you will need to add your name and email for your commits:
+
+```bash
+git config --local user.name "<YOUR NAME>"
+git config --local user.email <YOUR@EMAIL>
+```
+
 ```bash
 git checkout main # to change to the main branch
 git pull # to pull the updates from the remote repository

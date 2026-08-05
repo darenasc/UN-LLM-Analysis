@@ -8,7 +8,7 @@ import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.util import bigrams
 import os
-from notebooks.constants import CUSTOM_STOPWORDS, PROPER_NOUNS, ALL_VARIANTS
+from notebooks.daniel.constants import CUSTOM_STOPWORDS, PROPER_NOUNS, ALL_VARIANTS
 
 lemmatizer = WordNetLemmatizer()
 nltk.download("stopwords")
@@ -92,7 +92,7 @@ for STUDIED_YEAR in sorted(df["year"].unique()):
     ax.axis("off")
     ax.set_title(f"Most Common Words in UN Noon Briefings ({STUDIED_YEAR})", fontsize=20, pad=20)
     plt.tight_layout()
-    os.makedirs("../reports/figures", exist_ok=True)
+    os.makedirs("reports/figures", exist_ok=True)
     plt.savefig(f"../reports/figures/wordcloud_{STUDIED_YEAR}.png", dpi=150)
     plt.close()
     print(f"  Saved wordcloud_{STUDIED_YEAR}.png")

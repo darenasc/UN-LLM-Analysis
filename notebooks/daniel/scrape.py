@@ -3,7 +3,7 @@ import time
 from datetime import timedelta
 import os
 from playwright.sync_api import sync_playwright
-from notebooks.constants import SATURDAY, BACKUP_EVERY_X_ITERATIONS, BASE_URL, START_DATE, END_DATE
+from notebooks.daniel.constants import SATURDAY, BACKUP_EVERY_X_ITERATIONS, BASE_URL, START_DATE, END_DATE
 
 
 # --- Configuration ---

@@ -19,6 +19,7 @@ pandas = "*"
 argparse = "*"
 playwright = "*"
 mkdocs = "*"
+sqlalchemy = "*"
 
 [requires]
 python_version = "3.12"
