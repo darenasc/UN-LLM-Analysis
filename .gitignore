@@ -192,4 +192,9 @@ cython_debug/
 
 .vscode/settings.json
 
+.qodo/
+*.json
+*.csv
+.idea/
+
 Pipfile.lock
