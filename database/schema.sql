@@ -18,7 +18,7 @@ CREATE TABLE sections (
 
     section_id INTEGER PRIMARY KEY,
     briefing_id INTEGER NOT NULL,
-    topic TEXT NOT NULL,
+    title TEXT NOT NULL,
     section_text TEXT NOT NULL,
     FOREIGN KEY (briefing_id) REFERENCES briefings(briefing_id)
 );
