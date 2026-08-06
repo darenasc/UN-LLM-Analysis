@@ -49,7 +49,6 @@ def test_missing_file_raises_error():
 
 def test_missing_date_column_raises_error(tmp_path):
     # Raise ValueError if there is no date column in the csv being read
-    #TODO check that this error would be raised by the used version of Pandas
     csv_path = tmp_path / "no_date.csv"
     pd.DataFrame({"value":[1,2,3]}).to_csv(csv_path, index=False)
     with pytest.raises(ValueError):
