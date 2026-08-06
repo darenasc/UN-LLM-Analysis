@@ -17,8 +17,16 @@ nltk.download("wordnet")
 STOPWORDS = set(stopwords.words("english")).union(CUSTOM_STOPWORDS)
 
 # Load the cleaned data
-df = pd.read_csv("noon_briefings_clean.csv", parse_dates=["date"])
-df["year"] = df["date"].dt.year
+file_path = "noon_briefings_clean.csv"
+
+def read_csv_parsing_dates(file_path):
+    df = pd.read_csv(file_path, parse_dates=["date"])
+    df["year"] = df["date"].dt.year
+    return df
+
+read_csv_parsing_dates(file_path)
+
+
 
 ### --- VISUALISATION FOR EACH YEAR ---
 

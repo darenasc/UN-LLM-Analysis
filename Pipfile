@@ -20,6 +20,7 @@ argparse = "*"
 playwright = "*"
 mkdocs = "*"
 sqlalchemy = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.12"
