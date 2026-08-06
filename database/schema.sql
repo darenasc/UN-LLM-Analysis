@@ -3,7 +3,7 @@
 -- SQLite schema for UN LLM Analysis
 
 CREATE TABLE briefings (
-    briefing_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    briefing_id INTEGER PRIMARY KEY,
     briefing_date DATE NOT NULL,
     url TEXT UNIQUE NOT NULL,
     briefing_text TEXT NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE briefings (
 
 CREATE TABLE sections (
 
-    section_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    section_id INTEGER PRIMARY KEY,
     briefing_id INTEGER NOT NULL,
     topic TEXT NOT NULL,
     section_text TEXT NOT NULL,
