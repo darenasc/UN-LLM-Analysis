@@ -17,18 +17,40 @@ nltk.download("wordnet")
 STOPWORDS = set(stopwords.words("english")).union(CUSTOM_STOPWORDS)
 
 # Load the cleaned data
-file_path = "noon_briefings_clean.csv"
+file_path = "../notebooks/daniel/noon_briefings_clean.csv"
 
 def read_csv_parsing_dates(file_path):
     df = pd.read_csv(file_path, parse_dates=["date"])
     df["year"] = df["date"].dt.year
     return df
 
-read_csv_parsing_dates(file_path)
+df = read_csv_parsing_dates(file_path)
 
 
 
 ### --- VISUALISATION FOR EACH YEAR ---
+
+def create_wordcloud():
+    global wordcloud
+    # Word cloud
+    wordcloud = WordCloud(
+        width=1600,
+        height=800,
+        background_color="white",
+        max_words=50,
+        colormap="viridis",
+    ).generate_from_frequencies(word_counts)
+
+    fig, ax = plt.subplots(figsize=(16, 8))
+    ax.imshow(wordcloud, interpolation="bilinear")
+    ax.axis("off")
+    ax.set_title(f"Most Common Words in UN Noon Briefings ({STUDIED_YEAR})", fontsize=20, pad=20)
+    plt.tight_layout()
+    os.makedirs("notebooks/daniel/figures", exist_ok=True)
+    plt.savefig(f"notebooks/daniel/figures/wordcloud_{STUDIED_YEAR}.png", dpi=150)
+    plt.close()
+    print(f"  Saved wordcloud_{STUDIED_YEAR}.png")
+
 
 for STUDIED_YEAR in sorted(df["year"].unique()):
     df_filtered = df[df["year"] == STUDIED_YEAR]
@@ -86,21 +108,4 @@ for STUDIED_YEAR in sorted(df["year"].unique()):
 
     print(f"  Top 20: {Counter(word_counts).most_common(20)}")
 
-    # Word cloud
-    wordcloud = WordCloud(
-        width=1600,
-        height=800,
-        background_color="white",
-        max_words=50,
-        colormap="viridis",
-    ).generate_from_frequencies(word_counts)
-
-    fig, ax = plt.subplots(figsize=(16, 8))
-    ax.imshow(wordcloud, interpolation="bilinear")
-    ax.axis("off")
-    ax.set_title(f"Most Common Words in UN Noon Briefings ({STUDIED_YEAR})", fontsize=20, pad=20)
-    plt.tight_layout()
-    os.makedirs("reports/figures", exist_ok=True)
-    plt.savefig(f"../reports/figures/wordcloud_{STUDIED_YEAR}.png", dpi=150)
-    plt.close()
-    print(f"  Saved wordcloud_{STUDIED_YEAR}.png")
+    create_wordcloud()
