@@ -6,15 +6,19 @@
 
 `pipenv pip install pytest-cov`
 
+## Generating a Report
+
 From the project root:
 
-`pytest --cov=tests_folder`
+`pytest --cov=path_to_tests_folder`
 
 Generate a html coverage report:
 
-`pytest --cov=tests_folder --cov-report=html`
+`pytest --cov=path_to_tests_folder --cov-report=html`
+
+### Minimum Coverage Threshold
 
 You can set a minimum coverage threshold:
 
-`pytest --cov=tests_folder --cov-fall-under=80`
+`pytest --cov=path_to_tests_folder --cov-fall-under=80`
 
