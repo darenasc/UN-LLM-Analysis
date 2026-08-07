@@ -16,5 +16,5 @@ Generate a html coverage report:
 
 You can set a minimum coverage threshold:
 
-`pytest --cov-tests_folder --cov-fall-under=80`
+`pytest --cov=tests_folder --cov-fall-under=80`
 
