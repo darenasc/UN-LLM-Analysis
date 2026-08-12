@@ -169,20 +169,99 @@ def build_parser() -> argparse.ArgumentParser:
     """
     Build and return the argument parser for the script.
     """
-    parser = argparse.ArgumentParser(description="Scrape UN noon briefings.")
+
+    formatter = argparse.RawDescriptionHelpFormatter
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Download and inspect UN noon briefing data."
+        ), 
+        epilog="""Examples:
+  %(prog)s update 2026-08-12
+  %(prog)s update 2026-08-01 2026-08-12
+  %(prog)s check 2026-08-12
+
+Run '%(prog)s COMMAND --help' for details about a command.
+""", 
+        formatter_class=formatter
+    )
+
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    # Subparser for the "update" command
-    update_parser = subparsers.add_parser("update", help="Download briefings for a given date or range of dates.")
-    update_parser.add_argument("date1", nargs="?", type=parse_date, metavar="DATE")
-    update_parser.add_argument("date2", nargs="?", type=parse_date, metavar="DATE")
-    update_parser.add_argument("--start", type=parse_date)
-    update_parser.add_argument("--end", type=parse_date)
-    update_parser.add_argument("--overwrite", action="store_true", help="Overwrite existing data instead of skipping.")
 
-    # Subparser for the "check" command
-    check_parser = subparsers.add_parser("check", help="Check existence of briefing data for a given date.")
-    check_parser.add_argument("date", type=parse_date, metavar="DATE")
+    update_parser = subparsers.add_parser(
+        "update", 
+        help="Download briefings for a given date or range of dates.", 
+        description="""Download UN noon briefings and save them as JSON.
+
+Use positional dates or --start/--end options, but do not mix
+the two forms.
+""", 
+        epilog="""Accepted forms:
+  %(prog)s DATE1
+  %(prog)s DATE1 DATE2
+  %(prog)s --start DATE
+  %(prog)s --end DATE
+  %(prog)s --start DATE --end DATE
+
+DATE must use the YYYY-MM-DD format.
+--overwrite may be added to any form.
+""", 
+        usage=(
+            "%(prog)s [-h] [--overwrite] "
+            "(DATE1 [DATE2] | "
+            "--start DATE [--end DATE] | "
+            "--end DATE)"
+        ), 
+        formatter_class=formatter
+    )
+
+    update_parser.add_argument(
+        "date1", 
+        nargs="?", 
+        type=parse_date, 
+        metavar="DATE1", 
+        help=("Single date, or the first date of an inclusive range.")
+    )
+    update_parser.add_argument(
+        "date2", 
+        nargs="?", 
+        type=parse_date, 
+        metavar="DATE2", 
+        help="Last date of the inclusive positional range."
+    )
+    update_parser.add_argument(
+        "--start", 
+        type=parse_date, 
+        help=("First date of the range. If --end is omitted, the range ends today in New York.")
+    )
+    update_parser.add_argument(
+        "--end", 
+        type=parse_date, 
+        help=f"Last date of the range. If --start is omitted, the range starts from {START_DATE}."
+    )
+    update_parser.add_argument(
+        "--overwrite", 
+        action="store_true", 
+        help="Overwrite existing data instead of skipping."
+    )
+
+
+    check_parser = subparsers.add_parser(
+        "check", 
+        help="Check existence of stored briefing data for a given date.", 
+        description=("Check if a briefing for a given date has already been downloaded and stored as JSON."), 
+        epilog="""Example:
+  %(prog)s 2026-08-12
+""", 
+        formatter_class=formatter
+    )
+    check_parser.add_argument(
+        "date", 
+        type=parse_date, 
+        metavar="DATE", 
+        help="Date to check in YYYY-MM-DD format."
+    )
 
     return parser
 
