@@ -8,13 +8,19 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import Error as PlaywrightError
 from scripts.constants import BASE_URL, START_DATE, END_DATE, RAW_BRIEFINGS_ROOT
+from scripts.models import FetchResult
 
 # Basically UN Noon Briefing skips weekends and fixed official New York holidays, but still some exceptions, such as the following two dates:
 # https://www.un.org/sg/en/content/highlight/2013-08-31.html (Saturday, but has briefing)
 # https://www.un.org/sg/en/content/highlight/2013-09-01.html (Sunday, but has briefing)
 #
 
-def scrape_briefing(page_object, date_string, retries: int = 1):
+
+def scrape_briefing(
+        page_object, 
+        date_string: str, 
+        retries: int = 1
+) -> FetchResult:
     """
     Visit the briefing page for a given date and extract the (inner) html content.
 
@@ -28,17 +34,33 @@ def scrape_briefing(page_object, date_string, retries: int = 1):
 
     for attempt in range(retries + 1):
         try:
-            page_object.goto(
+            response = page_object.goto(
                 page_url, 
                 wait_until="domcontentloaded", 
                 timeout=120_000
             )
-            
+
+            if response is None:
+                print(f"  ✗ No response received for {page_url}.")
+                return FetchResult(status="failed", html=None, http_status=None, error="No response received.")
+
+            status_code = response.status
+            if status_code in {404, 410}:
+                print(f"  - No briefing found for {date_string} (HTTP {status_code}).")
+                return FetchResult(status="not_published", html=None, http_status=status_code, error=None)
+            elif status_code != 200:
+                print(f"  ✗ Unexpected status code for {date_string}: {status_code}")
+                return FetchResult(status="failed", html=None, http_status=status_code, error=f"Unexpected status code: {status_code}")
+
             body = page_object.locator(".field--name-body")
             body.wait_for(state="visible", timeout=120_000)
-            html = body.inner_html(timeout=120_000)
+            html = body.inner_html().strip()
+
+            if not html:
+                print(f"  - No briefing found for {date_string}.")
+                return FetchResult(status="not_published", html=None, http_status=status_code, error=None)
             
-            return html.strip()
+            return FetchResult(status="available", html=html, http_status=status_code, error=None)
         
         except PlaywrightError as exc:
             if attempt < retries:
@@ -46,10 +68,10 @@ def scrape_briefing(page_object, date_string, retries: int = 1):
                 time.sleep(2)  # Wait a bit before retrying
             else:
                 print(f"  ✗ Error on final attempt: {exc}. Giving up.")
-                return None
+                return FetchResult(status="failed", html=None, http_status=None, error=str(exc))
 
 
-def is_scraped(date_string):
+def is_scraped(date_string) -> bool:
     """Check if a briefing for the given date has already been scraped."""
 
     # Data paths follow this pattern: 
@@ -58,6 +80,16 @@ def is_scraped(date_string):
     BRIEFING_PATH = os.path.join(RAW_BRIEFINGS_ROOT, date_string[:4], date_string[:7], f"{date_string}.json")
     if not os.path.exists(BRIEFING_PATH):
         return False
+
+    try:
+        with open(BRIEFING_PATH, "r", encoding="utf-8") as f:
+            record = json.load(f)
+            if record.get("status") not in {"available", "not_published"}:
+                return False
+    except (json.JSONDecodeError, IOError) as exc:
+        print(f"  ✗ Error reading {BRIEFING_PATH}: {exc}")
+        return False
+
     return True
 
 def date_range(start_date, end_date):
@@ -95,20 +127,27 @@ def scrape_between_dates(start_date, end_date, overwrite=False):
             try:
                 page_result = scrape_briefing(page, date_string)
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-                if page_result:
+                if page_result.status == "available":
                     print(f"  ✓ Got briefing")
                 else:                   
                     print(f"  - No briefing")
-                    page_result = None
 
                 downloaded_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
                 page_url = f"{BASE_URL}/{date_string}.html"
-                json_content = {"date": date_string, "url": page_url, "html": page_result, "downloaded_at": downloaded_at}
+                json_content = {
+                    "date": date_string, 
+                    "url": page_url, 
+                    "status": page_result.status,
+                    "http_status": page_result.http_status,
+                    "html": page_result.html,
+                    "error": page_result.error,
+                    "downloaded_at": downloaded_at
+                }
                 # Even no briefing exists for this date, we still save a JSON file with "html": null to indicate that we checked and found nothing.  
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(json_content, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                print(f"  ✗ Error: {e}")
+            except Exception as exc:
+                print(f"  ✗ Error: {exc}")
 
             time.sleep(1)
 
