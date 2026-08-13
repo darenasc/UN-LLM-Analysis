@@ -21,6 +21,7 @@ playwright = "*"
 mkdocs = "*"
 sqlalchemy = "*"
 pytest-cov = "*"
+pre-commit = "*"
 
 [requires]
 python_version = "3.12"
