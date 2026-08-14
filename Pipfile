@@ -20,7 +20,6 @@ argparse = "*"
 playwright = "*"
 mkdocs = "*"
 sqlalchemy = "*"
-pathlib = "*"
 
 [requires]
 python_version = "3.12"
