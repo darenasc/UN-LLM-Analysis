@@ -28,7 +28,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 
 This project and everyone participating in it is governed by the
 [UN LLM Analysis Code of Conduct](https://github.com/darenasc/correlaid-mentoring-project/blob/main/CODE_OF_CONDUCT.md).
-By participating, you are expected to uphold this code. 
+By participating, you are expected to uphold this code.
 
 ## I Have a Question
 
@@ -151,7 +151,7 @@ Before start working on the Python code, make sure you create a new branch for y
 
 Then create your own branch to work on the code you want to include to the repository. Branch names are usually short descritions of the task at hand, for example, an issue number 10 with the task of create a database schema for the project, you can create it as follows `git branch -b 10_database_schema`. With that everyone can know that the task is described in the issue number 10 and to what it refers to.
 
-With you new branch just created feel free to add, delete, modify the files of the project. There is a good practice of writing [atomic commits](https://medium.com/@sandrodz/a-developers-guide-to-atomic-git-commits-c7b873b39223), meaning, small commits that contains meaningful changes. So when you are working on a task from an issue, you can create multiple commits to complete the work. 
+With you new branch just created feel free to add, delete, modify the files of the project. There is a good practice of writing [atomic commits](https://medium.com/@sandrodz/a-developers-guide-to-atomic-git-commits-c7b873b39223), meaning, small commits that contains meaningful changes. So when you are working on a task from an issue, you can create multiple commits to complete the work.
 
 If it's the first time using `git` in the project, you will need to add your name and email for your commits:
 
@@ -172,14 +172,14 @@ git add . # to add all the files or
 git add file_1, file_2, ... file_n # to select the files to include in the commit
 git commit -m 'Add your (atomic) commit message here' # to create a new commit to the current feature branch
 
-# You can create multiple commits while working on an issue, just repeat the 
+# You can create multiple commits while working on an issue, just repeat the
 # previous steps of status -> add -> commit and then repeat until finish
 
 # Once you finish your work you can push the code to the remote respository
 git push # or if the branch exists in the remote repository
 git push --set-upstream origin <name_of_your_new_branch> # to create your feature branch in the remote repository
 
-# If the feature branch is ready to be merged into main, 
+# If the feature branch is ready to be merged into main,
 # create a pull request (PR) in GitHub
 
 # And once the PR has been merged you can delete the feature branch
@@ -206,3 +206,31 @@ Please try to follow the good practice of [atomic commits](https://medium.com/@s
 <!-- omit in toc -->
 ## Attribution
 This guide is based on the [contributing.md](https://contributing.md/generator)!
+
+# Pytest-Cov Documentation
+
+## Installation
+Install pytest
+```bash
+pipenv install pytest # pre-requisite
+```
+Install pre-commit as a dependency, then install the git hook scripts so checks run automatically before each commit.
+
+```bash
+pre-commit install # run before the next command:
+pipenv install pytest-cov
+```
+## Generating a Report
+From the project root:
+```bash
+`pytest --cov=path_to_tests_folder`
+```
+Generate a html coverage report:
+```bash
+`pytest --cov=path_to_tests_folder --cov-report=html`
+```
+### Minimum Coverage Threshold
+You can set a minimum coverage threshold:
+```bash
+`pytest --cov=path_to_tests_folder --cov-fall-under=80`
+```
