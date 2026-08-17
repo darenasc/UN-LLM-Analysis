@@ -1,4 +1,5 @@
 import argparse
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 import json
@@ -9,7 +10,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from playwright.sync_api import Error as PlaywrightError
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Page, sync_playwright
 
 from un_llm_analysis.config import BASE_URL, BRIEFINGS_DIR
 
@@ -32,12 +33,12 @@ class FetchResult:
     error: str | None = None
 
 
-def scrape_briefing(page_object, date_string: str, retries: int = 1) -> FetchResult:
+def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResult:
     """
     Visit the briefing page for a given date and extract the (inner) html content.
 
     Parameters:
-        page_object  - the Playwright browser page object (a single reusable tab)
+        page  - the Playwright browser page object (a single reusable tab)
         date_string  - date in "YYYY-MM-DD" format, e.g. "2023-01-05"
     """
 
@@ -46,7 +47,7 @@ def scrape_briefing(page_object, date_string: str, retries: int = 1) -> FetchRes
 
     for attempt in range(retries + 1):
         try:
-            response = page_object.goto(page_url, wait_until="domcontentloaded", timeout=120_000)
+            response = page.goto(page_url, wait_until="domcontentloaded", timeout=120_000)
 
             if response is None:
                 print(f"  ✗ No response received for {page_url}.")
@@ -69,7 +70,7 @@ def scrape_briefing(page_object, date_string: str, retries: int = 1) -> FetchRes
                     error=f"Unexpected status code: {status_code}",
                 )
 
-            body = page_object.locator(".field--name-body")
+            body = page.locator(".field--name-body")
             body.wait_for(state="visible", timeout=120_000)
             html = body.inner_html().strip()
 
@@ -90,7 +91,7 @@ def scrape_briefing(page_object, date_string: str, retries: int = 1) -> FetchRes
                 return FetchResult(status="failed", html=None, http_status=None, error=str(exc))
 
 
-def is_scraped(date_string) -> bool:
+def _is_briefing_scraped(date_string: str) -> bool:
     """Check if a briefing for the given date has already been scraped."""
 
     # Data paths follow this pattern:
@@ -114,9 +115,9 @@ def is_scraped(date_string) -> bool:
     return True
 
 
-def date_range(start_date, end_date):
+def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
     """
-    Generate a list of dates between start_date and end_date.
+    Yield dates from start_date to end_date, inclusive
     """
 
     current_date = start_date
@@ -125,7 +126,7 @@ def date_range(start_date, end_date):
         current_date += timedelta(days=1)
 
 
-def scrape_between_dates(start_date, end_date, overwrite=False):
+def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = False) -> None:
     """
     Scrape UN noon briefings for all dates between start_date and end_date.
     """
@@ -134,7 +135,7 @@ def scrape_between_dates(start_date, end_date, overwrite=False):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        dates = list(date_range(start_date, end_date))
+        dates = list(_dates_between(start_date, end_date))
 
         print(f"{len(dates)} dates to scrape ...")
 
@@ -145,7 +146,7 @@ def scrape_between_dates(start_date, end_date, overwrite=False):
                 f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
             )
 
-            if is_scraped(date_string) and not overwrite:
+            if _is_briefing_scraped(date_string) and not overwrite:
                 print(f"  - Already scraped, skipping")
                 continue
 
@@ -179,7 +180,7 @@ def scrape_between_dates(start_date, end_date, overwrite=False):
         browser.close()
 
 
-def parse_date(value: str) -> date:
+def _parse_date(value: str) -> date:
     """
     Parse a string in YYYY-MM-DD format into a date object.
     Raises argparse.ArgumentTypeError if the format is invalid.
@@ -190,7 +191,7 @@ def parse_date(value: str) -> date:
         raise argparse.ArgumentTypeError(f"Invalid date: {value}. Expected YYYY-MM-DD.") from exc
 
 
-def build_parser() -> argparse.ArgumentParser:
+def _build_parser() -> argparse.ArgumentParser:
     """
     Build and return the argument parser for the script.
     """
@@ -241,25 +242,25 @@ DATE must use the YYYY-MM-DD format.
     update_parser.add_argument(
         "date1",
         nargs="?",
-        type=parse_date,
+        type=_parse_date,
         metavar="DATE1",
         help=("Single date, or the first date of an inclusive range."),
     )
     update_parser.add_argument(
         "date2",
         nargs="?",
-        type=parse_date,
+        type=_parse_date,
         metavar="DATE2",
         help="Last date of the inclusive positional range.",
     )
     update_parser.add_argument(
         "--start",
-        type=parse_date,
+        type=_parse_date,
         help=("First date of the range. If --end is omitted, the range ends today in New York."),
     )
     update_parser.add_argument(
         "--end",
-        type=parse_date,
+        type=_parse_date,
         help=f"Last date of the range. If --start is omitted, the range starts from {START_DATE}.",
     )
     update_parser.add_argument(
@@ -278,13 +279,13 @@ DATE must use the YYYY-MM-DD format.
         formatter_class=formatter,
     )
     check_parser.add_argument(
-        "date", type=parse_date, metavar="DATE", help="Date to check in YYYY-MM-DD format."
+        "date", type=_parse_date, metavar="DATE", help="Date to check in YYYY-MM-DD format."
     )
 
     return parser
 
 
-def resolve_update_requests(
+def _resolve_update_request(
     parser: argparse.ArgumentParser, args: argparse.Namespace
 ) -> tuple[date, date, bool]:
     """
@@ -330,19 +331,19 @@ def main() -> None:
     Main entry point for the script.
     """
 
-    parser = build_parser()
+    parser = _build_parser()
     args = parser.parse_args()
 
     if args.command == "check":
         date_string = args.date.strftime("%Y-%m-%d")
-        if is_scraped(date_string):
+        if _is_briefing_scraped(date_string):
             print(f"Briefing for {date_string} exists in the data directory.")
         else:
             print(f"Briefing for {date_string} does NOT exist in the data directory.")
         return
 
     if args.command == "update":
-        start_date, end_date, overwrite = resolve_update_requests(parser, args)
+        start_date, end_date, overwrite = _resolve_update_request(parser, args)
         print(f"Updating briefings from {start_date} to {end_date}, overwrite={overwrite} ...")
         scrape_between_dates(start_date, end_date, overwrite=overwrite)
         print("Update complete.")
