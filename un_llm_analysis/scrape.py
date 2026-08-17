@@ -1,20 +1,38 @@
-from html import parser
 import json
 import time
 from datetime import timedelta, datetime, date, timezone
+from zoneinfo import ZoneInfo
 import os
 import argparse
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from playwright.sync_api import Error as PlaywrightError
-from scripts.constants import BASE_URL, START_DATE, END_DATE, RAW_BRIEFINGS_ROOT
-from scripts.models import FetchResult
+
+from dataclasses import dataclass
+from typing import Literal
+
+from un_llm_analysis.config import BASE_URL, BRIEFINGS_DIR
 
 # Basically UN Noon Briefing skips weekends and fixed official New York holidays, but still some exceptions, such as the following two dates:
 # https://www.un.org/sg/en/content/highlight/2013-08-31.html (Saturday, but has briefing)
 # https://www.un.org/sg/en/content/highlight/2013-09-01.html (Sunday, but has briefing)
-#
 
+START_DATE = date(2021, 1, 1)
+# END_DATE is set to New York time, the UN site timezone.
+END_DATE = datetime.now(ZoneInfo("America/New_York")).date()
+
+FetchStatus = Literal[
+    "available",
+    "not_published",
+    "failed"
+]
+
+@dataclass(frozen=True)
+class FetchResult:
+    status: FetchStatus
+    html: str | None
+    http_status: int | None
+    error: str | None = None
 
 def scrape_briefing(
         page_object, 
@@ -77,7 +95,7 @@ def is_scraped(date_string) -> bool:
     # Data paths follow this pattern: 
     #   "data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json"
 
-    BRIEFING_PATH = os.path.join(RAW_BRIEFINGS_ROOT, date_string[:4], date_string[:7], f"{date_string}.json")
+    BRIEFING_PATH = os.path.join(BRIEFINGS_DIR, date_string[:4], date_string[:7], f"{date_string}.json")
     if not os.path.exists(BRIEFING_PATH):
         return False
 
@@ -118,7 +136,7 @@ def scrape_between_dates(start_date, end_date, overwrite=False):
         for i, date in enumerate(dates):
             date_string = date.strftime("%Y-%m-%d")
             print(f"[{i + 1}/{len(dates)}] {date_string}")
-            file_path = Path(f"{RAW_BRIEFINGS_ROOT}/{date_string[:4]}/{date_string[:7]}/{date_string}.json")
+            file_path = Path(f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json")
 
             if is_scraped(date_string) and not overwrite:
                 print(f"  - Already scraped, skipping")
