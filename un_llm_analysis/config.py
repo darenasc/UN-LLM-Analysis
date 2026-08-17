@@ -1,8 +1,10 @@
+from datetime import date
 from pathlib import Path
 
-BASE_URL = "https://www.un.org/sg/en/content/highlight/"
+BASE_URL = "https://www.un.org/sg/en/content/highlight"
+MIN_SCRAPE_DATE = date(2004, 4, 5)
 
-PROJ_ROOT = Path(__file__).resolve().parents[2]
+PROJ_ROOT = Path(__file__).resolve().parents[1]
 
 DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"

@@ -12,15 +12,11 @@ from zoneinfo import ZoneInfo
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page, sync_playwright
 
-from un_llm_analysis.config import BASE_URL, BRIEFINGS_DIR
+from un_llm_analysis.config import BASE_URL, BRIEFINGS_DIR, MIN_SCRAPE_DATE
 
 # Basically UN Noon Briefing skips weekends and fixed official New York holidays, but still some exceptions, such as the following two dates:
 # https://www.un.org/sg/en/content/highlight/2013-08-31.html (Saturday, but has briefing)
 # https://www.un.org/sg/en/content/highlight/2013-09-01.html (Sunday, but has briefing)
-
-START_DATE = date(2021, 1, 1)
-# END_DATE is set to New York time, the UN site timezone.
-END_DATE = datetime.now(ZoneInfo("America/New_York")).date()
 
 FetchStatus = Literal["available", "not_published", "failed"]
 
@@ -34,15 +30,13 @@ class FetchResult:
 
 
 def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResult:
-    """
-    Visit the briefing page for a given date and extract the (inner) html content.
+    """Visit the briefing page for a given date and extract the (inner) html content.
 
     Parameters:
         page  - the Playwright browser page object (a single reusable tab)
         date_string  - date in "YYYY-MM-DD" format, e.g. "2023-01-05"
     """
 
-    # page_url = f"{BASE_URL}?date={date_string}"
     page_url = f"{BASE_URL}/{date_string}.html"
 
     for attempt in range(retries + 1):
@@ -100,6 +94,7 @@ def _is_briefing_scraped(date_string: str) -> bool:
     BRIEFING_PATH = os.path.join(
         BRIEFINGS_DIR, date_string[:4], date_string[:7], f"{date_string}.json"
     )
+
     if not os.path.exists(BRIEFING_PATH):
         return False
 
@@ -116,9 +111,7 @@ def _is_briefing_scraped(date_string: str) -> bool:
 
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
-    """
-    Yield dates from start_date to end_date, inclusive
-    """
+    """Yield dates from start_date to end_date, inclusive"""
 
     current_date = start_date
     while current_date <= end_date:
@@ -127,9 +120,7 @@ def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
 
 
 def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = False) -> None:
-    """
-    Scrape UN noon briefings for all dates between start_date and end_date.
-    """
+    """Scrape UN noon briefings for all dates between start_date and end_date."""
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -181,10 +172,7 @@ def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = Fal
 
 
 def _parse_date(value: str) -> date:
-    """
-    Parse a string in YYYY-MM-DD format into a date object.
-    Raises argparse.ArgumentTypeError if the format is invalid.
-    """
+    """Parse a string in YYYY-MM-DD format into a date object."""
     try:
         return date.fromisoformat(value)
     except ValueError as exc:
@@ -192,17 +180,16 @@ def _parse_date(value: str) -> date:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """
-    Build and return the argument parser for the script.
-    """
+    """Build and return the argument parser for the script."""
 
     formatter = argparse.RawDescriptionHelpFormatter
 
     parser = argparse.ArgumentParser(
-        description=("Download and inspect UN noon briefing data."),
+        description="Download and check UN noon briefing data.",
         epilog="""Examples:
   %(prog)s update 2026-08-12
   %(prog)s update 2026-08-01 2026-08-12
+  %(prog)s update --since 2026-08-01
   %(prog)s check 2026-08-12
 
 Run '%(prog)s COMMAND --help' for details about a command.
@@ -217,54 +204,38 @@ Run '%(prog)s COMMAND --help' for details about a command.
         help="Download briefings for a given date or range of dates.",
         description="""Download UN noon briefings and save them as JSON.
 
-Use positional dates or --start/--end options, but do not mix
-the two forms.
+Use positional dates or the --since option, but do not combine them.
 """,
         epilog="""Accepted forms:
-  %(prog)s DATE1
-  %(prog)s DATE1 DATE2
-  %(prog)s --start DATE
-  %(prog)s --end DATE
-  %(prog)s --start DATE --end DATE
+  %(prog)s DATE [DATE]
+  %(prog)s --since DATE
 
-DATE must use the YYYY-MM-DD format.
+DATE must be in YYYY-MM-DD format.
+
 --overwrite may be added to any form.
 """,
-        usage=(
-            "%(prog)s [-h] [--overwrite] "
-            "(DATE1 [DATE2] | "
-            "--start DATE [--end DATE] | "
-            "--end DATE)"
-        ),
+        usage=("%(prog)s [-h] [--overwrite] " "(DATE [DATE] | " "--since DATE)"),
         formatter_class=formatter,
     )
 
     update_parser.add_argument(
-        "date1",
-        nargs="?",
+        "dates",
+        nargs="*",
         type=_parse_date,
-        metavar="DATE1",
-        help=("Single date, or the first date of an inclusive range."),
+        metavar="DATE",
+        help=(
+            "One date to update, or two dates defining an inclusive range. " "Format: YYYY-MM-DD."
+        ),
     )
     update_parser.add_argument(
-        "date2",
-        nargs="?",
+        "--since",
         type=_parse_date,
-        metavar="DATE2",
-        help="Last date of the inclusive positional range.",
+        help=("Update from the given date through today, inclusive. " "Format: YYYY-MM-DD."),
     )
     update_parser.add_argument(
-        "--start",
-        type=_parse_date,
-        help=("First date of the range. If --end is omitted, the range ends today in New York."),
-    )
-    update_parser.add_argument(
-        "--end",
-        type=_parse_date,
-        help=f"Last date of the range. If --start is omitted, the range starts from {START_DATE}.",
-    )
-    update_parser.add_argument(
-        "--overwrite", action="store_true", help="Overwrite existing data instead of skipping."
+        "--overwrite",
+        action="store_true",
+        help="Re-download and overwrite existing data instead of skipping it.",
     )
 
     check_parser = subparsers.add_parser(
@@ -288,48 +259,41 @@ DATE must use the YYYY-MM-DD format.
 def _resolve_update_request(
     parser: argparse.ArgumentParser, args: argparse.Namespace
 ) -> tuple[date, date, bool]:
-    """
-    Determine the start and end dates for the update operation based on
-    command-line arguments. Returns a tuple of (start_date, end_date, overwrite).
-    """
+    """Resolve update arguments into a tuple of (start_date, end_date, overwrite)."""
 
-    if args.date1 and (args.start or args.end):
-        parser.error(
-            "Invalid combination of arguments: --start/--end cannot be used with positional dates."
-        )
+    today = datetime.now(ZoneInfo("America/New_York")).date()
 
-    if args.start:
-        start_date = args.start
-        if args.end:
-            end_date = args.end
-        else:
-            end_date = END_DATE
-    elif args.end:
-        end_date = args.end
-        start_date = START_DATE
-    elif args.date1 and args.date2:
-        start_date = args.date1
-        end_date = args.date2
-    elif args.date1:
-        start_date = end_date = args.date1
+    if args.dates and args.since is not None:
+        parser.error("--since cannot be used with positional dates.")
+
+    if args.dates:
+        if len(args.dates) > 2:
+            parser.error("At most two positional dates may be provided.")
+        elif len(args.dates) == 1:
+            start_date = end_date = args.dates[0]
+        elif len(args.dates) == 2:
+            start_date, end_date = args.dates
+    elif args.since is not None:
+        start_date = args.since
+        end_date = today
     else:
-        parser.error("No dates specified. Use positional dates or --start/--end options.")
+        parser.error(
+            "No dates specified. Provide one or two positional dates, or use --since DATE."
+        )
 
     if start_date > end_date:
         parser.error(f"Start date {start_date} cannot be after end date {end_date}.")
 
-    if start_date < START_DATE or end_date > END_DATE:
-        parser.error(f"Dates must be between {START_DATE} and {END_DATE}.")
+    if start_date < MIN_SCRAPE_DATE or end_date > today:
+        parser.error(f"Dates must be between {MIN_SCRAPE_DATE} and {today}.")
 
-    overwrite = args.overwrite if hasattr(args, "overwrite") else False
+    overwrite = args.overwrite
 
     return start_date, end_date, overwrite
 
 
 def main() -> None:
-    """
-    Main entry point for the script.
-    """
+    """Main entry point for the script."""
 
     parser = _build_parser()
     args = parser.parse_args()
