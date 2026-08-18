@@ -1,14 +1,16 @@
-import pandas as pd
 from collections import Counter
+import os
 import re
-from wordcloud import WordCloud
+
 import matplotlib.pyplot as plt
-from nltk.corpus import stopwords
 import nltk
+from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.util import bigrams
-import os
-from notebooks.daniel.constants import CUSTOM_STOPWORDS, PROPER_NOUNS, ALL_VARIANTS
+import pandas as pd
+from wordcloud import WordCloud
+
+from notebooks.daniel.constants import ALL_VARIANTS, CUSTOM_STOPWORDS, PROPER_NOUNS
 
 lemmatizer = WordNetLemmatizer()
 nltk.download("stopwords")
@@ -19,16 +21,18 @@ STOPWORDS = set(stopwords.words("english")).union(CUSTOM_STOPWORDS)
 # Load the cleaned data
 file_path = "../notebooks/daniel/noon_briefings_clean.csv"
 
+
 def read_csv_parsing_dates(file_path):
     df = pd.read_csv(file_path, parse_dates=["date"])
     df["year"] = df["date"].dt.year
     return df
 
+
 df = read_csv_parsing_dates(file_path)
 
 
-
 ### --- VISUALISATION FOR EACH YEAR ---
+
 
 def create_wordcloud():
     global wordcloud
@@ -81,7 +85,7 @@ for STUDIED_YEAR in sorted(df["year"].unique()):
     while i < len(words):
         matched = False
         for variant_words, merged_token in ALL_VARIANTS:
-            if words[i:i + len(variant_words)] == variant_words:
+            if words[i : i + len(variant_words)] == variant_words:
                 merged_words.append(merged_token)
                 i += len(variant_words)
                 matched = True
