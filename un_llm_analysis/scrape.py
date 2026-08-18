@@ -1,5 +1,6 @@
 import argparse
 from collections.abc import Iterator
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 import json
@@ -13,10 +14,6 @@ from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page, sync_playwright
 
 from un_llm_analysis.config import BASE_URL, BRIEFINGS_DIR, MIN_SCRAPE_DATE
-
-# Basically UN Noon Briefing skips weekends and fixed official New York holidays, but still some exceptions, such as the following two dates:
-# https://www.un.org/sg/en/content/highlight/2013-08-31.html (Saturday, but has briefing)
-# https://www.un.org/sg/en/content/highlight/2013-09-01.html (Sunday, but has briefing)
 
 FetchStatus = Literal["available", "not_published", "failed"]
 
@@ -68,7 +65,7 @@ def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResu
                     break
 
             if status_code in {404, 410}:
-                print(f"  - No briefing found for {date_string} (HTTP {status_code}).")
+                print(f"  - No briefing available for {date_string} (HTTP {status_code}).")
                 return FetchResult(
                     status="not_published", html=None, http_status=status_code, error=None
                 )
@@ -86,7 +83,7 @@ def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResu
             html = body.inner_html().strip()
 
             if not html:
-                print(f"  - No briefing found for {date_string}.")
+                print(f"  - No briefing available for {date_string}.")
                 return FetchResult(
                     status="not_published", html=None, http_status=status_code, error=None
                 )
@@ -96,26 +93,27 @@ def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResu
         except PlaywrightError as exc:
             if attempt < retries:
                 print(f"  ✗ Error on attempt {attempt + 1}: {exc}. Retrying...")
-                time.sleep(2)  # Wait a bit before retrying
+                time.sleep(2)
             else:
                 print(f"  ✗ Error on final attempt: {exc}. Giving up.")
                 return FetchResult(status="failed", html=None, http_status=None, error=str(exc))
     return FetchResult(status="failed", html=None, http_status=None, error="No response received.")
 
 
-def _is_briefing_scraped(date_string: str) -> bool:
+def _is_briefing_scraped(briefing_date: date) -> bool:
     """Check if a briefing for the given date has already been scraped.
 
     Args:
-        date_string (str): Date of the briefing to be scraped.
+        briefing_date (date): Date of the briefing to be scraped.
 
     Returns:
         bool: Check whether or not the briefing has been already been scraped
             or not.
     """
 
-    # Data paths follow this pattern:
-    #   "data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json"
+    # Data paths pattern: PROJ_ROOT/data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json
+
+    date_string = briefing_date.strftime("%Y-%m-%d")
 
     briefing_path = os.path.join(
         BRIEFINGS_DIR, date_string[:4], date_string[:7], f"{date_string}.json"
@@ -136,6 +134,8 @@ def _is_briefing_scraped(date_string: str) -> bool:
     return True
 
 
+# Check all dates because weekend and holiday exceptions exist, e.g.
+# 2013-08-31 (Saturday) and 2013-09-01 (Sunday).
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
     """Yield dates from start_date to end_date, inclusive
 
@@ -164,22 +164,36 @@ def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = Fal
             downloaded briefing. Defaults to False.
     """
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+    requested_dates = list(_dates_between(start_date, end_date))
+    dates_to_fetch = {
+        briefing_date
+        for briefing_date in requested_dates
+        if overwrite or not _is_briefing_scraped(briefing_date)
+    }
+
+    skipped_count = len(requested_dates) - len(dates_to_fetch)
+
+    print(
+        f"{len(requested_dates)} dates requested. "
+        f"{len(dates_to_fetch)} to fetch, {skipped_count} to skip."
+    )
+
+    if not dates_to_fetch:
+        print("All requested briefings already exist.")
+        return
+
+    with sync_playwright() as p, closing(p.chromium.launch(headless=True)) as browser:
+
         page = browser.new_page()
 
-        dates = list(_dates_between(start_date, end_date))
-
-        print(f"{len(dates)} dates to scrape ...")
-
-        for i, _date in enumerate(dates):
+        for i, _date in enumerate(requested_dates):
             date_string = _date.strftime("%Y-%m-%d")
-            print(f"[{i + 1}/{len(dates)}] {date_string}")
+            print(f"[{i + 1}/{len(requested_dates)}] {date_string}")
             file_path = Path(
                 f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
             )
 
-            if _is_briefing_scraped(date_string) and not overwrite:
+            if _date not in dates_to_fetch:
                 print("  - Already scraped, skipping")
                 continue
 
@@ -202,15 +216,13 @@ def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = Fal
                     "error": page_result.error,
                     "downloaded_at": downloaded_at,
                 }
-                # Even no briefing exists for this date, we still save a JSON file with "html": null to indicate that we checked and found nothing.
+                # Record checked dates even when no briefing is available.
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(json_content, f, ensure_ascii=False, indent=2)
             except Exception as exc:
                 print(f"  ✗ Error: {exc}")
 
             time.sleep(1)
-
-        browser.close()
 
 
 def _parse_date(value: str) -> date:
@@ -258,11 +270,10 @@ Run '%(prog)s COMMAND --help' for details about a command.
 
 Use positional dates or the --since option, but do not combine them.
 """,
-        epilog="""Accepted forms:
-  %(prog)s DATE [DATE]
-  %(prog)s --since DATE
-
-DATE must be in YYYY-MM-DD format.
+        epilog="""Examples:
+  %(prog)s 2026-08-12
+  %(prog)s 2026-08-01 2026-08-12
+  %(prog)s --since 2026-08-01
 
 --overwrite may be added to any form.
 """,
@@ -362,7 +373,7 @@ def main() -> None:
 
     if args.command == "check":
         date_string = args.date.strftime("%Y-%m-%d")
-        if _is_briefing_scraped(date_string):
+        if _is_briefing_scraped(args.date):
             print(f"Briefing for {date_string} exists in the data directory.")
         else:
             print(f"Briefing for {date_string} does NOT exist in the data directory.")
