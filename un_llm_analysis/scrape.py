@@ -23,6 +23,8 @@ FetchStatus = Literal["available", "not_published", "failed"]
 
 @dataclass(frozen=True)
 class FetchResult:
+    """Result from scraping a briefing of a given date."""
+
     status: FetchStatus
     html: str | None
     http_status: int | None
@@ -32,9 +34,13 @@ class FetchResult:
 def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResult:
     """Visit the briefing page for a given date and extract the (inner) html content.
 
-    Parameters:
-        page  - the Playwright browser page object (a single reusable tab)
-        date_string  - date in "YYYY-MM-DD" format, e.g. "2023-01-05"
+    Args:
+        page (Page): the Playwright browser page object (a single reusable tab)
+        date_string (str): Date in "YYYY-MM-DD" format, e.g. "2023-01-05"
+        retries (int, optional): Number of retries to download briefing. Defaults to 1.
+
+    Returns:
+        FetchResult: Result from scraping the briefing of a given date.
     """
 
     page_url = f"{BASE_URL}/{date_string}.html"
@@ -83,35 +89,53 @@ def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResu
             else:
                 print(f"  ✗ Error on final attempt: {exc}. Giving up.")
                 return FetchResult(status="failed", html=None, http_status=None, error=str(exc))
+    return FetchResult(status="failed", html=None, http_status=None, error="No response received.")
 
 
 def _is_briefing_scraped(date_string: str) -> bool:
-    """Check if a briefing for the given date has already been scraped."""
+    """Check if a briefing for the given date has already been scraped.
+
+    Args:
+        date_string (str): Date of the briefing to be scraped.
+
+    Returns:
+        bool: Check whether or not the briefing has been already been scraped
+            or not.
+    """
 
     # Data paths follow this pattern:
     #   "data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json"
 
-    BRIEFING_PATH = os.path.join(
+    briefing_path = os.path.join(
         BRIEFINGS_DIR, date_string[:4], date_string[:7], f"{date_string}.json"
     )
 
-    if not os.path.exists(BRIEFING_PATH):
+    if not os.path.exists(briefing_path):
         return False
 
     try:
-        with open(BRIEFING_PATH, "r", encoding="utf-8") as f:
+        with open(briefing_path, "r", encoding="utf-8") as f:
             record = json.load(f)
             if record.get("status") not in {"available", "not_published"}:
                 return False
     except (json.JSONDecodeError, IOError) as exc:
-        print(f"  ✗ Error reading {BRIEFING_PATH}: {exc}")
+        print(f"  ✗ Error reading {briefing_path}: {exc}")
         return False
 
     return True
 
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
-    """Yield dates from start_date to end_date, inclusive"""
+    """Yield dates from start_date to end_date, inclusive
+
+    Args:
+        start_date (date): The date to start the sequence from..
+        end_date (date): The date to end the sequence at.
+
+    Yields:
+        Iterator[date]: An iterator yielding dates in the range
+            [start_date, end_date].
+    """
 
     current_date = start_date
     while current_date <= end_date:
@@ -120,7 +144,14 @@ def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
 
 
 def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = False) -> None:
-    """Scrape UN noon briefings for all dates between start_date and end_date."""
+    """Scrape UN noon briefings for all dates between start_date and end_date
+
+    Args:
+        start_date (date): The date to start the sequence from..
+        end_date (date): The date to end the sequence at.
+        overwrite (bool, optional): Whether or not to overwrite an already
+            downloaded briefing. Defaults to False.
+    """
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -130,24 +161,24 @@ def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = Fal
 
         print(f"{len(dates)} dates to scrape ...")
 
-        for i, date in enumerate(dates):
-            date_string = date.strftime("%Y-%m-%d")
+        for i, _date in enumerate(dates):
+            date_string = _date.strftime("%Y-%m-%d")
             print(f"[{i + 1}/{len(dates)}] {date_string}")
             file_path = Path(
                 f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
             )
 
             if _is_briefing_scraped(date_string) and not overwrite:
-                print(f"  - Already scraped, skipping")
+                print("  - Already scraped, skipping")
                 continue
 
             try:
                 page_result = scrape_briefing(page, date_string)
                 file_path.parent.mkdir(parents=True, exist_ok=True)
                 if page_result.status == "available":
-                    print(f"  ✓ Got briefing")
+                    print("  ✓ Got briefing")
                 else:
-                    print(f"  - No briefing")
+                    print("  - No briefing")
 
                 downloaded_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
                 page_url = f"{BASE_URL}/{date_string}.html"
@@ -172,7 +203,17 @@ def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = Fal
 
 
 def _parse_date(value: str) -> date:
-    """Parse a string in YYYY-MM-DD format into a date object."""
+    """Parse a string in YYYY-MM-DD format into a date object.
+
+    Args:
+        value (str): Date in str type. YYYY-MM-DD format is expected.
+
+    Raises:
+        argparse.ArgumentTypeError: Exception for type.
+
+    Returns:
+        date: date type returned from str.
+    """
     try:
         return date.fromisoformat(value)
     except ValueError as exc:
@@ -259,7 +300,17 @@ DATE must be in YYYY-MM-DD format.
 def _resolve_update_request(
     parser: argparse.ArgumentParser, args: argparse.Namespace
 ) -> tuple[date, date, bool]:
-    """Resolve update arguments into a tuple of (start_date, end_date, overwrite)."""
+    """Resolve update arguments into a tuple of (start_date, end_date,
+        overwrite).
+
+    Args:
+        parser (argparse.ArgumentParser): Parser object.
+        args (argparse.Namespace): Arguments passed.
+
+    Returns:
+        tuple[date, date, bool]: Arguments for start_date, end_date and
+            overwrite.
+    """
 
     today = datetime.now(ZoneInfo("America/New_York")).date()
 
