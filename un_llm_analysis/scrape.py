@@ -56,6 +56,17 @@ def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResu
                 )
 
             status_code = response.status
+
+            # Allow successful non-200 responses time to resolve, mainly for the WAF challenge.
+            for _ in range(2):
+                if response.ok and (status_code != 200):
+                    page.wait_for_timeout(3_000)
+
+                    response = page.goto(page_url, wait_until="domcontentloaded", timeout=120_000)
+                    status_code = response.status
+                else:
+                    break
+
             if status_code in {404, 410}:
                 print(f"  - No briefing found for {date_string} (HTTP {status_code}).")
                 return FetchResult(
