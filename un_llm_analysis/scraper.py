@@ -276,6 +276,9 @@ Use positional dates or the --since option, but do not combine them.
   %(prog)s --since 2026-08-01
 
 --overwrite may be added to any form.
+
+Scraped raw data location:
+  PROJ_ROOT/data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json
 """,
         usage=("%(prog)s [-h] [--overwrite] " "(DATE [DATE] | " "--since DATE)"),
         formatter_class=formatter,
@@ -309,6 +312,9 @@ Use positional dates or the --since option, but do not combine them.
         ),
         epilog="""Example:
   %(prog)s 2026-08-12
+
+Scraped raw data location:
+  PROJ_ROOT/data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json
 """,
         formatter_class=formatter,
     )
