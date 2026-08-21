@@ -201,13 +201,13 @@ Unit tests are developed using [`pytest`](https://docs.pytest.org/en/stable/).
 Install pytest and pytest-cov.
 
 ```bash
-pipenv install -d pytest # pre-requisite
-pipenv install -d pytest-cov
+pipenv install -d pytest pytest-cov
 ```
 
 Install [pre-commit](https://pre-commit.com) as a dependency, then install the git hook scripts so checks run automatically before each commit.
 
 ```bash
+pipenv install -d pre-commit
 pre-commit install # run before the next command:
 ```
 
