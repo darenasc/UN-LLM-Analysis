@@ -7,7 +7,6 @@ jupyterlab = "*"
 notebook = "*"
 numpy = "*"
 pip = "*"
-pytest = "*"
 python-dotenv = "*"
 scikit-learn = "*"
 "un_llm_analysis" ={editable = true, path = "."}
@@ -22,11 +21,12 @@ mkdocs = "*"
 sqlalchemy = "*"
 pytest-cov = "*"
 pre-commit = "*"
+pipfile = "*"
 
 [requires]
 python_version = "3.12"
 
 [dev-packages]
 pipfile = "*"
-pytest-cov = "*"
 pytest = "*"
+pytest-cov = "*"
