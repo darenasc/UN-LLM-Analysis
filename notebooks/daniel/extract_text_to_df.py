@@ -1,5 +1,6 @@
 import json
 import re
+
 import pandas as pd
 
 # Load the JSON file
@@ -31,21 +32,21 @@ for record in records:
         # Headings are ALL CAPS, at least 3 characters, and only contain
         # letters, spaces, hyphens and slashes.
         is_heading = (
-            len(line) >= 3
-            and line == line.upper()
-            and re.match(r'^[A-Z][A-Z\s\-\/]+$', line)
+            len(line) >= 3 and line == line.upper() and re.match(r"^[A-Z][A-Z\s\-\/]+$", line)
         )
 
         if is_heading:
             # We have hit a new heading. First, save whatever we have
             # collected under the previous heading (if anything).
             if current_topic and current_lines:
-                all_sections.append({
-                    "date": date,
-                    "url": url,
-                    "topic": current_topic,
-                    "text": " ".join(current_lines).strip()
-                })
+                all_sections.append(
+                    {
+                        "date": date,
+                        "url": url,
+                        "topic": current_topic,
+                        "text": " ".join(current_lines).strip(),
+                    }
+                )
             # Start a new section
             current_topic = line
             current_lines = []
@@ -58,12 +59,14 @@ for record in records:
 
     # After the loop ends, save the last section which has no heading after it
     if current_topic and current_lines:
-        all_sections.append({
-            "date": date,
-            "url": url,
-            "topic": current_topic,
-            "text": " ".join(current_lines).strip()
-        })
+        all_sections.append(
+            {
+                "date": date,
+                "url": url,
+                "topic": current_topic,
+                "text": " ".join(current_lines).strip(),
+            }
+        )
 
 # Convert the list of dicts to a dataframe
 df = pd.DataFrame(all_sections)

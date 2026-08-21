@@ -1,13 +1,14 @@
-import pandas as pd
 from collections import Counter
+import os
 import re
+
 import matplotlib.pyplot as plt
 import nltk
 from nltk.stem import WordNetLemmatizer
 from nltk.util import bigrams
-import os
+import pandas as pd
 
-from notebooks.daniel.constants import STOPWORDS, PROPER_NOUNS, ALL_VARIANTS
+from notebooks.daniel.constants import ALL_VARIANTS, PROPER_NOUNS, STOPWORDS
 
 lemmatizer = WordNetLemmatizer()
 nltk.download("stopwords")
@@ -40,7 +41,7 @@ def get_word_counts(text):
     while i < len(words):
         matched = False
         for variant_words, merged_token in ALL_VARIANTS:
-            if words[i:i + len(variant_words)] == variant_words:
+            if words[i : i + len(variant_words)] == variant_words:
                 merged_words.append(merged_token)
                 i += len(variant_words)
                 matched = True
@@ -96,8 +97,7 @@ tracked_terms = [word for word, _ in total_counts.most_common(MAX_TRACKED_TERMS)
 
 # Only keep terms appearing in the top N in at least 2 years
 tracked_terms = [
-    term for term in tracked_terms
-    if sum(term in yearly_top[year] for year in yearly_top) >= 2
+    term for term in tracked_terms if sum(term in yearly_top[year] for year in yearly_top) >= 2
 ]
 
 # Step 3: build frequency matrix
@@ -118,9 +118,7 @@ freq_df_norm = freq_df.div(freq_df.sum(axis=0), axis=1)
 # Now sort by most recent year — freq_df_norm exists at this point
 most_recent_year = valid_years[-1]
 tracked_terms = sorted(
-    tracked_terms,
-    key=lambda term: freq_df_norm.loc[term, most_recent_year],
-    reverse=True
+    tracked_terms, key=lambda term: freq_df_norm.loc[term, most_recent_year], reverse=True
 )
 
 # Rebuild matrices in the new order
