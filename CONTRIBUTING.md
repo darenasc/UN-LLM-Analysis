@@ -20,6 +20,10 @@ All types of contributions are encouraged and valued. See the [Table of Contents
   - [Reporting Bugs](#reporting-bugs)
   - [Suggesting Enhancements](#suggesting-enhancements)
   - [Your First Code Contribution](#your-first-code-contribution)
+  - [Testing](#testing)
+    - [Installation](#installation)
+    - [Generating a Report](#generating-a-report)
+    - [Minimum Coverage Threshold](#minimum-coverage-threshold)
   - [Improving The Documentation](#improving-the-documentation)
 - [Styleguides](#styleguides)
   - [Commit Messages](#commit-messages)
@@ -188,6 +192,47 @@ git pull # pull the changes from the remote respository that will include the ch
 git branch -d <name_of_your_new_branch> # to delete the feature branch locally
 ```
 
+### Testing
+
+Unit tests are developed using [`pytest`](https://docs.pytest.org/en/stable/).
+
+#### Installation
+
+Install pytest
+
+```bash
+pipenv install pytest # pre-requisite
+```
+
+Install [pre-commit](https://pre-commit.com) as a dependency, then install the git hook scripts so checks run automatically before each commit.
+
+```bash
+pre-commit install # run before the next command:
+pipenv install pytest-cov
+```
+
+#### Generating a Report
+
+From the project root:
+
+```bash
+pytest --cov=path_to_tests_folder
+```
+
+Generate a html coverage report:
+
+```bash
+pytest --cov=path_to_tests_folder --cov-report=html
+```
+
+#### Minimum Coverage Threshold
+
+You can set a minimum coverage threshold:
+
+```bash
+pytest --cov=path_to_tests_folder --cov-fall-under=80
+```
+
 ### Improving The Documentation
 
 - Add docstrings in [google format](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) to your code.
@@ -206,31 +251,3 @@ Please try to follow the good practice of [atomic commits](https://medium.com/@s
 <!-- omit in toc -->
 ## Attribution
 This guide is based on the [contributing.md](https://contributing.md/generator)!
-
-# Pytest-Cov Documentation
-
-## Installation
-Install pytest
-```bash
-pipenv install pytest # pre-requisite
-```
-Install pre-commit as a dependency, then install the git hook scripts so checks run automatically before each commit.
-
-```bash
-pre-commit install # run before the next command:
-pipenv install pytest-cov
-```
-## Generating a Report
-From the project root:
-```bash
-`pytest --cov=path_to_tests_folder`
-```
-Generate a html coverage report:
-```bash
-`pytest --cov=path_to_tests_folder --cov-report=html`
-```
-### Minimum Coverage Threshold
-You can set a minimum coverage threshold:
-```bash
-`pytest --cov=path_to_tests_folder --cov-fall-under=80`
-```
