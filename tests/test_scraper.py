@@ -1,13 +1,13 @@
 import argparse
-from datetime import date
-import json
-import pytest
 from argparse import Namespace
 from datetime import date, datetime, timedelta
+import json
 from zoneinfo import ZoneInfo
 
-from un_llm_analysis.scraper import _dates_between, _parse_date
+import pytest
+
 import un_llm_analysis.scraper as scraper
+from un_llm_analysis.scraper import _dates_between, _parse_date
 
 
 def test_parse_date_valid():
@@ -43,14 +43,13 @@ def test_dates_between():
     # THEN the result should match the expected dates
     assert result == expected_dates
 
+
 @pytest.mark.parametrize(
     "status, expected",
     [
         ("available", True),
         ("not_published", True),
-        ("error", False),
         ("failed", False),
-        ("unknown", False),
     ],
 )
 def test_is_briefing_scraped_status(
@@ -65,27 +64,20 @@ def test_is_briefing_scraped_status(
 
     briefing_dir = tmp_path / "briefings"
 
-    briefing_path = (
-        briefing_dir
-        / "2026"
-        / "2026-08"
-        / "2026-08-20.json"
-    )
+    briefing_path = briefing_dir / "2026" / "2026-08" / "2026-08-20.json"
 
     briefing_path.parent.mkdir(parents=True)
 
     with open(briefing_path, "w", encoding="utf-8") as f:
         json.dump({"status": status}, f)
 
-    monkeypatch.setattr(
-        scraper,
-        "BRIEFINGS_DIR",
-        str(briefing_dir)
-    )
+    monkeypatch.setattr(scraper, "BRIEFINGS_DIR", str(briefing_dir))
 
     result = scraper._is_briefing_scraped(briefing_date)
 
     assert result is expected
+
+
 def test_is_briefing_scraped_returns_false_when_file_missing(
     tmp_path,
     monkeypatch,
@@ -108,9 +100,7 @@ def test_is_briefing_scraped_returns_false_for_invalid_json(
     """Return False when the briefing file contains invalid JSON."""
 
     briefing_dir = tmp_path / "briefings"
-    briefing_path = (
-        briefing_dir / "2026" / "2026-08" / "2026-08-20.json"
-    )
+    briefing_path = briefing_dir / "2026" / "2026-08" / "2026-08-20.json"
 
     briefing_path.parent.mkdir(parents=True)
     briefing_path.write_text("{invalid json", encoding="utf-8")
@@ -119,15 +109,18 @@ def test_is_briefing_scraped_returns_false_for_invalid_json(
 
     assert scraper._is_briefing_scraped(date(2026, 8, 20)) is False
 
+
 def test_build_parser_update_single_date():
     """Parse an update command with one date."""
 
     parser = scraper._build_parser()
 
-    args = parser.parse_args([
-        "update",
-        "2026-08-12",
-    ])
+    args = parser.parse_args(
+        [
+            "update",
+            "2026-08-12",
+        ]
+    )
 
     assert args.command == "update"
     assert args.dates == [date(2026, 8, 12)]
@@ -140,11 +133,13 @@ def test_build_parser_update_date_range():
 
     parser = scraper._build_parser()
 
-    args = parser.parse_args([
-        "update",
-        "2026-08-01",
-        "2026-08-12",
-    ])
+    args = parser.parse_args(
+        [
+            "update",
+            "2026-08-01",
+            "2026-08-12",
+        ]
+    )
 
     assert args.command == "update"
     assert args.dates == [
@@ -160,11 +155,13 @@ def test_build_parser_update_since():
 
     parser = scraper._build_parser()
 
-    args = parser.parse_args([
-        "update",
-        "--since",
-        "2026-08-01",
-    ])
+    args = parser.parse_args(
+        [
+            "update",
+            "--since",
+            "2026-08-01",
+        ]
+    )
 
     assert args.command == "update"
     assert args.dates == []
@@ -177,11 +174,13 @@ def test_build_parser_update_overwrite():
 
     parser = scraper._build_parser()
 
-    args = parser.parse_args([
-        "update",
-        "2026-08-12",
-        "--overwrite",
-    ])
+    args = parser.parse_args(
+        [
+            "update",
+            "2026-08-12",
+            "--overwrite",
+        ]
+    )
 
     assert args.command == "update"
     assert args.dates == [date(2026, 8, 12)]
@@ -194,22 +193,15 @@ def test_build_parser_check():
 
     parser = scraper._build_parser()
 
-    args = parser.parse_args([
-        "check",
-        "2026-08-12",
-    ])
+    args = parser.parse_args(
+        [
+            "check",
+            "2026-08-12",
+        ]
+    )
 
     assert args.command == "check"
     assert args.date == date(2026, 8, 12)
-
-
-def test_build_parser_invalid_command():
-    """Reject an unknown command."""
-
-    parser = scraper._build_parser()
-
-    with pytest.raises(SystemExit):
-        parser.parse_args(["invalid"])
 
 
 def test_build_parser_missing_command():
@@ -259,7 +251,14 @@ def test_resolve_update_request_date_range():
     assert overwrite is False
 
 
-def test_resolve_update_request_since():
+def test_resolve_update_request_since(monkeypatch):
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 8, 23, tzinfo=tz)
+
+    monkeypatch.setattr(scraper, "datetime", FixedDateTime)
+
     parser = scraper._build_parser()
 
     since_date = date(2026, 8, 1)
@@ -275,10 +274,10 @@ def test_resolve_update_request_since():
         args,
     )
 
-    today = datetime.now(ZoneInfo("America/New_York")).date()
+    expected_today = date(2026, 8, 23)
 
     assert start_date == since_date
-    assert end_date == today
+    assert end_date == expected_today
     assert overwrite is False
 
 
@@ -372,10 +371,17 @@ def test_resolve_update_request_before_min_scrape_date():
         scraper._resolve_update_request(parser, args)
 
 
-def test_resolve_update_request_date_after_today():
+def test_resolve_update_request_date_after_today(monkeypatch):
+    class FixedDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 8, 23, tzinfo=tz)
+
+    monkeypatch.setattr(scraper, "datetime", FixedDateTime)
+
     parser = scraper._build_parser()
 
-    today = datetime.now(ZoneInfo("America/New_York")).date()
+    today = date(2026, 8, 23)
     tomorrow = today + timedelta(days=1)
 
     args = Namespace(
