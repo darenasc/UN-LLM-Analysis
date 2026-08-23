@@ -2,6 +2,7 @@ import argparse
 import subprocess
 import sys
 
+
 def run_script(script_name):
     """
     Run a Python script as a subprocess and stop the pipeline if it fails.
@@ -28,20 +29,17 @@ def run_script(script_name):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run the noon briefings analysis pipeline."
-    )
+    parser = argparse.ArgumentParser(description="Run the noon briefings analysis pipeline.")
     parser.add_argument(
         "--scrape",
         action="store_true",
         help="Run scrape.py first to fetch the latest briefings. "
-             "Skipped by default since it takes a long time."
+        "Skipped by default since it takes a long time.",
     )
     args = parser.parse_args()
 
     if args.scrape:
         run_script("scrape.py")
-
 
     run_script("extract_text_to_df.py")
     run_script("aggregation.py")

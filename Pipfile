@@ -1,13 +1,5 @@
 [packages]
-black = "*"
-flake8 = "*"
-ipython = "*"
-isort = "*"
-jupyterlab = "*"
-notebook = "*"
 numpy = "*"
-pip = "*"
-pytest = "*"
 python-dotenv = "*"
 scikit-learn = "*"
 "un_llm_analysis" ={editable = true, path = "."}
@@ -16,16 +8,21 @@ matplotlib = "*"
 wordcloud = "*"
 nltk = "*"
 pandas = "*"
-argparse = "*"
 playwright = "*"
 mkdocs = "*"
 sqlalchemy = "*"
+pipfile = "*"
 
 [requires]
 python_version = "3.12"
 
 [dev-packages]
 pipfile = "*"
+pytest = "*"
+pytest-cov = "*"
+pre-commit = "*"
 black = "*"
 isort = "*"
-pytest-cov = "*"
+ipython = "*"
+jupyterlab = "*"
+notebook = "*"
