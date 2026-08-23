@@ -251,14 +251,19 @@ def test_resolve_update_request_date_range():
     assert overwrite is False
 
 
-def test_resolve_update_request_since(monkeypatch):
+@pytest.fixture
+def fixed_today(monkeypatch):
     class FixedDateTime(datetime):
         @classmethod
         def now(cls, tz=None):
-            return cls(2026, 8, 23, tzinfo=tz)
+            return cls(2026, 8, 20, tzinfo=tz)
 
     monkeypatch.setattr(scraper, "datetime", FixedDateTime)
 
+    return date(2026, 8, 20)
+
+
+def test_resolve_update_request_since(fixed_today):
     parser = scraper._build_parser()
 
     since_date = date(2026, 8, 1)
@@ -274,7 +279,7 @@ def test_resolve_update_request_since(monkeypatch):
         args,
     )
 
-    expected_today = date(2026, 8, 23)
+    expected_today = fixed_today
 
     assert start_date == since_date
     assert end_date == expected_today
@@ -371,18 +376,10 @@ def test_resolve_update_request_before_min_scrape_date():
         scraper._resolve_update_request(parser, args)
 
 
-def test_resolve_update_request_date_after_today(monkeypatch):
-    class FixedDateTime(datetime):
-        @classmethod
-        def now(cls, tz=None):
-            return cls(2026, 8, 23, tzinfo=tz)
-
-    monkeypatch.setattr(scraper, "datetime", FixedDateTime)
-
+def test_resolve_update_request_date_after_today(fixed_today):
     parser = scraper._build_parser()
 
-    today = date(2026, 8, 23)
-    tomorrow = today + timedelta(days=1)
+    tomorrow = fixed_today + timedelta(days=1)
 
     args = Namespace(
         dates=[tomorrow],
