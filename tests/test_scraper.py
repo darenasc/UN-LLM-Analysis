@@ -2,12 +2,10 @@ import argparse
 from argparse import Namespace
 from datetime import date, datetime, timedelta
 import json
-from zoneinfo import ZoneInfo
 
 import pytest
 
 import un_llm_analysis.scraper as scraper
-from un_llm_analysis.scraper import _dates_between, _parse_date
 
 
 def test_parse_date_valid():
@@ -15,7 +13,7 @@ def test_parse_date_valid():
     date_string = "2026-08-01"
 
     # WHEN _parse_date is called
-    result = _parse_date(date_string)
+    result = scraper._parse_date(date_string)
 
     # THEN the result should match the expected date
     assert result == date(2026, 8, 1)
@@ -28,7 +26,7 @@ def test_parse_date_invalid():
     # WHEN _parse_date is called
     # THEN ArgumentTypeError is raised.
     with pytest.raises(argparse.ArgumentTypeError):
-        _parse_date(date_string)
+        scraper._parse_date(date_string)
 
 
 def test_dates_between():
@@ -38,7 +36,7 @@ def test_dates_between():
     expected_dates = [date(2026, 1, 30), date(2026, 1, 31), date(2026, 2, 1)]
 
     # WHEN _dates_between is called
-    result = list(_dates_between(start_date, end_date))
+    result = list(scraper._dates_between(start_date, end_date))
 
     # THEN the result should match the expected dates
     assert result == expected_dates
@@ -50,6 +48,7 @@ def test_dates_between():
         ("available", True),
         ("not_published", True),
         ("failed", False),
+        ("unknown", False),
     ],
 )
 def test_is_briefing_scraped_status(
