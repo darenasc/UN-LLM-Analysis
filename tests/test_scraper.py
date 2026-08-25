@@ -2,7 +2,9 @@ import argparse
 from argparse import Namespace
 from datetime import date, datetime, timedelta
 import json
+from unittest.mock import Mock
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 import pytest
 
 import un_llm_analysis.scraper as scraper
@@ -388,3 +390,161 @@ def test_resolve_update_request_date_after_today(fixed_today):
 
     with pytest.raises(SystemExit):
         scraper._resolve_update_request(parser, args)
+
+
+def fake_scrape_brieing(page, briefing_date):
+    return scraper.FetchResult(
+        status="available",
+        html="<p>Briefing</p>",
+        http_status=200,
+        error=None,
+    )
+
+
+def test_scrape_briefing_available():
+    """Test successful scraping of an available briefing."""
+
+    response = Mock(status=200, ok=True)
+    html = "<p>Briefing</p>"
+
+    page = Mock()
+    page.goto.return_value = response
+    page.locator.return_value.inner_html.return_value = html
+
+    result = scraper.scrape_briefing(page, "2026-08-20")
+
+    expected = scraper.FetchResult(
+        status="available", html=html, http_status=response.status, error=None
+    )
+
+    page.goto.assert_called_once()
+    page.locator.assert_called_once()
+    assert result == expected
+
+
+def make_mock_page(response, html):
+    page = Mock()
+    page.goto.return_value = response
+    page.locator.return_value.inner_html.return_value = html
+
+    return page
+
+
+@pytest.mark.parametrize(
+    "response, html, expected",
+    [
+        (
+            Mock(status=200, ok=True),
+            "<p>Briefing</p>",
+            scraper.FetchResult(
+                status="available", html="<p>Briefing</p>", http_status=200, error=None
+            ),
+        ),
+        (
+            Mock(status=200, ok=True),
+            "",
+            scraper.FetchResult(status="not_published", html=None, http_status=200, error=None),
+        ),
+        (
+            None,
+            None,
+            scraper.FetchResult(
+                status="failed", html=None, http_status=None, error="No response received."
+            ),
+        ),
+        (
+            Mock(status=404, ok=False),
+            None,
+            scraper.FetchResult(status="not_published", html=None, http_status=404, error=None),
+        ),
+        (
+            Mock(status=403, ok=False),
+            None,
+            scraper.FetchResult(
+                status="failed", html=None, http_status=403, error="Unexpected status code: 403"
+            ),
+        ),
+    ],
+    ids=[
+        "available-200",
+        "empty-html-200",
+        "no-response",
+        "not-published-404",
+        "failed-403",
+    ],
+)
+def test_scrape_briefing_by_basic_http_responses(response, html, expected):
+    page = make_mock_page(response, html)
+
+    result = scraper.scrape_briefing(page, "2026-08-20")
+
+    page.goto.assert_called_once()
+
+    if response is not None and response.status == 200:
+        page.locator.assert_called_once()
+        page.locator.return_value.inner_html.assert_called_once()
+    else:
+        page.locator.assert_not_called()
+
+    assert result == expected
+
+
+def test_scrape_briefing_status_202_retry_fails():
+    page = make_mock_page(Mock(status=202, ok=True), None)
+
+    result = scraper.scrape_briefing(page, "2026-08-20")
+
+    expected = scraper.FetchResult(
+        status="failed", html=None, http_status=202, error="Unexpected status code: 202"
+    )
+
+    assert page.goto.call_count == 3
+    assert page.wait_for_timeout.call_count == 2
+    page.locator.assert_not_called()
+
+    assert result == expected
+
+
+def test_scrape_briefing_status_202_retry_succeeds():
+    html = "<p>Briefing</p>"
+
+    response_202 = Mock(status=202, ok=True)
+    response_200 = Mock(status=200, ok=True)
+
+    page = make_mock_page(response_202, html)
+    page.goto.side_effect = [response_202, response_200]
+
+    result = scraper.scrape_briefing(page, "2026-08-20")
+
+    expected = scraper.FetchResult(status="available", html=html, http_status=200, error=None)
+
+    assert page.goto.call_count == 2
+    page.wait_for_timeout.assert_called_once()
+    page.locator.assert_called_once()
+    page.locator.return_value.inner_html.assert_called_once()
+
+    assert result == expected
+
+
+def test_scrape_briefing_selector_wait_timeout(monkeypatch):
+    page = make_mock_page(Mock(status=200, ok=True), None)
+
+    error_message = "Target selector not found"
+
+    page.locator.return_value.wait_for.side_effect = PlaywrightTimeoutError(error_message)
+
+    # Skip the real retry delay
+    monkeypatch.setattr(scraper.time, "sleep", lambda _seconds: None)
+
+    result = scraper.scrape_briefing(page, "2026-08-20")
+
+    expected = scraper.FetchResult(
+        status="failed", html=None, http_status=None, error=error_message
+    )
+
+    assert page.goto.call_count == 2
+    assert page.locator.call_count == 2
+    assert page.locator.return_value.wait_for.call_count == 2
+    assert page.locator.return_value.inner_html.call_count == 0
+
+    assert result == expected
