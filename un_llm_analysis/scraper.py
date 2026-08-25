@@ -386,9 +386,8 @@ def main() -> None:
             print(f"Briefing for {date_string} exists in the data directory.")
         else:
             print(f"Briefing for {date_string} does NOT exist in the data directory.")
-        return
 
-    if args.command == "update":
+    elif args.command == "update":  # pragma: no branch
         start_date, end_date, overwrite = _resolve_update_request(parser, args)
         print(f"Updating briefings from {start_date} to {end_date}, overwrite={overwrite} ...")
         scrape_between_dates(start_date, end_date, overwrite=overwrite)

@@ -684,3 +684,63 @@ def test_scrape_between_dates_continues_after_unexpected_error(
     assert fake_scrape_briefing.call_count == 2
     assert scraper._is_briefing_scraped(briefing_dates[0]) is False
     assert scraper._is_briefing_scraped(briefing_dates[1]) is True
+
+
+@pytest.mark.parametrize("is_scraped", [True, False])
+def test_main_check(monkeypatch, is_scraped):
+    briefing_date = date(2026, 8, 20)
+
+    fake_parser = Mock()
+    fake_parser.parse_args.return_value = Namespace(
+        command="check",
+        date=briefing_date,
+    )
+    monkeypatch.setattr(scraper, "_build_parser", Mock(return_value=fake_parser))
+
+    fake_is_briefing_scraped = Mock(return_value=is_scraped)
+    monkeypatch.setattr(
+        scraper,
+        "_is_briefing_scraped",
+        fake_is_briefing_scraped,
+    )
+
+    scraper.main()
+
+    fake_is_briefing_scraped.assert_called_once_with(briefing_date)
+
+
+def test_main_update(monkeypatch):
+    args = Namespace(command="update")
+
+    fake_parser = Mock()
+    fake_parser.parse_args.return_value = args
+    monkeypatch.setattr(scraper, "_build_parser", Mock(return_value=fake_parser))
+
+    fake_resolve_update_request = Mock(
+        return_value=(
+            date(2026, 8, 1),
+            date(2026, 8, 20),
+            False,
+        )
+    )
+    monkeypatch.setattr(
+        scraper,
+        "_resolve_update_request",
+        fake_resolve_update_request,
+    )
+
+    fake_scrape_between_dates = Mock()
+    monkeypatch.setattr(
+        scraper,
+        "scrape_between_dates",
+        fake_scrape_between_dates,
+    )
+
+    scraper.main()
+
+    fake_resolve_update_request.assert_called_once_with(fake_parser, args)
+    fake_scrape_between_dates.assert_called_once_with(
+        date(2026, 8, 1),
+        date(2026, 8, 20),
+        overwrite=False,
+    )
