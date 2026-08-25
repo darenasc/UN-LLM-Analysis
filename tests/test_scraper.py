@@ -392,36 +392,6 @@ def test_resolve_update_request_date_after_today(fixed_today):
         scraper._resolve_update_request(parser, args)
 
 
-def fake_scrape_brieing(page, briefing_date):
-    return scraper.FetchResult(
-        status="available",
-        html="<p>Briefing</p>",
-        http_status=200,
-        error=None,
-    )
-
-
-def test_scrape_briefing_available():
-    """Test successful scraping of an available briefing."""
-
-    response = Mock(status=200, ok=True)
-    html = "<p>Briefing</p>"
-
-    page = Mock()
-    page.goto.return_value = response
-    page.locator.return_value.inner_html.return_value = html
-
-    result = scraper.scrape_briefing(page, "2026-08-20")
-
-    expected = scraper.FetchResult(
-        status="available", html=html, http_status=response.status, error=None
-    )
-
-    page.goto.assert_called_once()
-    page.locator.assert_called_once()
-    assert result == expected
-
-
 def make_mock_page(response, html):
     page = Mock()
     page.goto.return_value = response
