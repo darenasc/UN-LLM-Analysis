@@ -80,7 +80,7 @@ def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResu
 
             body = page.locator(".field--name-body")
             body.wait_for(state="visible", timeout=120_000)
-            html = body.inner_html().strip()
+            html = body.inner_html()
 
             if not html:
                 print(f"  - No briefing available for {date_string}.")
@@ -88,7 +88,9 @@ def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResu
                     status="not_published", html=None, http_status=status_code, error=None
                 )
 
-            return FetchResult(status="available", html=html, http_status=status_code, error=None)
+            return FetchResult(
+                status="available", html=html.strip(), http_status=status_code, error=None
+            )
 
         except PlaywrightError as exc:
             if attempt < retries:
@@ -97,7 +99,8 @@ def scrape_briefing(page: Page, date_string: str, retries: int = 1) -> FetchResu
             else:
                 print(f"  ✗ Error on final attempt: {exc}. Giving up.")
                 return FetchResult(status="failed", html=None, http_status=None, error=str(exc))
-    return FetchResult(status="failed", html=None, http_status=None, error="No response received.")
+
+    raise RuntimeError("Unexpected end of scrape_briefing")  # pragma: no cover
 
 
 def _is_briefing_scraped(briefing_date: date) -> bool:
@@ -350,7 +353,7 @@ def _resolve_update_request(
             parser.error("At most two positional dates may be provided.")
         elif len(args.dates) == 1:
             start_date = end_date = args.dates[0]
-        elif len(args.dates) == 2:
+        else:  # len(args.dates) must be 2
             start_date, end_date = args.dates
     elif args.since is not None:
         start_date = args.since
@@ -392,5 +395,5 @@ def main() -> None:
         print("Update complete.")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
