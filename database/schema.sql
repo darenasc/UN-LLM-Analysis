@@ -8,7 +8,7 @@ CREATE TABLE briefings (
     url TEXT NOT NULL UNIQUE,
     speaker_name TEXT NOT NULL,
     speaker_role TEXT NOT NULL,
-    preface_text TEXT NOT NULL,
+    full_text TEXT NOT NULL,
     downloaded_at TEXT NOT NULL,
     processed_at TEXT NOT NULL
 );

@@ -12,6 +12,9 @@ playwright = "*"
 mkdocs = "*"
 sqlalchemy = "*"
 pipfile = "*"
+markdownify = "*"
+beautifulsoup4 = "*"
+markdown = "*"
 
 [requires]
 python_version = "3.12"
