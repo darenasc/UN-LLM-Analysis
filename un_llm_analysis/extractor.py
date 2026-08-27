@@ -147,11 +147,11 @@ def _extract_speaker(hard_lines: list[HardLine]) -> tuple[str | None, str | None
         cleaned = remaining[len(by_str) :].replace(",", "\n")
         parts = [part.strip() for part in cleaned.splitlines() if part.strip()]
 
-        if len(parts) < 2:
+        if not parts:
             return None, None
 
         speaker_name = parts[0]
-        speaker_role = parts[1]
+        speaker_role = parts[1] if len(parts) >= 2 else None
 
         return speaker_name, speaker_role
 
