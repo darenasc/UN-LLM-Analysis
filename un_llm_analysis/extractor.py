@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, datetime
+import json
 from pathlib import Path
 
 from bs4 import BeautifulSoup
@@ -257,3 +258,21 @@ def extract_briefing(file_path: Path) -> ExtractedBriefing:
     Returns:
         ExtractedBriefing: Structured briefing data extracted from the JSON file.
     """
+
+    with file_path.open("r", encoding="utf-8") as file:
+        record = json.load(file)
+
+    if record["status"] != "available":
+        return None
+
+    extracted_content = extract_html(record["html"])
+
+    return ExtractedBriefing(
+        briefing_date=record["date"],
+        url=record["url"],
+        downloaded_at=record["downloaded_at"],
+        speaker_name=extracted_content.speaker_name,
+        speaker_role=extracted_content.speaker_role,
+        sections=extracted_content.sections,
+        full_text=extracted_content.full_text,
+    )
