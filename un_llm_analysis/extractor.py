@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import date, datetime
 import json
 from pathlib import Path
 
@@ -26,11 +25,11 @@ class ExtractedContent:
 
 @dataclass(frozen=True)
 class ExtractedBriefing:
-    briefing_date: date
+    briefing_date: str
     url: str
-    downloaded_at: datetime
-    speaker_name: str
-    speaker_role: str
+    downloaded_at: str
+    speaker_name: str | None
+    speaker_role: str | None
     sections: tuple[ExtractedSection, ...]
     full_text: str
 
@@ -65,17 +64,17 @@ def _is_fully_bold(markdown: str) -> bool:
     return True
 
 
-def _markdown_to_text(markdown_text: str) -> str:
+def _markdown_to_text(markdown_line: str) -> str:
     """Convert a Markdown string to plain text.
 
     Args:
-        markdown_text (str): Markdown string to convert.
+        markdown_line (str): Markdown string to convert.
 
     Returns:
         str: Plain text converted from the markdown.
     """
 
-    html = markdown.markdown(markdown_text)
+    html = markdown.markdown(markdown_line)
     result = BeautifulSoup(html, "html.parser").get_text().strip()
 
     return result
@@ -97,19 +96,19 @@ def _extract_hard_lines(html: str) -> list[HardLine]:
         wrap=False,
     )
 
-    hard_lines = []
+    hard_lines: list[HardLine] = []
 
     for line in converted.splitlines():
-        markdown = line.strip().removesuffix("\\").rstrip()
+        markdown_line = line.strip().removesuffix("\\").rstrip()
 
-        if not markdown:
+        if not markdown_line:
             continue
 
         hard_lines.append(
             HardLine(
-                text=_markdown_to_text(markdown),
-                markdown=markdown,
-                fully_bold=_is_fully_bold(markdown),
+                text=_markdown_to_text(markdown_line),
+                markdown=markdown_line,
+                fully_bold=_is_fully_bold(markdown_line),
             )
         )
 
@@ -196,13 +195,14 @@ def _extract_sections(hard_lines: list[HardLine]) -> tuple[ExtractedSection, ...
         tuple[ExtractedSection, ...]: Sections extracted from the hard lines.
     """
 
-    extracted_sections = []
+    extracted_sections: list[ExtractedSection] = []
     i = 0
 
     while i < len(hard_lines) - 1:
         current_is_title_candidate = _is_section_title_candidate(hard_lines[i])
         next_is_title_candidate = _is_section_title_candidate(hard_lines[i + 1])
 
+        # This may treat a few irregular header lines as section titles (an accepted limitation).
         found_section = current_is_title_candidate and not next_is_title_candidate
 
         if not found_section:
@@ -249,14 +249,14 @@ def extract_html(html: str) -> ExtractedContent:
     )
 
 
-def extract_briefing(file_path: Path) -> ExtractedBriefing:
+def extract_briefing(file_path: Path) -> ExtractedBriefing | None:
     """Extract a structured briefing from a briefing's JSON file
 
     Args:
         file_path (Path): Path to the briefing JSON file.
 
     Returns:
-        ExtractedBriefing: Structured briefing data extracted from the JSON file.
+        ExtractedBriefing | None: Structured briefing data extracted from the JSON file, or None if unavailable.
     """
 
     with file_path.open("r", encoding="utf-8") as file:
