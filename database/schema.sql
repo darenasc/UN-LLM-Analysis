@@ -2,10 +2,15 @@
 
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE briefings (
+CREATE TABLE briefing (
     briefing_id INTEGER PRIMARY KEY,
     briefing_date TEXT NOT NULL UNIQUE,
     url TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL CHECK (
+        status IN ('available', 'not_published', 'failed')
+    ),
+    http_status INTEGER,
+    error TEXT,
     speaker_name TEXT,
     speaker_role TEXT,
     full_text TEXT NOT NULL,
@@ -14,7 +19,7 @@ CREATE TABLE briefings (
 );
 
 
-CREATE TABLE sections (
+CREATE TABLE section (
     section_id INTEGER PRIMARY KEY,
     briefing_id INTEGER NOT NULL,
     section_order INTEGER NOT NULL,

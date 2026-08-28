@@ -6,6 +6,8 @@ from bs4 import BeautifulSoup
 import markdown
 from markdownify import markdownify
 
+from un_llm_analysis.scraper import FetchStatus
+
 
 @dataclass(frozen=True)
 class ExtractedSection:
@@ -27,11 +29,14 @@ class ExtractedContent:
 class ExtractedBriefing:
     briefing_date: str
     url: str
+    status: FetchStatus
+    http_status: int | None
+    error: str | None
     downloaded_at: str
     speaker_name: str | None
     speaker_role: str | None
     sections: tuple[ExtractedSection, ...]
-    full_text: str
+    full_text: str | None
 
 
 @dataclass(frozen=True)
@@ -249,27 +254,41 @@ def extract_html(html: str) -> ExtractedContent:
     )
 
 
-def extract_briefing(file_path: Path) -> ExtractedBriefing | None:
+def extract_briefing(file_path: Path) -> ExtractedBriefing:
     """Extract a structured briefing from a briefing's JSON file
 
     Args:
         file_path (Path): Path to the briefing JSON file.
 
     Returns:
-        ExtractedBriefing | None: Structured briefing data extracted from the JSON file, or None if unavailable.
+        ExtractedBriefing: Briefing record parsed from the JSON file.
     """
 
     with file_path.open("r", encoding="utf-8") as file:
         record = json.load(file)
 
     if record["status"] != "available":
-        return None
+        return ExtractedBriefing(
+            briefing_date=record["date"],
+            url=record["url"],
+            status=record["status"],
+            http_status=record["http_status"],
+            error=record["error"],
+            downloaded_at=record["downloaded_at"],
+            speaker_name=None,
+            speaker_role=None,
+            sections=(),
+            full_text=None,
+        )
 
     extracted_content = extract_html(record["html"])
 
     return ExtractedBriefing(
         briefing_date=record["date"],
         url=record["url"],
+        status=record["status"],
+        http_status=record["http_status"],
+        error=record["error"],
         downloaded_at=record["downloaded_at"],
         speaker_name=extracted_content.speaker_name,
         speaker_role=extracted_content.speaker_role,
