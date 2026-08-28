@@ -6,8 +6,8 @@ CREATE TABLE briefings (
     briefing_id INTEGER PRIMARY KEY,
     briefing_date TEXT NOT NULL UNIQUE,
     url TEXT NOT NULL UNIQUE,
-    speaker_name TEXT NOT NULL,
-    speaker_role TEXT NOT NULL,
+    speaker_name TEXT,
+    speaker_role TEXT,
     full_text TEXT NOT NULL,
     downloaded_at TEXT NOT NULL,
     processed_at TEXT NOT NULL
