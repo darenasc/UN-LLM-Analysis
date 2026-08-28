@@ -5,7 +5,7 @@ import time
 
 from playwright.sync_api import sync_playwright
 
-from notebooks.daniel.constants import (
+from notebooks.daniel.archive.constants import (
     BACKUP_EVERY_X_ITERATIONS,
     BASE_URL,
     END_DATE,
@@ -132,7 +132,7 @@ def scrape_all():
                 print(f"  ✗ Error: {e}")
 
             if i % BACKUP_EVERY_X_ITERATIONS == 0 and results:
-                with open("noon_briefings_partial.json", "w", encoding="utf-8") as f:
+                with open("../noon_briefings_partial.json", "w", encoding="utf-8") as f:
                     json.dump(results, f, ensure_ascii=False, indent=2)
 
             time.sleep(1)
@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     # Write the final complete dataset to a JSON file.
     # indent=2 makes the file human-readable (one key per line, indented).
-    with open("noon_briefings.json", "w", encoding="utf-8") as f:
+    with open("../noon_briefings.json", "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
     print(f"\nDone. Saved {len(results)} briefings.")

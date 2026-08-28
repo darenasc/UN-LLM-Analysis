@@ -10,7 +10,7 @@ from nltk.util import bigrams
 import pandas as pd
 from wordcloud import WordCloud
 
-from notebooks.daniel.constants import ALL_VARIANTS, CUSTOM_STOPWORDS, PROPER_NOUNS
+from notebooks.daniel.archive.constants import ALL_VARIANTS, CUSTOM_STOPWORDS, PROPER_NOUNS
 
 lemmatizer = WordNetLemmatizer()
 nltk.download("stopwords")

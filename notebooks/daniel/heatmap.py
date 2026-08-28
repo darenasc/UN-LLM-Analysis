@@ -8,7 +8,7 @@ from nltk.stem import WordNetLemmatizer
 from nltk.util import bigrams
 import pandas as pd
 
-from notebooks.daniel.constants import ALL_VARIANTS, PROPER_NOUNS, STOPWORDS
+from notebooks.daniel.archive.constants import ALL_VARIANTS, PROPER_NOUNS, STOPWORDS
 
 lemmatizer = WordNetLemmatizer()
 nltk.download("stopwords")

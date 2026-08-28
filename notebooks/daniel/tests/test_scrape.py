@@ -1,12 +1,11 @@
 from datetime import date
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 import pytest
 
-from notebooks.daniel.constants import BASE_URL
-import notebooks.daniel.scrape as scrape
-from notebooks.daniel.scrape import daterange, scrape_all, scrape_briefing
+from notebooks.daniel.archive.constants import BASE_URL
+import notebooks.daniel.archive.scrape as scrape
+from notebooks.daniel.archive.scrape import daterange, scrape_briefing
 
 
 @pytest.mark.parametrize(
