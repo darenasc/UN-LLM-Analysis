@@ -1,10 +1,17 @@
-import json
-import time
 from datetime import timedelta
+import json
 import os
-from playwright.sync_api import sync_playwright
-from notebooks.daniel.constants import SATURDAY, BACKUP_EVERY_X_ITERATIONS, BASE_URL, START_DATE, END_DATE
+import time
 
+from playwright.sync_api import sync_playwright
+
+from notebooks.daniel.constants import (
+    BACKUP_EVERY_X_ITERATIONS,
+    BASE_URL,
+    END_DATE,
+    SATURDAY,
+    START_DATE,
+)
 
 # --- Configuration ---
 # Base URL for the UN Secretary-General noon briefing page.
@@ -85,6 +92,7 @@ def scrape_briefing(page_object, date_string):
     # easy to trace any record back to its source for verification later.
     return {"date": date_string, "page_url": page_url, "text": text.strip()}
 
+
 def load_existing_results(path="noon_briefings.json"):
     """Load previously scraped results, if any, so we can skip re-scraping them."""
     if os.path.exists(path):
@@ -132,6 +140,7 @@ def scrape_all():
         browser.close()
 
     return results
+
 
 # This guard ensures the scraping only runs when the script is executed
 # directly (e.g. `python scrape.py`), not when it is imported as a module

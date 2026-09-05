@@ -1,5 +1,6 @@
-import pandas as pd
 import json
+
+import pandas as pd
 
 df = pd.read_csv("noon_briefings.csv")
 records = df.to_dict(orient="records")

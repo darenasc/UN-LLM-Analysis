@@ -1,23 +1,84 @@
 from datetime import date
+
 from nltk.corpus import stopwords
 
 CUSTOM_STOPWORDS = {
-    "also", "today", "secretary", "general", "secretarygeneral", "united", "nations",
-    "said", "including", "according", "saying", "says",
-    "noted", "added", "stressed", "told", "called", "reported",
-    "un", "new", "one", "two", "three", "would", "could", "per", "met", "meet", "meeting", "many", "must", "tell",
-    "should", "million", "number",
-    "last", "lastly",
+    "also",
+    "today",
+    "secretary",
+    "general",
+    "secretarygeneral",
+    "united",
+    "nations",
+    "said",
+    "including",
+    "according",
+    "saying",
+    "says",
+    "noted",
+    "added",
+    "stressed",
+    "told",
+    "called",
+    "reported",
+    "un",
+    "new",
+    "one",
+    "two",
+    "three",
+    "would",
+    "could",
+    "per",
+    "met",
+    "meet",
+    "meeting",
+    "many",
+    "must",
+    "tell",
+    "should",
+    "million",
+    "number",
+    "last",
+    "lastly",
     "humanitarian",
-    "coordination", "coordinator", "coordinators",
-    "office", "affair", "affairs",
-    "programme", "food",
-    "partner", "continue",
-    "people", "nearly",
-    "noon", "briefing", "highlight",
-    "international", "law", "right", "human",
-    "security", "council", "country", "member", "minister","representative", "envoy", "peacekeeping", "mission",
-    "led", "resident", "statement", "issued", "men", "around", "high", "commissioner", "working","women"
+    "coordination",
+    "coordinator",
+    "coordinators",
+    "office",
+    "affair",
+    "affairs",
+    "programme",
+    "food",
+    "partner",
+    "continue",
+    "people",
+    "nearly",
+    "noon",
+    "briefing",
+    "highlight",
+    "international",
+    "law",
+    "right",
+    "human",
+    "security",
+    "council",
+    "country",
+    "member",
+    "minister",
+    "representative",
+    "envoy",
+    "peacekeeping",
+    "mission",
+    "led",
+    "resident",
+    "statement",
+    "issued",
+    "men",
+    "around",
+    "high",
+    "commissioner",
+    "working",
+    "women",
 }
 STOPWORDS = set(stopwords.words("english")).union(CUSTOM_STOPWORDS)
 
@@ -57,26 +118,22 @@ MERGED_TERMS = {
         "woman children",
         "women and children",
     ],
-
     "responseplan": [
         "response plan",
-
     ],
-
-"centralafricanrepublic": [
-    "central african republic",
-    "central african",
-    "african republic",
-],
-
-"sustainabledevelopmentgoals": [ # this term is not appearing frequently anyway
-    "sustainable development goal",
-    "sustainable development",
-    "development goal",
-    "sdgs",
-    "sdg",
-    "unsdg",
-],
+    "centralafricanrepublic": [
+        "central african republic",
+        "central african",
+        "african republic",
+    ],
+    "sustainabledevelopmentgoals": [  # this term is not appearing frequently anyway
+        "sustainable development goal",
+        "sustainable development",
+        "development goal",
+        "sdgs",
+        "sdg",
+        "unsdg",
+    ],
     # To EXCLUDE a phrase entirely (like "local authority"), just don't include
     # its merged token in PROPER_NOUNS below.
     "localauthority": [
@@ -95,7 +152,7 @@ PROPER_NOUNS = [
     "worldfoodprogramme",
     "womanchild",
     "centralafricanrepublic",
-    #"localauthority"
+    # "localauthority"
 ]
 
 # Build a flat list of (variant_words, merged_token), sorted longest-first
@@ -107,7 +164,7 @@ ALL_VARIANTS = sorted(
         for variant in variants
     ),
     key=lambda x: len(x[0]),
-    reverse=True
+    reverse=True,
 )
 
 SATURDAY = 5

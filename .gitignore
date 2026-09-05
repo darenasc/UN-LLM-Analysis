@@ -198,3 +198,8 @@ cython_debug/
 .idea/
 
 Pipfile.lock
+
+htmlcov
+
+# temporarily exclude png files (Wordsoups)
+*.png
