@@ -132,6 +132,11 @@ def _extract_speaker(hard_lines: list[HardLine]) -> tuple[str | None, str | None
 
     title_str = "HIGHLIGHTS OF THE NOON BRIEFING"
     by_str = "BY "
+    role_words = [
+        "SPOKESMAN",
+        "SPOKESWOMAN",
+        "SPOKESPERSON",
+    ]
 
     for i, hard_line in enumerate(hard_lines):
         if title_str not in hard_line.text.upper():
@@ -156,7 +161,11 @@ def _extract_speaker(hard_lines: list[HardLine]) -> tuple[str | None, str | None
             return None, None
 
         speaker_name = parts[0]
-        speaker_role = parts[1] if len(parts) >= 2 else None
+        speaker_role = (
+            parts[1]
+            if len(parts) >= 2 and any(word in parts[1].upper() for word in role_words)
+            else None
+        )
 
         return speaker_name, speaker_role
 

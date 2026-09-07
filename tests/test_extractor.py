@@ -55,3 +55,48 @@ def test_extract_hard_lines(html, expected_markdown, monkeypatch):
 
     for i in range(expected_num_of_lines):
         assert result[i].markdown == expected_markdown[i]
+
+
+@pytest.fixture
+def fake_hard_line(monkeypatch):
+    class FakeHardLine:
+        def __init__(self, text):
+            self.text = text
+
+    monkeypatch.setattr(extractor, "HardLine", FakeHardLine)
+
+    return FakeHardLine
+
+
+@pytest.mark.parametrize(
+    "lines, expected_name, expected_role",
+    [
+        (
+            ["HIGHLIGHTS OF THE NOON BRIEFING", "BY SPEAKER NAME", "SPOKESMAN ROLE"],
+            "SPEAKER NAME",
+            "SPOKESMAN ROLE",
+        ),
+        (
+            ["HIGHLIGHTS OF THE NOON BRIEFING BY SPEAKER NAME", "SPOKESMAN ROLE"],
+            "SPEAKER NAME",
+            "SPOKESMAN ROLE",
+        ),
+        (
+            [
+                "HIGHLIGHTS OF THE NOON BRIEFING",
+                "BY SPEAKER NAME",
+                "SECTION TITLE",
+                "Section text.",
+            ],
+            "SPEAKER NAME",
+            None,
+        ),
+        (["HIGHLIGHTS OF THE NOON BRIEFING", "SECTION TITLE", "Section text."], None, None),
+    ],
+)
+def test_extract_speaker(lines, expected_name, expected_role, fake_hard_line):
+
+    fake_hard_lines = [fake_hard_line(line) for line in lines]
+
+    result = extractor._extract_speaker(fake_hard_lines)
+    assert result == (expected_name, expected_role)
