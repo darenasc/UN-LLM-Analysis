@@ -60,8 +60,9 @@ def test_extract_hard_lines(html, expected_markdown, monkeypatch):
 @pytest.fixture
 def fake_hard_line(monkeypatch):
     class FakeHardLine:
-        def __init__(self, text):
+        def __init__(self, text, fully_bold=False):
             self.text = text
+            self.fully_bold = fully_bold
 
     monkeypatch.setattr(extractor, "HardLine", FakeHardLine)
 
@@ -100,3 +101,21 @@ def test_extract_speaker(lines, expected_name, expected_role, fake_hard_line):
 
     result = extractor._extract_speaker(fake_hard_lines)
     assert result == (expected_name, expected_role)
+
+
+@pytest.mark.parametrize(
+    "line, fully_bold, expected",
+    [
+        ("SECTION TITLE", True, True),
+        ("SECTION TITLE", False, False),
+        ("Section Title", True, False),
+        ("2026-08-25", True, False),
+    ],
+)
+def test_is_section_title_candidate(fake_hard_line, line, fully_bold, expected):
+
+    input_line = fake_hard_line(line, fully_bold=fully_bold)
+
+    result = extractor._is_section_title_candidate(input_line)
+
+    assert result is expected
