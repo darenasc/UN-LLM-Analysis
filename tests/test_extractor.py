@@ -119,3 +119,98 @@ def test_is_section_title_candidate(fake_hard_line, line, fully_bold, expected):
     result = extractor._is_section_title_candidate(input_line)
 
     assert result is expected
+
+
+def test_extract_sections_regular_case(monkeypatch, fake_hard_line):
+
+    hard_lines = [
+        fake_hard_line(text="SECTION A"),
+        fake_hard_line(text="First paragraph."),
+        fake_hard_line(text="Second paragraph."),
+        fake_hard_line(text="SECTION B"),
+        fake_hard_line(text="Another paragraph."),
+    ]
+
+    monkeypatch.setattr(
+        extractor,
+        "_is_section_title_candidate",
+        lambda line: line.text.startswith("SECTION"),
+    )
+
+    result = extractor._extract_sections(hard_lines)
+
+    assert result == (
+        extractor.ExtractedSection(
+            title="SECTION A",
+            text="First paragraph.\nSecond paragraph.",
+        ),
+        extractor.ExtractedSection(
+            title="SECTION B",
+            text="Another paragraph.",
+        ),
+    )
+
+
+def test_extract_sections_uses_last_of_consecutive_title_candidates(monkeypatch, fake_hard_line):
+
+    hard_lines = [
+        fake_hard_line(text="HEADER ONE"),
+        fake_hard_line(text="HEADER TWO"),
+        fake_hard_line(text="SECTION A"),
+        fake_hard_line(text="First paragraph."),
+    ]
+
+    monkeypatch.setattr(
+        extractor,
+        "_is_section_title_candidate",
+        lambda line: line.text.startswith(("HEADER", "SECTION")),
+    )
+
+    result = extractor._extract_sections(hard_lines)
+
+    assert result == (
+        extractor.ExtractedSection(
+            title="SECTION A",
+            text="First paragraph.",
+        ),
+    )
+
+
+def test_extract_sections_returns_empty_tuple_when_no_title_candidates(
+    monkeypatch, fake_hard_line
+):
+
+    hard_lines = [
+        fake_hard_line(text="First paragraph."),
+        fake_hard_line(text="Second paragraph."),
+    ]
+
+    monkeypatch.setattr(
+        extractor,
+        "_is_section_title_candidate",
+        lambda line: False,
+    )
+
+    result = extractor._extract_sections(hard_lines)
+
+    assert result == ()
+
+
+def test_extract_sections_ignores_title_candidate_without_content(monkeypatch, fake_hard_line):
+
+    hard_lines = [
+        fake_hard_line(text="First paragraph."),
+        fake_hard_line(text="Second paragraph."),
+        fake_hard_line(text="SECTION A"),
+        fake_hard_line(text="SECTION B"),
+    ]
+
+    monkeypatch.setattr(
+        extractor,
+        "_is_section_title_candidate",
+        lambda line: line.text.startswith("SECTION"),
+    )
+
+    result = extractor._extract_sections(hard_lines)
+
+    assert result == ()
