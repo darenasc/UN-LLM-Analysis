@@ -214,3 +214,45 @@ def test_extract_sections_ignores_title_candidate_without_content(monkeypatch, f
     result = extractor._extract_sections(hard_lines)
 
     assert result == ()
+
+
+def test_extract_html_builds_extracted_content(fake_hard_line, monkeypatch):
+
+    html = "<p>original html</p>"
+
+    hard_lines = [
+        fake_hard_line(text="First paragraph."),
+        fake_hard_line(text="Second paragraph."),
+    ]
+
+    sections = (
+        extractor.ExtractedSection(
+            title="SECTION TITLE",
+            text="Section text.",
+        ),
+    )
+
+    def fake_extract_hard_lines(value):
+        assert value == html
+        return hard_lines
+
+    def fake_extract_speaker(value):
+        assert value is hard_lines
+        return "SPEAKER NAME", "SPOKESMAN ROLE"
+
+    def fake_extract_sections(value):
+        assert value is hard_lines
+        return sections
+
+    monkeypatch.setattr(extractor, "_extract_hard_lines", fake_extract_hard_lines)
+    monkeypatch.setattr(extractor, "_extract_speaker", fake_extract_speaker)
+    monkeypatch.setattr(extractor, "_extract_sections", fake_extract_sections)
+
+    result = extractor.extract_html(html)
+
+    assert result == extractor.ExtractedContent(
+        speaker_name="SPEAKER NAME",
+        speaker_role="SPOKESMAN ROLE",
+        sections=sections,
+        full_text="First paragraph.\nSecond paragraph.",
+    )
