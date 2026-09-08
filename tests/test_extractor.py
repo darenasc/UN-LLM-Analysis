@@ -1,3 +1,6 @@
+import json
+from unittest.mock import Mock
+
 import pytest
 
 import un_llm_analysis.extractor as extractor
@@ -255,4 +258,89 @@ def test_extract_html_builds_extracted_content(fake_hard_line, monkeypatch):
         speaker_role="SPOKESMAN ROLE",
         sections=sections,
         full_text="First paragraph.\nSecond paragraph.",
+    )
+
+
+def test_extract_briefing_handles_available_briefing(monkeypatch, tmp_path):
+
+    record = {
+        "date": "2026-08-25",
+        "url": "https://example.com/briefing",
+        "status": "available",
+        "http_status": 200,
+        "error": None,
+        "downloaded_at": "2026-08-25T12:00:00Z",
+        "html": "<p>briefing html</p>",
+    }
+
+    file_path = tmp_path / "briefing.json"
+    file_path.write_text(json.dumps(record), encoding="utf-8")
+
+    extracted_content = extractor.ExtractedContent(
+        speaker_name="SPEAKER NAME",
+        speaker_role="SPOKESMAN ROLE",
+        sections=(
+            extractor.ExtractedSection(
+                title="SECTION TITLE",
+                text="Section text.",
+            ),
+        ),
+        full_text="Full briefing text.",
+    )
+
+    def fake_extract_html(value):
+        assert value == record["html"]
+        return extracted_content
+
+    monkeypatch.setattr(extractor, "extract_html", fake_extract_html)
+
+    result = extractor.extract_briefing(file_path)
+
+    assert result == extractor.ExtractedBriefing(
+        briefing_date=record["date"],
+        url=record["url"],
+        status=record["status"],
+        http_status=record["http_status"],
+        error=record["error"],
+        downloaded_at=record["downloaded_at"],
+        speaker_name=extracted_content.speaker_name,
+        speaker_role=extracted_content.speaker_role,
+        sections=extracted_content.sections,
+        full_text=extracted_content.full_text,
+    )
+
+
+def test_extract_briefing_handles_unavailable_briefing(monkeypatch, tmp_path):
+
+    record = {
+        "date": "2026-08-25",
+        "url": "https://example.com/briefing",
+        "status": "failed",
+        "http_status": 500,
+        "error": "Error message",
+        "downloaded_at": "2026-08-25T12:00:00Z",
+        "html": None,
+    }
+
+    file_path = tmp_path / "briefing.json"
+    file_path.write_text(json.dumps(record), encoding="utf-8")
+
+    mock_extract_html = Mock()
+    monkeypatch.setattr(extractor, "extract_html", mock_extract_html)
+
+    result = extractor.extract_briefing(file_path)
+
+    mock_extract_html.assert_not_called()
+
+    assert result == extractor.ExtractedBriefing(
+        briefing_date=record["date"],
+        url=record["url"],
+        status=record["status"],
+        http_status=record["http_status"],
+        error=record["error"],
+        downloaded_at=record["downloaded_at"],
+        speaker_name=None,
+        speaker_role=None,
+        sections=(),
+        full_text=None,
     )
