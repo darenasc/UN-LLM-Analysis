@@ -1,4 +1,6 @@
+from dataclasses import asdict
 import json
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -375,3 +377,18 @@ def test_extract_briefing_unavailable(monkeypatch, tmp_path):
         sections=(),
         full_text=None,
     )
+
+
+def test_extract_briefing_with_real_fixture():
+
+    fixtures_dir = Path(__file__).parent / "fixtures"
+
+    result = extractor.extract_briefing(fixtures_dir / "briefing_2026-08-25.json")
+
+    expected = json.loads(
+        (fixtures_dir / "extracted_briefing_2026-08-25.json").read_text(encoding="utf-8")
+    )
+
+    expected["sections"] = tuple(expected["sections"])
+
+    assert asdict(result) == expected
