@@ -53,6 +53,19 @@ scraper check 2026-08-12
 Scraped raw data location:
   `data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json`
 
+### `extractor`
+
+Extract structured content from a scraped briefing JSON file.
+
+```python
+from pathlib import Path
+from un_llm_analysis.extractor import extract_briefing
+
+briefing = extract_briefing(
+    Path("data/raw/briefings/2026/2026-08/2026-08-25.json")
+)
+```
+The extracted result includes speaker information, sections, and full text when available.
 
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
