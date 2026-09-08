@@ -7,102 +7,129 @@ import un_llm_analysis.extractor as extractor
 
 
 @pytest.mark.parametrize(
-    "str, expected",
+    "markdown_text, expected",
     [("A test string", False), ("** **", False), ("**A test string**", True)],
+    ids=[
+        "not-bold",
+        "empty-bold",
+        "fully-bold",
+    ],
 )
-def test_is_fully_bold(str, expected):
+def test_is_fully_bold(markdown_text, expected):
 
-    result = extractor._is_fully_bold(str)
+    result = extractor._is_fully_bold(markdown_text)
 
     assert result is expected
 
 
 @pytest.mark.parametrize(
-    "markdown_line, expexted",
+    "markdown_line, expected",
     [
         ("**Bold line.**", "Bold line."),
         ("* List item", "List item"),
         ("[Anchor text](URL)", "Anchor text"),
     ],
+    ids=[
+        "bold-line",
+        "list-item",
+        "link-with-anchor-text",
+    ],
 )
-def test_markdown_to_text(markdown_line, expexted):
+def test_markdown_to_text(markdown_line, expected):
 
     result = extractor._markdown_to_text(markdown_line)
 
-    assert result == expexted
+    assert result == expected
 
 
 @pytest.mark.parametrize(
-    "html, expected_markdown",
+    "html, expected_markdown_lines",
     [
         (
-            '<p><span><strong>Section Title </strong></span></p><p class="nbps-detected"><span>Section text. &nbsp;</span></p>',
-            ["**Section Title**", "Section text."],
+            '<p><span><strong>SECTION TITLE </strong></span></p><p class="nbps-detected"><span>Section text. &nbsp;</span></p>',
+            ["**SECTION TITLE**", "Section text."],
         ),
         (
-            "<p><li>List line-1.</li> <li>List line-2.</li></p>",
-            ["- List line-1.", "- List line-2."],
+            "<ul><li>List line-1.</li> <li>List line-2.</li></ul>",
+            ["* List line-1.", "* List line-2."],
+        ),
+        (
+            "<p>First line.<br>Second line.</p>",
+            ["First line.", "Second line."],
         ),
         ("<p> </p><p></p> <p> </p>", []),
     ],
+    ids=[
+        "section-title-and-text",
+        "list-items",
+        "hard-line-breaks",
+        "empty-lines",
+    ],
 )
-def test_extract_hard_lines(html, expected_markdown, monkeypatch):
+def test_extract_hard_lines(html, expected_markdown_lines, monkeypatch):
 
     monkeypatch.setattr(extractor, "_markdown_to_text", lambda _: None)
     monkeypatch.setattr(extractor, "_is_fully_bold", lambda _: None)
     result = extractor._extract_hard_lines(html)
 
-    expected_num_of_lines = len(expected_markdown)
+    assert len(result) == len(expected_markdown_lines)
 
-    assert len(result) == expected_num_of_lines
-
-    for i in range(expected_num_of_lines):
-        assert result[i].markdown == expected_markdown[i]
+    result_markdown_lines = [line.markdown for line in result]
+    assert result_markdown_lines == expected_markdown_lines
 
 
-@pytest.fixture
-def fake_hard_line(monkeypatch):
-    class FakeHardLine:
-        def __init__(self, text, fully_bold=False):
-            self.text = text
-            self.fully_bold = fully_bold
-
-    monkeypatch.setattr(extractor, "HardLine", FakeHardLine)
-
-    return FakeHardLine
+def make_hard_line(
+    text: str,
+    fully_bold: bool = False,
+    markdown: str = "",
+) -> extractor.HardLine:
+    return extractor.HardLine(
+        text=text,
+        markdown=markdown,
+        fully_bold=fully_bold,
+    )
 
 
 @pytest.mark.parametrize(
     "lines, expected_name, expected_role",
     [
         (
-            ["HIGHLIGHTS OF THE NOON BRIEFING", "BY SPEAKER NAME", "SPOKESMAN ROLE"],
+            ["HIGHLIGHTS OF THE NOON BRIEFING", "BY SPEAKER NAME,", "SPOKESMAN ROLE"],
             "SPEAKER NAME",
             "SPOKESMAN ROLE",
         ),
         (
-            ["HIGHLIGHTS OF THE NOON BRIEFING BY SPEAKER NAME", "SPOKESMAN ROLE"],
-            "SPEAKER NAME",
-            "SPOKESMAN ROLE",
-        ),
-        (
-            [
-                "HIGHLIGHTS OF THE NOON BRIEFING",
-                "BY SPEAKER NAME",
-                "SECTION TITLE",
-                "Section text.",
-            ],
+            ["HIGHLIGHTS OF THE NOON BRIEFING BY SPEAKER NAME", "SECTION TITLE"],
             "SPEAKER NAME",
             None,
         ),
+        (
+            [
+                "HIGHLIGHTS OF THE NOON BRIEFING BY",
+                "SPEAKER NAME,",
+                "SPOKESMAN ROLE",
+            ],
+            "SPEAKER NAME",
+            "SPOKESMAN ROLE",
+        ),
         (["HIGHLIGHTS OF THE NOON BRIEFING", "SECTION TITLE", "Section text."], None, None),
+        (["SECTION TITLE", "Section text."], None, None),
+        (["HIGHLIGHTS OF THE NOON BRIEFING", "BY", ","], None, None),
+    ],
+    ids=[
+        "speaker-name-and-role",
+        "speaker-name-without-role",
+        "by-at-line-end",
+        "briefing-header-without-by",
+        "no-briefing-header",
+        "no-speaker-after-by",
     ],
 )
-def test_extract_speaker(lines, expected_name, expected_role, fake_hard_line):
+def test_extract_speaker(lines, expected_name, expected_role):
 
-    fake_hard_lines = [fake_hard_line(line) for line in lines]
+    make_hard_lines = [make_hard_line(line) for line in lines]
 
-    result = extractor._extract_speaker(fake_hard_lines)
+    result = extractor._extract_speaker(make_hard_lines)
     assert result == (expected_name, expected_role)
 
 
@@ -114,24 +141,30 @@ def test_extract_speaker(lines, expected_name, expected_role, fake_hard_line):
         ("Section Title", True, False),
         ("2026-08-25", True, False),
     ],
+    ids=[
+        "valid-title",
+        "not-bold",
+        "too-much-lowercase",
+        "no-cased-characters",
+    ],
 )
-def test_is_section_title_candidate(fake_hard_line, line, fully_bold, expected):
+def test_is_section_title_candidate(line, fully_bold, expected):
 
-    input_line = fake_hard_line(line, fully_bold=fully_bold)
+    input_line = make_hard_line(line, fully_bold=fully_bold)
 
     result = extractor._is_section_title_candidate(input_line)
 
     assert result is expected
 
 
-def test_extract_sections_regular_case(monkeypatch, fake_hard_line):
+def test_extract_sections_regular_case(monkeypatch):
 
     hard_lines = [
-        fake_hard_line(text="SECTION A"),
-        fake_hard_line(text="First paragraph."),
-        fake_hard_line(text="Second paragraph."),
-        fake_hard_line(text="SECTION B"),
-        fake_hard_line(text="Another paragraph."),
+        make_hard_line(text="SECTION A"),
+        make_hard_line(text="First paragraph."),
+        make_hard_line(text="Second paragraph."),
+        make_hard_line(text="SECTION B"),
+        make_hard_line(text="Another paragraph."),
     ]
 
     monkeypatch.setattr(
@@ -154,13 +187,13 @@ def test_extract_sections_regular_case(monkeypatch, fake_hard_line):
     )
 
 
-def test_extract_sections_uses_last_of_consecutive_title_candidates(monkeypatch, fake_hard_line):
+def test_extract_sections_uses_last_title_candidates(monkeypatch):
 
     hard_lines = [
-        fake_hard_line(text="HEADER ONE"),
-        fake_hard_line(text="HEADER TWO"),
-        fake_hard_line(text="SECTION A"),
-        fake_hard_line(text="First paragraph."),
+        make_hard_line(text="HEADER ONE"),
+        make_hard_line(text="HEADER TWO"),
+        make_hard_line(text="SECTION A"),
+        make_hard_line(text="First paragraph."),
     ]
 
     monkeypatch.setattr(
@@ -179,13 +212,11 @@ def test_extract_sections_uses_last_of_consecutive_title_candidates(monkeypatch,
     )
 
 
-def test_extract_sections_returns_empty_tuple_when_no_title_candidates(
-    monkeypatch, fake_hard_line
-):
+def test_extract_sections_returns_empty_when_no_titles(monkeypatch):
 
     hard_lines = [
-        fake_hard_line(text="First paragraph."),
-        fake_hard_line(text="Second paragraph."),
+        make_hard_line(text="First paragraph."),
+        make_hard_line(text="Second paragraph."),
     ]
 
     monkeypatch.setattr(
@@ -199,13 +230,13 @@ def test_extract_sections_returns_empty_tuple_when_no_title_candidates(
     assert result == ()
 
 
-def test_extract_sections_ignores_title_candidate_without_content(monkeypatch, fake_hard_line):
+def test_extract_sections_ignores_title_without_content(monkeypatch):
 
     hard_lines = [
-        fake_hard_line(text="First paragraph."),
-        fake_hard_line(text="Second paragraph."),
-        fake_hard_line(text="SECTION A"),
-        fake_hard_line(text="SECTION B"),
+        make_hard_line(text="First paragraph."),
+        make_hard_line(text="Second paragraph."),
+        make_hard_line(text="SECTION A"),
+        make_hard_line(text="SECTION B"),
     ]
 
     monkeypatch.setattr(
@@ -219,13 +250,13 @@ def test_extract_sections_ignores_title_candidate_without_content(monkeypatch, f
     assert result == ()
 
 
-def test_extract_html_builds_extracted_content(fake_hard_line, monkeypatch):
+def test_extract_html_builds_extracted_content(monkeypatch):
 
     html = "<p>original html</p>"
 
     hard_lines = [
-        fake_hard_line(text="First paragraph."),
-        fake_hard_line(text="Second paragraph."),
+        make_hard_line(text="First paragraph."),
+        make_hard_line(text="Second paragraph."),
     ]
 
     sections = (
@@ -261,7 +292,7 @@ def test_extract_html_builds_extracted_content(fake_hard_line, monkeypatch):
     )
 
 
-def test_extract_briefing_handles_available_briefing(monkeypatch, tmp_path):
+def test_extract_briefing_available(monkeypatch, tmp_path):
 
     record = {
         "date": "2026-08-25",
@@ -310,7 +341,7 @@ def test_extract_briefing_handles_available_briefing(monkeypatch, tmp_path):
     )
 
 
-def test_extract_briefing_handles_unavailable_briefing(monkeypatch, tmp_path):
+def test_extract_briefing_unavailable(monkeypatch, tmp_path):
 
     record = {
         "date": "2026-08-25",
