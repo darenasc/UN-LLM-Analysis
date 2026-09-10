@@ -13,6 +13,9 @@ mkdocs = "*"
 sqlalchemy = "*"
 streamlit = "*"
 pipfile = "*"
+markdownify = "*"
+beautifulsoup4 = "*"
+markdown = "*"
 
 [requires]
 python_version = "3.12"
