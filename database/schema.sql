@@ -35,9 +35,9 @@ CREATE TABLE IF NOT EXISTS section (
 
 
 CREATE TABLE IF NOT EXISTS sdg (
-    briefing_id INTEGER,
-    section_id INTEGER,
-    sdg TEXT,
-    model TEXT,
-    created_at TEXT
+    briefing_id INTEGER NOT NULL,
+    section_id INTEGER NOT NULL,
+    sdg TEXT NOT NULL,
+    model TEXT NOT NULL,
+    created_at TEXT NOT NULL
 );
