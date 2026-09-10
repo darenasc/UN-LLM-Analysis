@@ -1,4 +1,5 @@
 import sqlite3
+from un_llm_analysis.config import BRIEFINGS_DB, SCHEMA_DB
 
 # Matches schema.sql
 SCHEMA = """
@@ -51,14 +52,18 @@ def connect_db(db_path):
     return conn
 
 
-def create_database(db_path):
+def create_database(db_path: str = str(BRIEFINGS_DB), schema_path: str = str(SCHEMA_DB)):
     """Create the database file and tables if they don't already exist.
 
     Args:
         db_path (str): Path to the SQLite database file to create/open.
+        schema_path (str): Path to the SQL schema of the database.
     """
+    with open(SCHEMA_DB, "r", encoding="utf-8") as f:
+         sql_schema = f.read()
+
     with connect_db(db_path) as conn:
-        conn.executescript(SCHEMA)
+         conn.executescript(sql_schema)
 
 
 # --- briefing ------------------------------------------------------------
@@ -297,7 +302,7 @@ def delete_section(conn, section_id):
 if __name__ == "__main__":
     # test functions with mock data in memory
     conn = connect_db(":memory:")
-    conn.executescript(SCHEMA)
+    conn.executescript(SCHEMA_DB)
 
     briefing_id = insert_briefing(
         conn,
