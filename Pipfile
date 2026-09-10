@@ -16,6 +16,7 @@ pipfile = "*"
 markdownify = "*"
 beautifulsoup4 = "*"
 markdown = "*"
+plotly = "*"
 
 [requires]
 python_version = "3.12"
