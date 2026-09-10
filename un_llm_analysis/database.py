@@ -38,7 +38,6 @@ def create_database(db_path):
 
 
 # --- briefings ---------------------------------------------------------
-
 def insert_briefing(
     conn,
     briefing_date,
@@ -48,7 +47,15 @@ def insert_briefing(
     processing_date=None,
     metadata=None,
 ):
-    """Insert a briefing into the database."""
+    """Insert a briefing into the database, keyed on url.
+
+    If a briefing with this url already exists, it is deleted first,
+    then the new version is inserted.
+    """
+    existing = get_briefing(conn, url=url)
+    if existing is not None:
+        delete_briefing(conn, existing["briefing_id"])
+
     cur = conn.execute(
         """
         INSERT INTO briefings (
@@ -70,6 +77,7 @@ def insert_briefing(
             metadata,
         ),
     )
+    conn.commit()
 
     return cur.lastrowid
 
@@ -113,6 +121,7 @@ def delete_briefing(conn, briefing_id):
         (briefing_id,),
     )
 
+    conn.commit()
     return cur.rowcount > 0
 
 
@@ -132,6 +141,7 @@ def insert_section(conn, briefing_id, title, section_text):
         (briefing_id, title, section_text),
     )
 
+    conn.commit()
     return cur.lastrowid
 
 
@@ -157,6 +167,7 @@ def delete_section(conn, section_id):
         (section_id,),
     )
 
+    conn.commit()
     return cur.rowcount > 0
 
 if __name__ == "__main__":
