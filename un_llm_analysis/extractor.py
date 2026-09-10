@@ -1,3 +1,8 @@
+"""Extract structured information from UN noon briefing records.
+
+The module defines data structures for the extraction process and parses briefing JSON records, extracting speaker and section information from available HTML.
+"""
+
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -11,12 +16,16 @@ from un_llm_analysis.scraper import FetchStatus
 
 @dataclass(frozen=True)
 class ExtractedSection:
+    """A titled section extracted from a briefing."""
+
     title: str
     text: str
 
 
 @dataclass(frozen=True)
 class ExtractedContent:
+    """Structured content extracted from briefing HTML."""
+
     speaker_name: str | None
     speaker_role: str | None
     sections: tuple[ExtractedSection, ...]
@@ -27,6 +36,8 @@ class ExtractedContent:
 
 @dataclass(frozen=True)
 class ExtractedBriefing:
+    """A briefing record with its metadata and extracted content."""
+
     briefing_date: str
     url: str
     status: FetchStatus

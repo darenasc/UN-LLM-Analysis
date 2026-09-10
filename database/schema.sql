@@ -2,7 +2,7 @@
 
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE briefing (
+CREATE TABLE IF NOT EXISTS briefing (
     briefing_id INTEGER PRIMARY KEY,
     briefing_date TEXT NOT NULL UNIQUE,
     url TEXT NOT NULL UNIQUE,
@@ -19,7 +19,7 @@ CREATE TABLE briefing (
 );
 
 
-CREATE TABLE section (
+CREATE TABLE IF NOT EXISTS section (
     section_id INTEGER PRIMARY KEY,
     briefing_id INTEGER NOT NULL,
     section_order INTEGER NOT NULL,
