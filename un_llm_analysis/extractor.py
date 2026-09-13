@@ -1,6 +1,20 @@
 """Extract structured information from UN noon briefing records.
 
-The module defines data structures for the extraction process and parses briefing JSON records, extracting speaker and section information from available HTML.
+The module defines data structures for the extraction process and parses
+briefing JSON records, extracting speaker and section information from
+available HTML.
+
+Extracted data:
+- briefing_date
+- url
+- status
+- http_status
+- error
+- downloaded_at
+- speaker_name
+- speaker_role
+- sections
+- full_text
 """
 
 from dataclasses import dataclass
