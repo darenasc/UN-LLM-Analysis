@@ -32,3 +32,12 @@ CREATE TABLE IF NOT EXISTS section (
 
     UNIQUE (briefing_id, section_order)
 );
+
+
+CREATE TABLE IF NOT EXISTS sdg (
+    briefing_id INTEGER NOT NULL,
+    section_id INTEGER NOT NULL,
+    sdg TEXT NOT NULL,
+    model TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);

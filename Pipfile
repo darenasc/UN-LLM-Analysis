@@ -16,6 +16,12 @@ pipfile = "*"
 markdownify = "*"
 beautifulsoup4 = "*"
 markdown = "*"
+plotly = "*"
+ollama = "*"
+mlflow = "*"
+openai = "*"
+jupyter = "*"
+ipywidgets = "*"
 loguru = "*"
 
 [requires]
