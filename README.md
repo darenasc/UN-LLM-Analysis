@@ -59,11 +59,11 @@ Extract structured content from a scraped briefing JSON file.
 
 ```python
 from pathlib import Path
+
+from un_llm_analysis.config import RAW_DATA_DIR
 from un_llm_analysis.extractor import extract_briefing
 
-briefing = extract_briefing(
-    Path("data/raw/briefings/2026/2026-08/2026-08-25.json")
-)
+briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2026-08-12.json")
 ```
 The extracted result includes speaker information, sections, and full text when available.
 
