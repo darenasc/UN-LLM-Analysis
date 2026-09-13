@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS section (
     text TEXT NOT NULL,
 
     FOREIGN KEY (briefing_id)
-        REFERENCES briefings(briefing_id)
+        REFERENCES briefing(briefing_id)
         ON DELETE CASCADE,
 
     UNIQUE (briefing_id, section_order)
