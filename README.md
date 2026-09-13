@@ -8,7 +8,7 @@
 
 Analysis of the language patterns and themes in [UN noon briefings](https://www.un.org/sg/en/content/noon-briefing-highlight) using large language models (LLMs). This project aims to identify trends and insights on global issues, policy developments, and emerging challenges, facilitating more informed decision-making and analysis.
 
-> **Note**: The communications about the project are in the 
+> **Note**: The communications about the project are in the
 > `#mentoring-project` channel on Correlaid's Slack.
 
 ## Usage
@@ -25,7 +25,49 @@ pipenv shell
 pipenv install -d Pipfile
 ```
 
-See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and 
+### `scraper update`
+Download UN noon briefings and save them as JSON.
+
+```bash
+# usage: scraper update [-h] [--overwrite] (DATE [DATE] | --since DATE)
+
+# Update briefing for a single date
+scraper update 2026-08-12
+
+# Update briefings for a date range
+scraper update 2026-08-01 2026-08-12
+
+# Update briefings since a given date:
+scraper update --since 2026-08-01
+```
+
+### `scraper check`
+Check if a briefing for a given date has already been downloaded and stored as JSON.
+
+```bash
+# usage: scraper check [-h] DATE
+
+scraper check 2026-08-12
+```
+
+Scraped raw data location:
+  `data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json`
+
+### `extractor`
+
+Extract structured content from a scraped briefing JSON file.
+
+```python
+from pathlib import Path
+from un_llm_analysis.extractor import extract_briefing
+
+briefing = extract_briefing(
+    Path("data/raw/briefings/2026/2026-08/2026-08-25.json")
+)
+```
+The extracted result includes speaker information, sections, and full text when available.
+
+See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
 
 ## Design
@@ -35,9 +77,9 @@ start contributing to the project.
 
 ## Planning
 
-A generic data science project will look like the following. In theory, the 
-implmentation part is planned to last between 4 to 10 weeks. The Gantt chart 
-shows dependencies that, in practice, can progress in parallel with 
+A generic data science project will look like the following. In theory, the
+implmentation part is planned to last between 4 to 10 weeks. The Gantt chart
+shows dependencies that, in practice, can progress in parallel with
 communication among the assigned people.
 
 ```mermaid
@@ -138,7 +180,7 @@ gantt
 │                         the creator's initials, and a short `-` delimited description, e.g.
 │                         `1.0-jqp-initial-data-exploration`.
 │
-├── pyproject.toml     <- Project configuration file with package metadata for 
+├── pyproject.toml     <- Project configuration file with package metadata for
 │                         un_llm_analysis and configuration for tools like black
 │
 ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
@@ -161,13 +203,12 @@ gantt
     │
     ├── features.py             <- Code to create features for modeling
     │
-    ├── modeling                
-    │   ├── __init__.py 
-    │   ├── predict.py          <- Code to run model inference with trained models          
+    ├── modeling
+    │   ├── __init__.py
+    │   ├── predict.py          <- Code to run model inference with trained models
     │   └── train.py            <- Code to train models
     │
     └── plots.py                <- Code to create visualizations
 ```
 
 --------
-
