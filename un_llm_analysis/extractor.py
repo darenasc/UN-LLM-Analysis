@@ -136,6 +136,7 @@ def _extract_hard_lines(html: str) -> list[HardLine]:
     fragments: list[tuple[str, bool]] = []
 
     def flush_line() -> None:
+        """Convert accumulated fragments into a hard line and reset the buffer."""
         text = " ".join("".join(part for part, _ in fragments).split())
         if text:
             hard_lines.append(
@@ -147,6 +148,7 @@ def _extract_hard_lines(html: str) -> list[HardLine]:
         fragments.clear()
 
     def visit(node: Tag | NavigableString, bold: bool = False) -> None:
+        """Recursively process an HTML node, tracking line boundaries and bold text."""
         if isinstance(node, Comment):
             return
 
