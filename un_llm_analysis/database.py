@@ -4,7 +4,7 @@ from typing import Any
 
 from un_llm_analysis.config import BRIEFINGS_DB, SCHEMA_DB
 
-def connect_db(db_path: str) -> sqlite.Connection:
+def connect_db(db_path: str) -> sqlite3.Connection:
     """Connect to SQLite database with foreign keys enabled.
 
     Args:
@@ -107,7 +107,7 @@ def insert_briefing(
     return cur.lastrowid
 
 
-def get_briefing_by_id(conn, briefing_id):
+def get_briefing_by_id(conn: sqlite3.Connection, briefing_id: int) -> sqlite3.Row | None:
     """Retrieve briefing by ID.
 
     Args:
