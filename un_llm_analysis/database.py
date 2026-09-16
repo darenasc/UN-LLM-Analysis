@@ -567,7 +567,7 @@ def get_sdgs_between_dates(
 
     Returns:
         pd.DataFrame: Data from the sdg table.
-    """ """"""
+    """
     min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
     max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
 
@@ -585,5 +585,8 @@ def get_sdgs_between_dates(
         rows = cursor.fetchall()
         column_names = [x[0] for x in cursor.description]
         cursor.close()
-    df = pd.DataFrame(rows, columns=column_names)
-    return df
+    if rows:
+        df = pd.DataFrame(rows, columns=column_names)
+        return df
+    else:
+        return pd.DataFrame()
