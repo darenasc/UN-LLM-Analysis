@@ -151,7 +151,7 @@ def get_briefing_by_id(conn, briefing_id):
     """
     return conn.execute(
         """
-        SELECT *
+        SELECT briefing_id, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at
         FROM briefing
         WHERE briefing_id = ?
         """,
@@ -201,7 +201,7 @@ def get_briefing_id_by_url(conn, url):
     if row is None:
         return None
 
-    return row[0]
+    return row["briefing_id"]
 
 
 def delete_briefing(conn, briefing_id):
@@ -258,7 +258,7 @@ def insert_section(conn, briefing_id, section_order, title, text):
     return cur.lastrowid
 
 
-def get_section(conn, section_id):
+def get_section_by_id(conn, section_id):
     """Retrieve section by ID.
 
     Args:
