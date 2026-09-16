@@ -21,9 +21,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 
-from bs4 import BeautifulSoup
-import markdown
-from markdownify import markdownify
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
 from un_llm_analysis.scraper import FetchStatus
 
@@ -66,48 +64,41 @@ class ExtractedBriefing:
 
 @dataclass(frozen=True)
 class HardLine:
-    """A line separated by an explicit HTML boundary such as <br>, <p>, or <li>."""
+    """A nonempty line separated by an explicit HTML boundary such as <br>, <p>, or <li>."""
 
     text: str
-    markdown: str
     fully_bold: bool
 
 
-def _is_fully_bold(markdown: str) -> bool:
-    """Check whether a Markdown string is fully bold.
+_TEXT_TRANSLATION = str.maketrans(
+    {
+        # Space-like characters -> regular space
+        "\u00a0": " ",  # NO-BREAK SPACE
+        "\u202f": " ",  # NARROW NO-BREAK SPACE
+        "\u2002": " ",  # EN SPACE
+        "\u2003": " ",  # EM SPACE
+        "\u2007": " ",  # FIGURE SPACE
+        "\u2009": " ",  # THIN SPACE
+        # Invisible formatting characters -> remove
+        "\u200b": None,  # ZERO WIDTH SPACE
+        "\u00ad": None,  # SOFT HYPHEN
+        "\ufeff": None,  # ZERO WIDTH NO-BREAK SPACE / BOM
+        "\u2060": None,  # WORD JOINER
+    }
+)
+
+
+def _normalize_text(text: str) -> str:
+    """Normalize text by replacing certain Unicode characters.
 
     Args:
-        markdown (str): Markdown string to check.
+        text (str): Original text to normalize.
 
     Returns:
-        bool: Whether the entire string is bold.
+        str: Normalized text with specific Unicode characters replaced or removed.
     """
 
-    text = markdown.strip()
-    if not (text.startswith("**") and text.endswith("**")):
-        return False
-
-    content = text[2:-2]
-    if content.strip() == "" or "**" in content:
-        return False
-
-    return True
-
-
-def _markdown_to_text(markdown_line: str) -> str:
-    """Convert a Markdown string to plain text.
-
-    Args:
-        markdown_line (str): Markdown string to convert.
-
-    Returns:
-        str: Plain text converted from the markdown.
-    """
-
-    html = markdown.markdown(markdown_line)
-    result = BeautifulSoup(html, "html.parser").get_text().strip()
-
-    return result
+    return text.translate(_TEXT_TRANSLATION)
 
 
 def _extract_hard_lines(html: str) -> list[HardLine]:
@@ -120,27 +111,72 @@ def _extract_hard_lines(html: str) -> list[HardLine]:
         list[HardLine]: Structured hard lines extracted from the HTML.
     """
 
-    converted = markdownify(
-        html,
-        newline_style="BACKSLASH",
-        wrap=False,
-    )
+    block_tags = {
+        "p",
+        "div",
+        "li",
+        "ul",
+        "ol",
+        "blockquote",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "section",
+        "article",
+        "header",
+        "footer",
+        "main",
+        "hr",
+    }
 
     hard_lines: list[HardLine] = []
+    fragments: list[tuple[str, bool]] = []
 
-    for line in converted.splitlines():
-        markdown_line = line.strip().removesuffix("\\").rstrip()
-
-        if not markdown_line:
-            continue
-
-        hard_lines.append(
-            HardLine(
-                text=_markdown_to_text(markdown_line),
-                markdown=markdown_line,
-                fully_bold=_is_fully_bold(markdown_line),
+    def flush_line() -> None:
+        """Convert accumulated fragments into a hard line and reset the buffer."""
+        text = " ".join("".join(part for part, _ in fragments).split())
+        if text:
+            hard_lines.append(
+                HardLine(
+                    text=text,
+                    fully_bold=all(bold for part, bold in fragments if part.strip()),
+                )
             )
-        )
+        fragments.clear()
+
+    def visit(node: Tag | NavigableString, bold: bool = False) -> None:
+        """Recursively process an HTML node, tracking line boundaries and bold text."""
+        if isinstance(node, Comment):
+            return
+
+        if isinstance(node, NavigableString):
+            fragments.append((_normalize_text(str(node)), bold))
+            return
+
+        if node.name in {"script", "style"}:
+            return
+
+        if node.name == "br":
+            flush_line()
+            return
+
+        is_block = node.name in block_tags
+        if is_block:
+            flush_line()
+
+        bold = bold or node.name in {"strong", "b"}
+        for child in node.children:
+            visit(child, bold)
+
+        if is_block:
+            flush_line()
+
+    soup = BeautifulSoup(html, "html.parser")
+    visit(soup)
+    flush_line()
 
     return hard_lines
 
@@ -161,6 +197,8 @@ def _extract_speaker(hard_lines: list[HardLine]) -> tuple[str | None, str | None
         "SPOKESMAN",
         "SPOKESWOMAN",
         "SPOKESPERSON",
+        # Below are common misspellings found in the data.
+        "SPOKESPESMAN",
     ]
 
     for i, hard_line in enumerate(hard_lines):
