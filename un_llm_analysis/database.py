@@ -1,3 +1,4 @@
+import ast
 from datetime import datetime
 from pathlib import Path
 import sqlite3
@@ -41,7 +42,7 @@ def get_db_connection(db_path: str | Path = str(BRIEFINGS_DB)) -> sqlite3.Connec
 
 
 # --- briefing ------------------------------------------------------------
-def _get_briefing_id_from_date(date: str) -> int:
+def get_briefing_id_from_date(date: str) -> int:
     """Returns a YYYYMMDD int from a 'YYYY-MM-DD' str.
 
     Args:
@@ -75,17 +76,17 @@ def insert_into_briefing(
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
 
     briefing_exists = get_briefing_by_id(
-        conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date)
+        conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date)
     )
     if briefing_exists is not None:
-        delete_briefing(conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date))
+        delete_briefing(conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date))
 
     with conn:
         cursor = conn.cursor()
         cursor.execute(
             query_insert,
             (
-                _get_briefing_id_from_date(briefing.briefing_date),
+                get_briefing_id_from_date(briefing.briefing_date),
                 briefing.briefing_date,
                 briefing.url,
                 briefing.status,
@@ -102,7 +103,7 @@ def insert_into_briefing(
         cursor.close()
 
         logger.info(f"Briefing from '{briefing.briefing_date}' inserted to the database.")
-    return _get_briefing_id_from_date(briefing.briefing_date)
+    return get_briefing_id_from_date(briefing.briefing_date)
 
 
 def get_sections_by_briefing_id(
@@ -209,11 +210,64 @@ def get_briefing_by_url(conn: sqlite3.Connection, url: str) -> ExtractedBriefing
             speaker_name=row["speaker_name"],
             speaker_role=row["speaker_role"],
             sections=get_sections_by_briefing_id(
-                conn=conn, briefing_id=_get_briefing_id_from_date(row["briefing_date"])
+                conn=conn, briefing_id=get_briefing_id_from_date(row["briefing_date"])
             ),
             full_text=row["full_text"],
         )
         return briefing
+    else:
+        return None
+
+
+def get_briefings_between_dates(
+    conn: sqlite3.Connection, start_date: str, end_date: str
+) -> list[ExtractedBriefing] | None:
+    """Retrieve briefings between two dates.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date with format 'YYYY-MM-DD'.
+        end_date (str): End date with format 'YYYY-MM-DD'.
+
+    Returns:
+        list[ExtractedBriefing] | None: List with requested that are in the
+            database briefings or None.
+    """
+    min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+    max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT briefing_id, briefing_date, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at
+        FROM briefing
+        WHERE briefing_id between ? and ?;
+        """,
+        (
+            min_date,
+            max_date,
+        ),
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+
+    if rows:
+        briefings = []
+        for row in rows:
+            briefing = ExtractedBriefing(
+                briefing_date=row["briefing_date"],
+                url=row["url"],
+                status=row["status"],
+                http_status=row["http_status"],
+                error=row["error"],
+                downloaded_at=row["downloaded_at"],
+                speaker_name=row["speaker_name"],
+                speaker_role=row["speaker_role"],
+                sections=get_sections_by_briefing_id(conn=conn, briefing_id=row["briefing_id"]),
+                full_text=row["full_text"],
+            )
+            briefings.append(briefing)
+        return briefings
     else:
         return None
 
