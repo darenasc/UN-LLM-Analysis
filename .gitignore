@@ -205,3 +205,7 @@ htmlcov
 
 # temporarily exclude png files (Wordsoups)
 *.png
+
+# Keep test JSON fixtures
+!tests/fixtures/
+!tests/fixtures/**/*.json

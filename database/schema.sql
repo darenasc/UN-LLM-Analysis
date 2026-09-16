@@ -1,24 +1,43 @@
-
-
 -- SQLite schema for UN LLM Analysis
 
-CREATE TABLE briefings (
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS briefing (
     briefing_id INTEGER PRIMARY KEY,
-    briefing_date DATE NOT NULL,
-    url TEXT UNIQUE NOT NULL,
-    briefing_text TEXT NOT NULL,
-    download_date TIMESTAMP,
-    processing_date TIMESTAMP,
-    metadata TEXT
+    briefing_date TEXT NOT NULL UNIQUE,
+    url TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL CHECK (
+        status IN ('available', 'not_published', 'failed')
+    ),
+    http_status INTEGER,
+    error TEXT,
+    speaker_name TEXT,
+    speaker_role TEXT,
+    full_text TEXT NOT NULL,
+    downloaded_at TEXT NOT NULL,
+    processed_at TEXT NOT NULL
 );
-    
-   
 
-CREATE TABLE sections (
 
+CREATE TABLE IF NOT EXISTS section (
     section_id INTEGER PRIMARY KEY,
     briefing_id INTEGER NOT NULL,
+    section_order INTEGER NOT NULL,
     title TEXT NOT NULL,
-    section_text TEXT NOT NULL,
-    FOREIGN KEY (briefing_id) REFERENCES briefings(briefing_id)
+    text TEXT NOT NULL,
+
+    FOREIGN KEY (briefing_id)
+        REFERENCES briefing(briefing_id)
+        ON DELETE CASCADE,
+
+    UNIQUE (briefing_id, section_order)
+);
+
+
+CREATE TABLE IF NOT EXISTS sdg (
+    briefing_id INTEGER NOT NULL,
+    section_id INTEGER NOT NULL,
+    sdg TEXT NOT NULL,
+    model TEXT NOT NULL,
+    created_at TEXT NOT NULL
 );
