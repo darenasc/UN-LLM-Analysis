@@ -2,7 +2,7 @@
 numpy = "*"
 python-dotenv = "*"
 scikit-learn = "*"
-"un_llm_analysis" ={editable = true, path = "."}
+"un_llm_analysis" = {editable = true, path = "."}
 pandas-stubs = "*"
 matplotlib = "*"
 wordcloud = "*"
@@ -11,18 +11,17 @@ pandas = "*"
 playwright = "*"
 mkdocs = "*"
 sqlalchemy = "*"
-pipfile = "*"
 
 [requires]
 python_version = "3.12"
 
 [dev-packages]
 pipfile = "*"
-pytest = "*"
-pytest-cov = "*"
 pre-commit = "*"
 black = "*"
 isort = "*"
 ipython = "*"
 jupyterlab = "*"
 notebook = "*"
+pytest = "*"
+pytest-cov = "*"
