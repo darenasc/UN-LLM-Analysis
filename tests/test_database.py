@@ -129,6 +129,7 @@ def test_get_sections_by_briefing_id(briefing, conn):
     # THEN the sections are a tuple of ExtractedSection
     assert isinstance(sections, tuple)
     assert isinstance(sections[0], ExtractedSection)
+    assert sections == briefing.sections
 
 
 def test_get_briefing_by_id(briefing, conn):
@@ -187,9 +188,19 @@ def test_delete_briefing(briefing, conn):
     # WHEN deleting a briefing using the briefing id
     result = delete_briefing(conn=conn, briefing_id=briefing_id)
 
-    # THEN the result is equal to 1 and an int
-    assert isinstance(result, int)
-    assert result == 1
+    # THEN the result is equal to True and an bool
+    assert isinstance(result, bool)
+    assert result is True
+
+
+def test_delete_briefing_false(conn):
+    # GIVEN a database with data
+    # WHEN deleting a non-existing record
+    result = delete_briefing(conn=conn, briefing_id=20260231)
+
+    # THEN the result is equal to False and an bool
+    assert isinstance(result, bool)
+    assert result is False
 
 
 def test_insert_into_section_all(briefing, conn):
@@ -289,7 +300,15 @@ def test_delete_section(section_index, briefing, conn):
     result = delete_section(conn=conn, section_id=result_section_id)
 
     # THEN the result is True
-    assert result == True
+    assert result is True
+
+
+def test_delete_section_false(conn):
+    """Test delete a single section by the section_id when it does not exists."""
+    result = delete_section(conn=conn, section_id=2026023101)
+
+    # THEN the result is True
+    assert result is False
 
 
 def test_delete_sections(briefing, conn):
@@ -304,4 +323,14 @@ def test_delete_sections(briefing, conn):
     result = delete_sections(conn=conn, briefing_id=briefing_id_section)
 
     # THEN the result is True
-    assert result == True
+    assert result is True
+
+
+def test_delete_sections_false(briefing, conn):
+    """Test deleting all the sections when the briefing_id does not exists."""
+    # GIVEN a database connection without data
+    # WHEN deleting sections of a non-existing briefing_id
+    result = delete_sections(conn=conn, briefing_id=20260231)
+
+    # THEN the result is False
+    assert result is False

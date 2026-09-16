@@ -55,7 +55,6 @@ def _get_briefing_id_from_date(date: str) -> int:
 
 
 def insert_into_briefing(
-    # briefing: ExtractedBriefing, db_path: str | Path = str(BRIEFINGS_DB)
     conn: sqlite3.Connection,
     briefing: ExtractedBriefing,
 ) -> int:
@@ -65,8 +64,11 @@ def insert_into_briefing(
     then the new version is inserted.
 
     Args:
-        briefing (ExtractedBriefing): _description_
-        db_path (str | Path, optional): _description_. Defaults to str(BRIEFINGS_DB).
+        conn (sqlite3.Connection): Database connection.
+        briefing (ExtractedBriefing): Briefing object.
+
+    Returns:
+        int: `briefing_id` to confirm a successful insertion.
     """
     query_insert = """INSERT INTO briefing
             (briefing_id, briefing_date, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at)
@@ -115,7 +117,7 @@ def get_sections_by_briefing_id(
 
     Returns:
         tuple[ExtractedSection, ...]: Sections stored in the database
-            associated to the briefinid.
+            associated to the briefing.
     """
     cursor = conn.cursor()
     cursor.execute(
@@ -143,7 +145,8 @@ def get_briefing_by_id(conn: sqlite3.Connection, briefing_id: int) -> ExtractedB
         briefing_id (int): Primary key of the briefing.
 
     Returns:
-        sqlite3.Row | None: The matching row, or None if not found.
+        ExtractedBriefing | None: The briefing data from the database given a
+            briefing_id, or None if not found.
     """
     cursor = conn.cursor()
     cursor.execute(
