@@ -59,7 +59,7 @@ def create_database(db_path: str = str(BRIEFINGS_DB), schema_path: str = str(SCH
         db_path (str): Path to the SQLite database file to create/open.
         schema_path (str): Path to the SQL schema of the database.
     """
-    with open(SCHEMA_DB, "r", encoding="utf-8") as f:
+    with open(schema_path, "r", encoding="utf-8") as f:
          sql_schema = f.read()
 
     with connect_db(db_path) as conn:
