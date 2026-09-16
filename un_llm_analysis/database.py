@@ -1,43 +1,10 @@
 import sqlite3
+from sqlite3 import Connection, Row
+from typing import Any
+
 from un_llm_analysis.config import BRIEFINGS_DB, SCHEMA_DB
 
-# Matches schema.sql
-SCHEMA = """
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE IF NOT EXISTS briefing (
-    briefing_id INTEGER PRIMARY KEY,
-    briefing_date TEXT NOT NULL UNIQUE,
-    url TEXT NOT NULL UNIQUE,
-    status TEXT NOT NULL CHECK (
-        status IN ('available', 'not_published', 'failed')
-    ),
-    http_status INTEGER,
-    error TEXT,
-    speaker_name TEXT,
-    speaker_role TEXT,
-    full_text TEXT NOT NULL,
-    downloaded_at TEXT NOT NULL,
-    processed_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS section (
-    section_id INTEGER PRIMARY KEY,
-    briefing_id INTEGER NOT NULL,
-    section_order INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    text TEXT NOT NULL,
-
-    FOREIGN KEY (briefing_id)
-        REFERENCES briefing(briefing_id)
-        ON DELETE CASCADE,
-
-    UNIQUE (briefing_id, section_order)
-);
-"""
-
-
-def connect_db(db_path):
+def connect_db(db_path: str) -> sqlite.Connection:
     """Connect to SQLite database with foreign keys enabled.
 
     Args:
@@ -52,7 +19,8 @@ def connect_db(db_path):
     return conn
 
 
-def create_database(db_path: str = str(BRIEFINGS_DB), schema_path: str = str(SCHEMA_DB)):
+def create_database(db_path: str = str(BRIEFINGS_DB),
+                    schema_path: str = str(SCHEMA_DB)) -> None:
     """Create the database file and tables if they don't already exist.
 
     Args:
@@ -68,18 +36,18 @@ def create_database(db_path: str = str(BRIEFINGS_DB), schema_path: str = str(SCH
 
 # --- briefing ------------------------------------------------------------
 def insert_briefing(
-    conn,
-    briefing_date,
-    url,
-    status,
-    full_text,
-    downloaded_at,
-    processed_at,
-    http_status=None,
-    error=None,
-    speaker_name=None,
-    speaker_role=None,
-):
+        conn: sqlite3.Connection,
+        briefing_date: str,
+        url: str,
+        status: str,
+        full_text: str,
+        downloaded_at: str,
+        processed_at: str,
+        http_status: int | None = None,
+        error: str | None = None,
+        speaker_name: str | None = None,
+        speaker_role: str | None = None,
+) -> int:
     """Insert a briefing into the database, keyed on url.
 
     If a briefing with this url already exists, it is deleted first,
@@ -159,7 +127,7 @@ def get_briefing_by_id(conn, briefing_id):
     ).fetchone()
 
 
-def get_briefing_by_url(conn, url):
+def get_briefing_by_url(conn: sqlite3.Connection, url: str) -> sqlite3.Row | None:
     """Retrieve briefing by URL.
 
     Args:
@@ -171,7 +139,7 @@ def get_briefing_by_url(conn, url):
     """
     return conn.execute(
         """
-        SELECT *
+        SELECT briefing_id, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at
         FROM briefing
         WHERE url = ?
         """,
@@ -179,7 +147,7 @@ def get_briefing_by_url(conn, url):
     ).fetchone()
 
 
-def get_briefing_id_by_url(conn, url):
+def get_briefing_id_by_url(conn: sqlite3.Connection, url: str) -> int | None:
     """Get briefing ID by URL.
 
     Args:
@@ -204,7 +172,7 @@ def get_briefing_id_by_url(conn, url):
     return row["briefing_id"]
 
 
-def delete_briefing(conn, briefing_id):
+def delete_briefing(conn: sqlite3.Connection, briefing_id: int) -> bool:
     """Delete briefing by ID.
 
     Args:
@@ -228,7 +196,7 @@ def delete_briefing(conn, briefing_id):
 
 # --- section ---------------------------------------------------------------
 
-def insert_section(conn, briefing_id, section_order, title, text):
+def insert_section(conn: sqlite3.Connection, briefing_id: int, section_order: int, title: str, text: str) -> int:
     """Insert a section into the database.
 
     Args:
@@ -258,7 +226,7 @@ def insert_section(conn, briefing_id, section_order, title, text):
     return cur.lastrowid
 
 
-def get_section_by_id(conn, section_id):
+def get_section_by_id(conn: sqlite3.Connection, section_id: int) -> sqlite3.Row | None:
     """Retrieve section by ID.
 
     Args:
@@ -278,7 +246,7 @@ def get_section_by_id(conn, section_id):
     ).fetchone()
 
 
-def delete_section(conn, section_id):
+def delete_section(conn: sqlite3.Connection, section_id: int) -> bool:
     """Delete section by ID.
 
     Args:
