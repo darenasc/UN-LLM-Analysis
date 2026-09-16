@@ -5,8 +5,6 @@ BASE_URL = "https://www.un.org/sg/en/content/highlight"
 MIN_SCRAPE_DATE = date(2004, 4, 5)
 
 PROJ_ROOT = Path(__file__).resolve().parents[1]
-BRIEFINGS_DB = PROJ_ROOT / "app" / "briefings.db"
-SCHEMA_DB = PROJ_ROOT / "database" / "schema.sql"
 
 DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
@@ -29,3 +27,6 @@ EXTERNAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
+SCHEMA_DB = PROJ_ROOT / "database" / "schema.sql"
+BRIEFINGS_DB = PROJ_ROOT / "app" / "briefings.db"

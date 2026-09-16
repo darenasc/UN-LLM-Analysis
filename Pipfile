@@ -22,6 +22,7 @@ mlflow = "*"
 openai = "*"
 jupyter = "*"
 ipywidgets = "*"
+loguru = "*"
 
 [requires]
 python_version = "3.12"
