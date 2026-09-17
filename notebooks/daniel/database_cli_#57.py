@@ -382,8 +382,8 @@ def _resolve_load_request(
     if start_date > end_date:
         parser.error(f"Start date {start_date} cannot be after end date {end_date}.")
 
-    if start_date < MIN_SCRAPE_DATE:
-        parser.error(f"Start date must be on or after {MIN_SCRAPE_DATE}.")
+    if start_date < MIN_SCRAPE_DATE or end_date > today:
+        parser.error(f"Dates must be between {MIN_SCRAPE_DATE} and {today}.")
 
     return start_date, end_date, args.overwrite, args.dry_run
 
