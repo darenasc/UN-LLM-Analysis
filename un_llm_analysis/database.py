@@ -1,8 +1,10 @@
+import ast
 from datetime import datetime
 from pathlib import Path
 import sqlite3
 
 from loguru import logger
+import pandas as pd
 
 from un_llm_analysis.config import BRIEFINGS_DB, SCHEMA_DB
 from un_llm_analysis.extractor import ExtractedBriefing, ExtractedSection
@@ -41,7 +43,7 @@ def get_db_connection(db_path: str | Path = str(BRIEFINGS_DB)) -> sqlite3.Connec
 
 
 # --- briefing ------------------------------------------------------------
-def _get_briefing_id_from_date(date: str) -> int:
+def get_briefing_id_from_date(date: str) -> int:
     """Returns a YYYYMMDD int from a 'YYYY-MM-DD' str.
 
     Args:
@@ -75,17 +77,17 @@ def insert_into_briefing(
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
 
     briefing_exists = get_briefing_by_id(
-        conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date)
+        conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date)
     )
     if briefing_exists is not None:
-        delete_briefing(conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date))
+        delete_briefing(conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date))
 
     with conn:
         cursor = conn.cursor()
         cursor.execute(
             query_insert,
             (
-                _get_briefing_id_from_date(briefing.briefing_date),
+                get_briefing_id_from_date(briefing.briefing_date),
                 briefing.briefing_date,
                 briefing.url,
                 briefing.status,
@@ -102,7 +104,7 @@ def insert_into_briefing(
         cursor.close()
 
         logger.info(f"Briefing from '{briefing.briefing_date}' inserted to the database.")
-    return _get_briefing_id_from_date(briefing.briefing_date)
+    return get_briefing_id_from_date(briefing.briefing_date)
 
 
 def get_sections_by_briefing_id(
@@ -209,11 +211,64 @@ def get_briefing_by_url(conn: sqlite3.Connection, url: str) -> ExtractedBriefing
             speaker_name=row["speaker_name"],
             speaker_role=row["speaker_role"],
             sections=get_sections_by_briefing_id(
-                conn=conn, briefing_id=_get_briefing_id_from_date(row["briefing_date"])
+                conn=conn, briefing_id=get_briefing_id_from_date(row["briefing_date"])
             ),
             full_text=row["full_text"],
         )
         return briefing
+    else:
+        return None
+
+
+def get_briefings_between_dates(
+    conn: sqlite3.Connection, start_date: str, end_date: str
+) -> list[ExtractedBriefing] | None:
+    """Retrieve briefings between two dates.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date with format 'YYYY-MM-DD'.
+        end_date (str): End date with format 'YYYY-MM-DD'.
+
+    Returns:
+        list[ExtractedBriefing] | None: List with requested that are in the
+            database briefings or None.
+    """
+    min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+    max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT briefing_id, briefing_date, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at
+        FROM briefing
+        WHERE briefing_id between ? and ?;
+        """,
+        (
+            min_date,
+            max_date,
+        ),
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+
+    if rows:
+        briefings = []
+        for row in rows:
+            briefing = ExtractedBriefing(
+                briefing_date=row["briefing_date"],
+                url=row["url"],
+                status=row["status"],
+                http_status=row["http_status"],
+                error=row["error"],
+                downloaded_at=row["downloaded_at"],
+                speaker_name=row["speaker_name"],
+                speaker_role=row["speaker_role"],
+                sections=get_sections_by_briefing_id(conn=conn, briefing_id=row["briefing_id"]),
+                full_text=row["full_text"],
+            )
+            briefings.append(briefing)
+        return briefings
     else:
         return None
 
@@ -424,3 +479,114 @@ def delete_sections(conn: sqlite3.Connection, briefing_id: int):
 
     logger.info(f"Deleted the sections of briefing '{briefing_id}'")
     return cur.rowcount > 0
+
+
+# --- sdg -------------------------------------------------------------------
+
+
+def insert_into_sdg(
+    conn: sqlite3.Connection,
+    briefing_id: int,
+    section_id: int,
+    sdgs: str,
+    model: str,
+    created_at: str,
+    verbose: bool = True,
+) -> None:
+    """Insert data into sdg table.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        briefing_id (int): Id of the briefing.
+        section_id (int): Id of the section (briefing_id * 100 + section_order)
+        sdgs (str): Text with list of SDG codes. "['SDG1', ..., 'SDG17']"
+        model (str): Model name.
+        created_at (str): Date of the processing.
+        verbose (bool, optional): Show logging of the process. Defaults to True.
+    """
+    parsed_sdgs = ast.literal_eval(sdgs)
+    if parsed_sdgs is None:
+        return
+    sql_insert = """INSERT INTO sdg
+                    (briefing_id, section_id, sdg, model, created_at)
+                    VALUES(?, ?, ?, ?, ?);"""
+    with conn:
+        delete_from_sdg(conn=conn, section_id=section_id, model=model, verbose=verbose)
+
+        cursor = conn.cursor()
+        for sdg in parsed_sdgs:
+            cursor.execute(sql_insert, (briefing_id, section_id, sdg, model, created_at))
+        conn.commit()
+
+    if verbose:
+        logger.info(f"{section_id} {sdgs} data inserted into `sdg`")
+
+
+def delete_from_sdg(
+    conn: sqlite3.Connection, section_id: int, model: str, verbose: bool = True
+) -> bool:
+    """Delete data from the sdg table.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Id of the section.
+        model (str): Model name.
+        verbose (bool, optional): Show logging of the process. Defaults to True.
+
+    Returns:
+        bool: Whether or not data was deleted.
+    """
+    query_delete = """DELETE FROM sdg WHERE section_id = ? AND model = ?"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            query_delete,
+            (
+                section_id,
+                model,
+            ),
+        )
+        conn.commit()
+        was_deleted = cursor.rowcount > 1
+        cursor.close()
+
+    if verbose:
+        logger.info(f"Deleted sdg section'{section_id}' of model '{model}'")
+    return was_deleted
+
+
+def get_sdgs_between_dates(
+    conn: sqlite3.Connection, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """Return data from the sdg table.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date with format 'YYYY-MM-DD'.
+        end_date (str): End date with format 'YYYY-MM-DD'.
+
+    Returns:
+        pd.DataFrame: Data from the sdg table.
+    """
+    min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+    max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+
+    sql_query = """SELECT briefing_id, section_id, sdg, model, created_at FROM sdg WHERE briefing_id between ? AND ?;"""
+
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            sql_query,
+            (
+                min_date,
+                max_date,
+            ),
+        )
+        rows = cursor.fetchall()
+        column_names = [x[0] for x in cursor.description]
+        cursor.close()
+    if rows:
+        df = pd.DataFrame(rows, columns=column_names)
+        return df
+    else:
+        return pd.DataFrame()
