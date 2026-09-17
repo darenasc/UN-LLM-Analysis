@@ -1,24 +1,24 @@
 import argparse
 from collections.abc import Iterator
 from datetime import date, datetime, timedelta
-from pathlib import Path
 import os
-import sys  
+from pathlib import Path
 import sqlite3
+import sys
 from zoneinfo import ZoneInfo
 
 from loguru import logger
 
 from un_llm_analysis.config import BRIEFINGS_DIR, MIN_SCRAPE_DATE
-from un_llm_analysis.extractor import extract_briefing
 from un_llm_analysis.database import (
     create_database,
+    get_briefing_by_id,
+    get_briefing_id_from_date,
     get_db_connection,
     insert_into_briefing,
     insert_into_section,
-    get_briefing_by_id,
-    _get_briefing_id_from_date,
 )
+from un_llm_analysis.extractor import extract_briefing
 
 """CLI for managing the UN noon briefing database.
 
@@ -33,6 +33,7 @@ The CLI follows a layered architecture:
 - Business Logic: Helper functions and core operations
 - CLI Layer: Argument parsing, validation, and dispatch
 """
+
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
     """Yield dates from start_date to end_date, inclusive.
@@ -166,7 +167,7 @@ def query_by_date(query_date: date) -> None:
         query_date (date): Date of the briefing to query.
     """
     with get_db_connection() as conn:
-        briefing_id = _get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
+        briefing_id = get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
         briefing = get_briefing_by_id(conn, briefing_id)
 
     if briefing:
@@ -188,9 +189,7 @@ def query_by_status(status: str) -> None:
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if status == "all":
-            cursor.execute(
-                "SELECT briefing_date, url, status FROM briefing"
-            )
+            cursor.execute("SELECT briefing_date, url, status FROM briefing")
         else:
             cursor.execute(
                 "SELECT briefing_date, url, status FROM briefing WHERE status = ?",
@@ -201,6 +200,7 @@ def query_by_status(status: str) -> None:
     print(f"Found {len(rows)} briefings with status '{status}':")
     for row in rows:
         print(f"  {row['briefing_date']}: {row['url']}")
+
 
 def _get_existing_briefing_dates(
     conn: sqlite3.Connection, start_date: date, end_date: date
@@ -240,7 +240,9 @@ def show_stats() -> None:
         status_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
 
         # Date range
-        cursor.execute("SELECT MIN(briefing_date) as min_date, MAX(briefing_date) as max_date FROM briefing")
+        cursor.execute(
+            "SELECT MIN(briefing_date) as min_date, MAX(briefing_date) as max_date FROM briefing"
+        )
         date_range = cursor.fetchone()
 
     print("Database Statistics:")
@@ -409,7 +411,6 @@ def _resolve_load_request(
     return start_date, end_date, args.overwrite, args.dry_run
 
 
-
 def main() -> None:
     """Main entry point for the script.
 
@@ -425,7 +426,9 @@ def main() -> None:
 
     elif args.command == "load":
         start_date, end_date, overwrite, dry_run = _resolve_load_request(parser, args)
-        print(f"Loading briefings from {start_date} to {end_date}, overwrite={overwrite}, dry_run={dry_run}...")
+        print(
+            f"Loading briefings from {start_date} to {end_date}, overwrite={overwrite}, dry_run={dry_run}..."
+        )
         success = load_between_dates(start_date, end_date, overwrite=overwrite, dry_run=dry_run)
         if not success:
             sys.exit(1)
