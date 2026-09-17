@@ -3,6 +3,7 @@ from collections.abc import Iterator
 from datetime import date, datetime, timedelta
 from pathlib import Path
 import os
+import sys  
 import sqlite3
 from zoneinfo import ZoneInfo
 
@@ -88,7 +89,9 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
         return False
 
 
-def load_between_dates(start_date: date, end_date: date, overwrite: bool = False, dry_run: bool = False) -> None:
+def load_between_dates(
+    start_date: date, end_date: date, overwrite: bool = False, dry_run: bool = False
+) -> bool:
     """Load briefings from JSON files into database for a date range.
 
     Args:
@@ -96,6 +99,10 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
         end_date (date): The date to end loading at.
         overwrite (bool): Whether to overwrite existing briefings. Defaults to False.
         dry_run (bool): If True, preview what would be loaded without actually loading. Defaults to False.
+
+    Returns:
+        bool: True if every loaded briefing succeeded (or nothing needed loading),
+            False if at least one briefing failed to load.
     """
     requested_dates = list(_dates_between(start_date, end_date))
 
@@ -113,7 +120,7 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
                 print(f"  [{date_string}] Would load from {file_path}")
         print(f"Total: {len(requested_dates)} dates requested.")
         print("Dry run complete.")
-        return
+        return True
 
     # Filter dates based on database state (only when not in dry-run mode)
     dates_to_load = [
@@ -124,7 +131,9 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
 
     if not dates_to_load:
         print("All requested briefings already in database.")
-        return
+        return True
+
+    failed_dates: list[str] = []
 
     with get_db_connection() as conn:
         for i, briefing_date in enumerate(dates_to_load):
@@ -138,10 +147,16 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
                 continue
 
             print(f"  [{i + 1}/{len(dates_to_load)}] {date_string} Loading...")
-            load_briefing_to_db(file_path, conn)
+            success = load_briefing_to_db(file_path, conn)
+            if not success:
+                failed_dates.append(date_string)
+
+    if failed_dates:
+        print(f"Load complete with {len(failed_dates)} failure(s): {', '.join(failed_dates)}")
+        return False
 
     print("Load complete.")
-
+    return True
 
 def _is_briefing_in_db(briefing_date: date) -> bool:
     """Check if a briefing exists in the database.
@@ -387,6 +402,7 @@ def _resolve_load_request(
     return start_date, end_date, args.overwrite, args.dry_run
 
 
+
 def main() -> None:
     """Main entry point for the script.
 
@@ -403,7 +419,9 @@ def main() -> None:
     elif args.command == "load":
         start_date, end_date, overwrite, dry_run = _resolve_load_request(parser, args)
         print(f"Loading briefings from {start_date} to {end_date}, overwrite={overwrite}, dry_run={dry_run}...")
-        load_between_dates(start_date, end_date, overwrite=overwrite, dry_run=dry_run)
+        success = load_between_dates(start_date, end_date, overwrite=overwrite, dry_run=dry_run)
+        if not success:
+            sys.exit(1)
 
     elif args.command == "query":
         if args.date:
