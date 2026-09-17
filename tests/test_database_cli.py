@@ -18,7 +18,7 @@ from un_llm_analysis.database_cli import (
 )
 
 
-def test_dates_between():
+def test_dates_between() -> None:
     """Test _dates_between function yields correct date range."""
     start = date(2023, 1, 1)
     end = date(2023, 1, 3)
@@ -28,7 +28,8 @@ def test_dates_between():
 
 
 def test_dates_between_single_day():
-    """Test _dates_between with single day range."""
+    """Test _dates_between with single day range.
+    """
     start = date(2023, 1, 1)
     end = date(2023, 1, 1)
     result = list(_dates_between(start, end))
