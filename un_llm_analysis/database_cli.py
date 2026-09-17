@@ -19,23 +19,18 @@ from un_llm_analysis.database import (
     _get_briefing_id_from_date,
 )
 
-"""
-# Mental Model
+"""CLI for managing the UN noon briefing database.
 
-Data Layer:
-- extractor.py
-- database.pyp
+This module provides command-line interface for:
+- Initializing the database from schema
+- Loading extracted briefings from JSON files
+- Querying briefings by date or status
+- Displaying database statistics
 
-Business logic:
-- Helper functions: _dates_between, _is_briefing_json_exists, _is_briefing_in_db
-- Core operations: load_briefing_to_db, load_between_dates, query_by_date
-
-CLI layer:
-- argument parsing: _build_parser, _parse_date
-- argument validation: _resolve_load_request
-- command dispatch: main
-- user-facing output: print
-
+The CLI follows a layered architecture:
+- Data Layer: extractor.py, database.py
+- Business Logic: Helper functions and core operations
+- CLI Layer: Argument parsing, validation, and dispatch
 """
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
@@ -75,7 +70,7 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
 
     Args:
         file_path (Path): Path to the briefing JSON file.
-        conn: Database connection object.
+        conn (sqlite3.Connection): Database connection object.
 
     Returns:
         bool: True if loading succeeded, False otherwise.
@@ -128,7 +123,7 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
         return
 
     with get_db_connection() as conn:
-        for briefing_date in dates_to_load:
+        for i, briefing_date in enumerate(dates_to_load):
             date_string = briefing_date.strftime("%Y-%m-%d")
             file_path = Path(
                 f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
@@ -138,7 +133,7 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
                 print(f"  - No JSON file for {date_string}, skipping")
                 continue
 
-            print(f"  [{date_string}] Loading...")
+            print(f"  [{i + 1}/{len(dates_to_load)}] {date_string} Loading...")
             load_briefing_to_db(file_path, conn)
 
     print("Load complete.")
@@ -290,9 +285,9 @@ Run '%(prog)s COMMAND --help' for details about a command.
   %(prog)s 2023-01-01 2023-12-31
   %(prog)s --since 2023-01-01
 
---overwrite may be added to any form.
+--overwrite and --dry-run may be added to any form.
 """,
-        usage="%(prog)s [-h] [--overwrite] (DATE [DATE] | --since DATE)",
+        usage="%(prog)s [-h] [--overwrite] [--dry-run] (DATE [DATE] | --since DATE)",
         formatter_class=formatter,
     )
     load_parser.add_argument(
@@ -382,8 +377,8 @@ def _resolve_load_request(
     if start_date > end_date:
         parser.error(f"Start date {start_date} cannot be after end date {end_date}.")
 
-    if start_date < MIN_SCRAPE_DATE:
-        parser.error(f"Start date must be on or after {MIN_SCRAPE_DATE}.")
+    if start_date < MIN_SCRAPE_DATE or end_date > today:
+        parser.error(f"Dates must be between {MIN_SCRAPE_DATE} and {today}.")
 
     return start_date, end_date, args.overwrite, args.dry_run
 
