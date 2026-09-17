@@ -116,6 +116,8 @@ def load_between_dates(
 
             if not _is_briefing_json_exists(briefing_date):
                 print(f"  - No JSON file for {date_string}, would skip")
+            elif not overwrite and _is_briefing_in_db(briefing_date):
+                print(f"  - Briefing for {date_string} already in database, would skip")
             else:
                 print(f"  [{date_string}] Would load from {file_path}")
         print(f"Total: {len(requested_dates)} dates requested.")
