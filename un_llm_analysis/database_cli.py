@@ -98,19 +98,10 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
         dry_run (bool): If True, preview what would be loaded without actually loading. Defaults to False.
     """
     requested_dates = list(_dates_between(start_date, end_date))
-    dates_to_load = [
-        d for d in requested_dates if overwrite or not _is_briefing_in_db(d)
-    ]
-
-    print(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
-
-    if not dates_to_load:
-        print("All requested briefings already in database.")
-        return
 
     if dry_run:
         print("DRY RUN - No changes will be made:")
-        for briefing_date in dates_to_load:
+        for briefing_date in requested_dates:
             date_string = briefing_date.strftime("%Y-%m-%d")
             file_path = Path(
                 f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
@@ -120,7 +111,19 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
                 print(f"  - No JSON file for {date_string}, would skip")
             else:
                 print(f"  [{date_string}] Would load from {file_path}")
+        print(f"Total: {len(requested_dates)} dates requested.")
         print("Dry run complete.")
+        return
+
+    # Filter dates based on database state (only when not in dry-run mode)
+    dates_to_load = [
+        d for d in requested_dates if overwrite or not _is_briefing_in_db(d)
+    ]
+
+    print(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
+
+    if not dates_to_load:
+        print("All requested briefings already in database.")
         return
 
     with get_db_connection() as conn:
