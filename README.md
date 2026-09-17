@@ -70,6 +70,19 @@ The extracted result includes speaker information, sections, and full text when 
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
 
+### `streamlit`
+
+To visualize a dashboard with data from the project. Run the following command
+from the terminal.
+
+```bash
+# Start a streamlit app
+
+streamlit run app/Dashboard.py
+```
+
+The app will be running locally in http://localhost:8501
+
 ## Design
 
 - [Slides from the first meeting on 08.06.2026 "Volunteer Project Correlaid"](https://docs.google.com/presentation/d/1eMzWXqI4xPCCzbhxbL_EYkOfEE-uKAT6_fdOmvRROlI/edit?usp=sharing)
@@ -170,7 +183,10 @@ gantt
 │   ├── external       <- Data from third party sources.
 │   ├── interim        <- Intermediate data that has been transformed.
 │   ├── processed      <- The final, canonical data sets for modeling.
+│   │   └── database
+│   │      └── briefings.db.zip <- Database with 5 years of data
 │   └── raw            <- The original, immutable data dump.
+│      └── briefings   <- Folder that will store JSON files with briefings.
 │
 ├── docs               <- A default mkdocs project; see www.mkdocs.org for details
 │
@@ -182,8 +198,6 @@ gantt
 │
 ├── pyproject.toml     <- Project configuration file with package metadata for
 │                         un_llm_analysis and configuration for tools like black
-│
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
 │
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
 │   └── figures        <- Generated graphics and figures to be used in reporting
@@ -199,16 +213,11 @@ gantt
     │
     ├── config.py               <- Store useful variables and configuration
     │
-    ├── dataset.py              <- Scripts to download or generate data
+    ├── database.py             <- Scripts to load data to the database
     │
-    ├── features.py             <- Code to create features for modeling
+    ├── extractor.py            <- Scripts to extact information from briefings
     │
-    ├── modeling
-    │   ├── __init__.py
-    │   ├── predict.py          <- Code to run model inference with trained models
-    │   └── train.py            <- Code to train models
-    │
-    └── plots.py                <- Code to create visualizations
+    ├── scraper.py              <- Scripts to download briefings from internet
 ```
 
 --------
