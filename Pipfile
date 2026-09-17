@@ -28,7 +28,6 @@ loguru = "*"
 python_version = "3.12"
 
 [dev-packages]
-pipfile = "*"
 pre-commit = "*"
 black = "*"
 isort = "*"
@@ -37,3 +36,4 @@ jupyterlab = "*"
 notebook = "*"
 pytest = "*"
 pytest-cov = "*"
+pipfile = "*"
