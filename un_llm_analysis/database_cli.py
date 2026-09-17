@@ -77,9 +77,10 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
     """
     try:
         briefing = extract_briefing(file_path)
-        briefing_id = insert_into_briefing(conn, briefing)
-        if briefing.sections:
-            insert_into_section(conn, briefing_id, briefing.sections)
+        with conn:
+            briefing_id = insert_into_briefing(conn, briefing)
+            if briefing.sections:
+                insert_into_section(conn, briefing_id, briefing.sections)
         logger.info(f"Loaded briefing from {file_path}")
         return True
     except Exception as exc:
