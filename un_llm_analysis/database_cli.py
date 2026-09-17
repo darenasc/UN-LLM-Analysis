@@ -113,31 +113,29 @@ def load_between_dates(
             file_path = Path(
                 f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
             )
-
             if not _is_briefing_json_exists(briefing_date):
                 print(f"  - No JSON file for {date_string}, would skip")
-            elif not overwrite and _is_briefing_in_db(briefing_date):
-                print(f"  - Briefing for {date_string} already in database, would skip")
             else:
                 print(f"  [{date_string}] Would load from {file_path}")
         print(f"Total: {len(requested_dates)} dates requested.")
         print("Dry run complete.")
         return True
 
-    # Filter dates based on database state (only when not in dry-run mode)
-    dates_to_load = [
-        d for d in requested_dates if overwrite or not _is_briefing_in_db(d)
-    ]
-
-    print(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
-
-    if not dates_to_load:
-        print("All requested briefings already in database.")
-        return True
-
     failed_dates: list[str] = []
 
     with get_db_connection() as conn:
+        if overwrite:
+            dates_to_load = requested_dates
+        else:
+            existing_dates = _get_existing_briefing_dates(conn, start_date, end_date)
+            dates_to_load = [d for d in requested_dates if d not in existing_dates]
+
+        print(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
+
+        if not dates_to_load:
+            print("All requested briefings already in database.")
+            return True
+
         for i, briefing_date in enumerate(dates_to_load):
             date_string = briefing_date.strftime("%Y-%m-%d")
             file_path = Path(
@@ -159,19 +157,6 @@ def load_between_dates(
 
     print("Load complete.")
     return True
-
-def _is_briefing_in_db(briefing_date: date) -> bool:
-    """Check if a briefing exists in the database.
-
-    Args:
-        briefing_date (date): Date of the briefing to check.
-
-    Returns:
-        bool: True if the briefing exists in the database, False otherwise.
-    """
-    with get_db_connection() as conn:
-        briefing_id = _get_briefing_id_from_date(briefing_date.strftime("%Y-%m-%d"))
-        return get_briefing_by_id(conn, briefing_id) is not None
 
 
 def query_by_date(query_date: date) -> None:
@@ -216,6 +201,26 @@ def query_by_status(status: str) -> None:
     print(f"Found {len(rows)} briefings with status '{status}':")
     for row in rows:
         print(f"  {row['briefing_date']}: {row['url']}")
+
+def _get_existing_briefing_dates(
+    conn: sqlite3.Connection, start_date: date, end_date: date
+) -> set[date]:
+    """Fetch the set of briefing dates already in the database within a range.
+
+    Args:
+        conn (sqlite3.Connection): Database connection object.
+        start_date (date): Start of the range (inclusive).
+        end_date (date): End of the range (inclusive).
+
+    Returns:
+        set[date]: Dates that already have a briefing row in the database.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT briefing_date FROM briefing WHERE briefing_date BETWEEN ? AND ?",
+        (start_date.isoformat(), end_date.isoformat()),
+    )
+    return {date.fromisoformat(row["briefing_date"]) for row in cursor.fetchall()}
 
 
 def show_stats() -> None:
