@@ -41,3 +41,18 @@ CREATE TABLE IF NOT EXISTS sdg (
     model TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+
+CREATE TABLE IF NOT EXISTS country_mentions (
+    section_id INTEGER NOT NULL,
+    country_code TEXT NOT NULL,
+    country_name TEXT NOT NULL,
+    mention_count INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+
+    FOREIGN KEY (section_id)
+        REFERENCES section(section_id)
+        ON DELETE CASCADE,
+
+    UNIQUE (section_id, country_code)
+);

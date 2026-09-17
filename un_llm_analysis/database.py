@@ -424,3 +424,123 @@ def delete_sections(conn: sqlite3.Connection, briefing_id: int):
 
     logger.info(f"Deleted the sections of briefing '{briefing_id}'")
     return cur.rowcount > 0
+
+
+# --- country_mentions --------------------------------------------------------
+
+
+def insert_country_mentions(
+    conn: sqlite3.Connection,
+    section_id: int,
+    country_code: str,
+    country_name: str,
+    mention_count: int,
+) -> int:
+    """Insert or update country mention count for a section.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        section_id (int): ID of the section.
+        country_code (str): ISO country code.
+        country_name (str): Full country name.
+        mention_count (int): Number of mentions in the section.
+
+    Returns:
+        int: The section_id of the inserted/updated row.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO country_mentions (section_id, country_code, country_name, mention_count, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(section_id, country_code) DO UPDATE SET
+            mention_count = excluded.mention_count,
+            created_at = excluded.created_at
+        """,
+        (section_id, country_code, country_name, mention_count, str(datetime.now())),
+    )
+    conn.commit()
+    cursor.close()
+
+    logger.info(f"Inserted country mention for '{country_name}' in section {section_id}")
+    return section_id
+
+
+def get_country_mentions_by_section(
+    conn: sqlite3.Connection, section_id: int
+) -> list[sqlite3.Row]:
+    """Get all country mentions for a specific section.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        section_id (int): ID of the section.
+
+    Returns:
+        list[sqlite3.Row]: List of country mention rows for the section.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT section_id, country_code, country_name, mention_count, created_at
+        FROM country_mentions
+        WHERE section_id = ?
+        ORDER BY mention_count DESC
+        """,
+        (section_id,),
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+    return rows
+
+
+def get_country_mentions_by_briefing(
+    conn: sqlite3.Connection, briefing_id: int
+) -> list[sqlite3.Row]:
+    """Get all country mentions for all sections in a briefing.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        briefing_id (int): ID of the briefing.
+
+    Returns:
+        list[sqlite3.Row]: List of country mention rows for the briefing.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT cm.section_id, cm.country_code, cm.country_name, cm.mention_count, cm.created_at,
+               s.section_order, s.title
+        FROM country_mentions cm
+        JOIN section s ON cm.section_id = s.section_id
+        WHERE s.briefing_id = ?
+        ORDER BY s.section_order, cm.mention_count DESC
+        """,
+        (briefing_id,),
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+    return rows
+
+
+def delete_country_mentions_by_section(
+    conn: sqlite3.Connection, section_id: int
+) -> bool:
+    """Delete all country mentions for a section.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        section_id (int): ID of the section.
+
+    Returns:
+        bool: True if rows were deleted, False otherwise.
+    """
+    cur = conn.execute(
+        """
+        DELETE FROM country_mentions
+        WHERE section_id = ?
+        """,
+        (section_id,),
+    )
+    conn.commit()
+    logger.info(f"Deleted country mentions for section {section_id}")
+    return cur.rowcount > 0
