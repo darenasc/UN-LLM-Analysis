@@ -5,18 +5,22 @@ import pytest
 
 from un_llm_analysis.config import SCHEMA_DB
 from un_llm_analysis.database import (
-    _get_briefing_id_from_date,
     create_database,
     delete_briefing,
+    delete_from_sdg,
     delete_section,
     delete_sections,
     get_briefing_by_id,
     get_briefing_by_url,
     get_briefing_id_by_url,
+    get_briefing_id_from_date,
+    get_briefings_between_dates,
     get_db_connection,
+    get_sdgs_between_dates,
     get_section,
     get_sections_by_briefing_id,
     insert_into_briefing,
+    insert_into_sdg,
     insert_into_section,
     insert_section,
 )
@@ -80,7 +84,7 @@ def test__get_briefing_id_from_date(date, expected):
     """Test _get_briefing_id_from_date."""
     # GIVEN a 'YYYY-MM-DD' date
     # WHEN calling `_get_briefing_id_from_date`
-    briefing_id = _get_briefing_id_from_date(date=date)
+    briefing_id = get_briefing_id_from_date(date=date)
 
     # THEN eval the transformation into integer YYYYMMDD
     assert briefing_id == expected
@@ -96,7 +100,7 @@ def test_insert_into_briefing(briefing, conn):
     """Test insert into the briefing table."""
     # GIVEN a database connection
     result = get_briefing_by_id(
-        conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date)
+        conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date)
     )
 
     # WHEN no data in the database
@@ -106,13 +110,13 @@ def test_insert_into_briefing(briefing, conn):
     # WHEN inserting a briefing in the database
     briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
     result = get_briefing_by_id(
-        conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date)
+        conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date)
     )
 
     # THEN the data from the database corresponds with the briefing
     assert isinstance(result, ExtractedBriefing)
     assert result.briefing_date == briefing.briefing_date
-    assert _get_briefing_id_from_date(result.briefing_date) == briefing_id
+    assert get_briefing_id_from_date(result.briefing_date) == briefing_id
 
 
 def test_get_sections_by_briefing_id(briefing, conn):
@@ -139,13 +143,13 @@ def test_get_briefing_by_id(briefing, conn):
 
     # WHEN checking if a briefing exists
     result = get_briefing_by_id(
-        conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date)
+        conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date)
     )
 
     # THEN the briefing date corresponds with the inserted data
     assert isinstance(result, ExtractedBriefing)
     assert result.briefing_date == briefing.briefing_date
-    assert briefing_id == _get_briefing_id_from_date(result.briefing_date)
+    assert briefing_id == get_briefing_id_from_date(result.briefing_date)
 
 
 def test_get_briefing_by_url(briefing, conn):
@@ -158,7 +162,7 @@ def test_get_briefing_by_url(briefing, conn):
 
     assert isinstance(result, ExtractedBriefing)
     assert result.url == briefing.url
-    assert _get_briefing_id_from_date(result.briefing_date) == briefing_id
+    assert get_briefing_id_from_date(result.briefing_date) == briefing_id
 
 
 def test_get_briefing_id_by_url(briefing, conn):
@@ -176,8 +180,25 @@ def test_get_briefing_id_by_url(briefing, conn):
 
     # THEN the resuls is int and the same as the id computed from the extracted briefing
     assert isinstance(result, int)
-    assert result == _get_briefing_id_from_date(briefing.briefing_date)
+    assert result == get_briefing_id_from_date(briefing.briefing_date)
     assert result == briefing_id
+
+
+def test_get_briefings_between_dates(briefing, conn):
+    # GIVEN a database with data
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+
+    # WHEN deleting a briefing using the briefing id
+    result = get_briefings_between_dates(
+        conn=conn, start_date=briefing.briefing_date, end_date=briefing.briefing_date
+    )
+
+    # THEN the lenght of the result list is equal to 1 and is a ExtractedBriefing
+    if result:
+        assert len(result) == 1
+        assert isinstance(result[0], ExtractedBriefing)
+    else:
+        assert result is None
 
 
 def test_delete_briefing(briefing, conn):
@@ -334,3 +355,71 @@ def test_delete_sections_false(briefing, conn):
 
     # THEN the result is False
     assert result is False
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,sdgs,model,created_at",
+    [
+        (20260801, 2026080101, "['SDG1', 'SDG2']", "llama3.2", "2026-08-01"),
+        (20260801, 2026080102, "['SDG3', 'SDG4']", "llama3.2", "2026-08-01"),
+    ],
+)
+def test_insert_into_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+    # GIVEN a database connection
+    # WHEN inserting data into the sdg table
+    insert_into_sdg(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        sdgs=sdgs,
+        model=model,
+        created_at=created_at,
+    )
+    result_df = get_sdgs_between_dates(conn=conn, start_date=created_at, end_date=created_at)
+
+    # THEN data is returned from the database
+    assert result_df.shape[0] > 0
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,sdgs,model,created_at",
+    [
+        (20260801, 2026080101, "['SDG1', 'SDG2']", "llama3.2", "2026-08-01"),
+        (20260801, 2026080102, "['SDG3', 'SDG4']", "llama3.2", "2026-08-01"),
+    ],
+)
+def test_delete_from_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+    insert_into_sdg(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        sdgs=sdgs,
+        model=model,
+        created_at=created_at,
+    )
+    result_df = get_sdgs_between_dates(conn=conn, start_date=created_at, end_date=created_at)
+    assert result_df.shape[0] > 0
+
+    delete_from_sdg(conn=conn, section_id=section_id, model=model)
+    result_df = get_sdgs_between_dates(conn=conn, start_date=created_at, end_date=created_at)
+    assert result_df.shape[0] == 0
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,sdgs,model,created_at",
+    [
+        (20260801, 2026080101, "['SDG1', 'SDG2']", "llama3.2", "2026-08-01"),
+        (20260801, 2026080102, "['SDG3', 'SDG4']", "llama3.2", "2026-08-01"),
+    ],
+)
+def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, created_at):
+    insert_into_sdg(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        sdgs=sdgs,
+        model=model,
+        created_at=created_at,
+    )
+    result_df = get_sdgs_between_dates(conn=conn, start_date=created_at, end_date=created_at)
+    assert result_df.shape[0] > 0
