@@ -8,6 +8,7 @@ import pandas as pd
 
 from un_llm_analysis.config import BRIEFINGS_DB_PATH, SCHEMA_DB
 from un_llm_analysis.extractor import ExtractedBriefing, ExtractedSection
+from un_llm_analysis.scraper import FetchStatus
 
 
 def create_database(db_path: str | Path = BRIEFINGS_DB_PATH, schema_path: str | Path = SCHEMA_DB):
@@ -610,41 +611,54 @@ def get_sdgs_between_dates(
 # --- streamlit app
 
 
-def get_min_max_dates(conn: sqlite3.Connection):
-    """_summary_
+def get_min_max_dates(
+    conn: sqlite3.Connection, status: FetchStatus = "available"
+) -> tuple[str, str] | tuple[None, None]:
+    """Returns minimum and maximum dates present in the database with briefings.
 
     Args:
-        db_path (Path, optional): _description_. Defaults to BRIEFINGS_DB_PATH.
+        conn (sqlite3.Connection): Connection to a database.
+        status (FetchStatus, optional): Status of the briefing download.
+            Defaults to "available".
 
     Returns:
-        _type_: _description_
+        tuple[str, str]: Min and max dates present in the database
     """
-    query = """select min(b.briefing_id) as min_briefing_id, max(b.briefing_id) as max_briefing_id from briefing b where b.status = 'available';"""
+    query = """select min(b.briefing_id) as min_briefing_id, max(b.briefing_id) as max_briefing_id from briefing b where b.status = ?;"""
     with conn:
         cursor = conn.cursor()
-        cursor.execute(query)
-        min_briefing_id, max_briefing_id = cursor.fetchall()[0]
+        cursor.execute(query, (status,))
+        row = cursor.fetchall()
         cursor.close()
+        if row:
+            min_briefing_id, max_briefing_id = row[0]
+            return datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime(
+                "%Y-%m-%d"
+            ), datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+        else:
+            return None, None
 
-    return datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime(
-        "%Y-%m-%d"
-    ), datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
 
-
-def get_dates_with_briefings(conn: sqlite3.Connection):
-    """_summary_
+def get_dates_with_briefings(
+    conn: sqlite3.Connection, status: FetchStatus = "available"
+) -> list[str]:
+    """Return a list with dates ['YYYY-MM-DD', ...] where there is a briefing
+    on the status requested.
 
     Args:
-        db_path (Path, optional): _description_. Defaults to BRIEFINGS_DB_PATH.
+        conn (sqlite3.Connection): Connection to a database.
+        status (FetchStatus, optional): Status of the briefing download.
+            Defaults to "available".
 
     Returns:
-        _type_: _description_
+        list[str]: List with dates of the briefings in the database with the
+            status requested.
     """
-    query = """select distinct b.briefing_id from briefing b where b.status = 'available';"""
+    query = """select distinct b.briefing_id from briefing b where b.status = ?;"""
     briefing_dates = []
     with conn:
         cursor = conn.cursor()
-        cursor.execute(query)
+        cursor.execute(query, (status,))
         rows = cursor.fetchall()
         cursor.close()
 
