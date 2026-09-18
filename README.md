@@ -91,7 +91,7 @@ The app will be running locally in http://localhost:8501
 ## Planning
 
 A generic data science project will look like the following. In theory, the
-implmentation part is planned to last between 4 to 10 weeks. The Gantt chart
+implementation part is planned to last between 4 to 10 weeks. The Gantt chart
 shows dependencies that, in practice, can progress in parallel with
 communication among the assigned people.
 
@@ -215,7 +215,7 @@ gantt
     │
     ├── database.py             <- Scripts to load data to the database
     │
-    ├── extractor.py            <- Scripts to extact information from briefings
+    ├── extractor.py            <- Scripts to extract information from briefings
     │
     ├── scraper.py              <- Scripts to download briefings from internet
 ```
