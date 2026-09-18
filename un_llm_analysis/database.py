@@ -222,11 +222,11 @@ def get_briefing_by_url(conn: sqlite3.Connection, url: str) -> ExtractedBriefing
 
 
 def get_briefing_by_date(conn: sqlite3.Connection, date: str) -> ExtractedBriefing | None:
-    """Retrieve briefing by URL.
+    """Retrieve briefing by date.
 
     Args:
         conn (sqlite3.Connection): Open database connection.
-        url (str): URL of the briefing.
+        date (str): Date of the briefing.
 
     Returns:
         sqlite3.Row | None: The matching row, or None if not found.
