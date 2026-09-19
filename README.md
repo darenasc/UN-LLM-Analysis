@@ -70,10 +70,10 @@ The extracted result includes speaker information, sections, and full text when 
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
 
-### `streamlit`
+### `streamlit app`
 
-To visualize a dashboard with data from the project. Run the following command
-from the terminal.
+This project adds a streamlit app to visualise some of the data and analysis.
+Run the following command from the terminal to launch it.
 
 ```bash
 # Start a streamlit app
@@ -82,6 +82,11 @@ streamlit run app/Dashboard.py
 ```
 
 The app will be running locally in http://localhost:8501
+
+#### Screeshots from the dashboard
+
+![alt text](figures/home.png)
+![alt text](figures/reader.png)
 
 ## Design
 
