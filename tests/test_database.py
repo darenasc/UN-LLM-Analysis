@@ -10,12 +10,15 @@ from un_llm_analysis.database import (
     delete_from_sdg,
     delete_section,
     delete_sections,
+    get_briefing_by_date,
     get_briefing_by_id,
     get_briefing_by_url,
     get_briefing_id_by_url,
     get_briefing_id_from_date,
     get_briefings_between_dates,
+    get_dates_with_briefings,
     get_db_connection,
+    get_min_max_dates,
     get_sdgs_between_dates,
     get_section,
     get_sections_by_briefing_id,
@@ -163,6 +166,18 @@ def test_get_briefing_by_url(briefing, conn):
     assert isinstance(result, ExtractedBriefing)
     assert result.url == briefing.url
     assert get_briefing_id_from_date(result.briefing_date) == briefing_id
+
+
+def test_get_briefing_by_date(briefing, conn):
+    """Test getting a briefing given an url."""
+    # GIVEN a database connection with data
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+
+    # WHEN requesting a briefing
+    result = get_briefing_by_date(conn=conn, date=briefing.briefing_date)
+
+    # THEN the resuls is equal to the inserted briefing
+    assert briefing.briefing_date == result.briefing_date
 
 
 def test_get_briefing_id_by_url(briefing, conn):
@@ -423,3 +438,29 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
     )
     result_df = get_sdgs_between_dates(conn=conn, start_date=created_at, end_date=created_at)
     assert result_df.shape[0] > 0
+
+
+def test_get_min_max_dates(briefing, conn):
+    """Test retrieving min and max dates from the briefing table."""
+    # GIVEN a database connection with data
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+
+    # WHEN requesting max an min dates of briefings
+    result_min, result_max = get_min_max_dates(conn=conn)
+
+    # THEN the dates are equal to the inserted record
+    assert result_min == briefing.briefing_date
+    assert result_max == briefing.briefing_date
+
+
+def test_get_dates_with_briefings(briefing, conn):
+    """Test"""
+    # GIVEN a database connection with data
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+
+    # WHEN requesting a briefing
+    result = get_dates_with_briefings(conn=conn)
+
+    # THEN the result is a list and the date inserted is in the results
+    assert isinstance(result, list)
+    assert briefing.briefing_date in result

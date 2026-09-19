@@ -29,4 +29,4 @@ REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 SCHEMA_DB = PROJ_ROOT / "database" / "schema.sql"
-BRIEFINGS_DB = PROJ_ROOT / "app" / "briefings.db"
+BRIEFINGS_DB_PATH = PROJ_ROOT / "app" / "briefings.db"

@@ -70,6 +70,24 @@ The extracted result includes speaker information, sections, and full text when 
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
 
+### `streamlit app`
+
+This project adds a streamlit app to visualise some of the data and analysis.
+Run the following command from the terminal to launch it.
+
+```bash
+# Start a streamlit app
+
+streamlit run app/Dashboard.py
+```
+
+The app will be running locally in http://localhost:8501
+
+#### Screeshots from the dashboard
+
+![alt text](figures/home.png)
+![alt text](figures/reader.png)
+
 ## Design
 
 - [Slides from the first meeting on 08.06.2026 "Volunteer Project Correlaid"](https://docs.google.com/presentation/d/1eMzWXqI4xPCCzbhxbL_EYkOfEE-uKAT6_fdOmvRROlI/edit?usp=sharing)
@@ -78,7 +96,7 @@ start contributing to the project.
 ## Planning
 
 A generic data science project will look like the following. In theory, the
-implmentation part is planned to last between 4 to 10 weeks. The Gantt chart
+implementation part is planned to last between 4 to 10 weeks. The Gantt chart
 shows dependencies that, in practice, can progress in parallel with
 communication among the assigned people.
 
@@ -170,7 +188,10 @@ gantt
 │   ├── external       <- Data from third party sources.
 │   ├── interim        <- Intermediate data that has been transformed.
 │   ├── processed      <- The final, canonical data sets for modeling.
+│   │   └── database
+│   │      └── briefings.db.zip <- Database with 5 years of data
 │   └── raw            <- The original, immutable data dump.
+│      └── briefings   <- Folder that will store JSON files with briefings.
 │
 ├── docs               <- A default mkdocs project; see www.mkdocs.org for details
 │
@@ -182,8 +203,6 @@ gantt
 │
 ├── pyproject.toml     <- Project configuration file with package metadata for
 │                         un_llm_analysis and configuration for tools like black
-│
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
 │
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
 │   └── figures        <- Generated graphics and figures to be used in reporting
@@ -199,16 +218,11 @@ gantt
     │
     ├── config.py               <- Store useful variables and configuration
     │
-    ├── dataset.py              <- Scripts to download or generate data
+    ├── database.py             <- Scripts to load data to the database
     │
-    ├── features.py             <- Code to create features for modeling
+    ├── extractor.py            <- Scripts to extract information from briefings
     │
-    ├── modeling
-    │   ├── __init__.py
-    │   ├── predict.py          <- Code to run model inference with trained models
-    │   └── train.py            <- Code to train models
-    │
-    └── plots.py                <- Code to create visualizations
+    ├── scraper.py              <- Scripts to download briefings from internet
 ```
 
 --------
