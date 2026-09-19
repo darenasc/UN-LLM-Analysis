@@ -31,4 +31,4 @@ else:
 
 for section in briefing.sections:
     with st.expander(f"**{section.title}**"):
-        st.markdown(section.text)
+        st.markdown(section.text.replace("\n", "\n\n"))
