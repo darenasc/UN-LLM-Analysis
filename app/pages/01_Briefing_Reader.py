@@ -24,8 +24,9 @@ selected_date = st.sidebar.date_input(
 briefing = database.get_briefing_by_date(conn=conn, date=str(selected_date))
 st.header(f"Noon briefing of {selected_date.strftime('%A, %d %B %Y')}")
 
-if briefing.speaker_role:
-    st.write(f"By {briefing.speaker_role}, {briefing.speaker_name}")
+if briefing.sections:
+    speaker = ", ".join(x for x in [briefing.speaker_name, briefing.speaker_role] if x)
+    st.write(f"By {speaker}" if speaker else "Speaker not specified.")
 else:
     st.write("Noon briefing not available.")
 
