@@ -5,7 +5,7 @@
 
 The project uses:
 
-- Python 3.12    
+- Python 3.12
 - Pipenv
 
 ## Set up the project
