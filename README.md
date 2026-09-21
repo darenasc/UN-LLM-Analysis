@@ -240,7 +240,7 @@ gantt
 
 # Contributors
 
-**Volunteers**:
+**Volunteers**: Franz Song
 
 **Mentor**: Diego Arenas
 

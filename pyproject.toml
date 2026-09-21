@@ -7,16 +7,18 @@ name = "un_llm_analysis"
 version = "0.0.1"
 description = "Analysis of the UN noon briefings using LLMs."
 authors = [
-  {name="Diego Arenas", email="darenasc@gmail.com"},
+  { name = "Diego Arenas", email = "darenasc@gmail.com" },
+  { name = "Franz Song", email = "justsyh@gmail.com" },
 ]
 maintainers = [
-  { name="Diego Arenas", email="darenasc@gmail.com" }
+  { name = "Diego Arenas", email = "darenasc@gmail.com" },
+  { name = "Franz Song", email = "justsyh@gmail.com" },
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License"
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
 ]
 requires-python = "~=3.12.0"
 
