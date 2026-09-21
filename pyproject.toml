@@ -5,9 +5,12 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "un_llm_analysis"
 version = "0.0.1"
-description = "A short description of the project."
+description = "Analysis of the UN noon briefings using LLMs."
 authors = [
-  { name = "Correlaid" },
+  {name="Diego Arenas", email="darenasc@gmail.com"},
+]
+maintainers = [
+  { name="Diego Arenas", email="darenasc@gmail.com" }
 ]
 license = { file = "LICENSE" }
 readme = "README.md"

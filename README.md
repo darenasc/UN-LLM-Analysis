@@ -237,3 +237,11 @@ gantt
 ```
 
 --------
+
+# Contributors
+
+**Volunteers**:
+
+**Mentor**: Diego Arenas
+
+**Project Partner**: Correlaid
