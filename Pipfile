@@ -36,12 +36,14 @@ wordcloud = "*"
 python_version = "3.12"
 
 [dev-packages]
-pytest = "*"
-pytest-cov = "*"
-pre-commit = "*"
 black = "*"
-isort = "*"
 ipython = "*"
+isort = "*"
 jupyterlab = "*"
+mkdocs-material = "*"
+mkdocstrings = {extras = ["python"], version = "*"}
 notebook = "*"
 pipfile = "*"
+pre-commit = "*"
+pytest = "*"
+pytest-cov = "*"
