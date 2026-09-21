@@ -46,32 +46,33 @@ def test_create_database(tmp_path):
     assert (tmp_path / db_name).exists()
 
 
-@pytest.fixture(scope="function")
-def conn(tmp_path):
-    """Fixture serving a database connection."""
-    db_name = "briefings.db"
-    create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
-
-    yield get_db_connection(db_path=tmp_path / db_name)
-
-    (tmp_path / db_name).unlink()
-
-
 def test_get_db_connection(tmp_path):
     """Test getting a connection to a database."""
     # GIVEN a path a to a database
-    db_name = "briefings.db"
+    tmp_db_path = tmp_path / "briefings.db"
 
-    # WHEN testing `create_database`
-    create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
-    conn = get_db_connection(db_path=tmp_path / db_name)
+    # WHEN testing `get_db_connection` (DB is created if the parent dir exists)
+    conn = get_db_connection(db_path=tmp_db_path)
 
     # THEN check the database exists and is of the correct type
-    assert (tmp_path / db_name).exists()
+    assert tmp_db_path.exists()
     assert isinstance(conn, sqlite3.Connection)
 
-    # delete database from disk
-    (tmp_path / db_name).unlink()
+    # close the connection
+    conn.close()
+
+
+@pytest.fixture(scope="function")
+def conn():
+    """Fixture serving an in-memory database connection."""
+    conn = get_db_connection(":memory:")
+
+    sql_schema = Path(SCHEMA_DB).read_text(encoding="utf-8")
+    conn.executescript(sql_schema)
+
+    yield conn
+
+    conn.close()
 
 
 @pytest.mark.parametrize(
