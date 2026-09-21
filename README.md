@@ -53,6 +53,17 @@ scraper check 2026-08-12
 Scraped raw data location:
   `data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json`
 
+## Documentation
+
+The project documentation is built with MkDocs.
+To view the documentation locally, run:
+
+```bash
+pipenv run mkdocs serve -f docs/mkdocs.yml
+```
+
+See the [Getting Started](./docs/getting-started.md) guide for the setup instructions.
+
 
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.

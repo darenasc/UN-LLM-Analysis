@@ -1,10 +1,15 @@
-# un_llm_analysis documentation!
 
-## Description
+# UN LLM Analysis
 
-A short description of the project.
+## About the project
 
-## Commands
+The UN LLM Analysis project analyzes language patterns and themes in UN noon briefings using large language models (LLMs).
 
-The Makefile contains the central entry points for common tasks related to this project.
+The aim is to identify trends and insights on global issues, policy developments, and emerging challenges.
+
+## Project resources
+
+The project includes tools and documentation for collecting and analyzing UN noon briefing data.
+
+
 
