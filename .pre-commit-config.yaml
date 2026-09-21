@@ -24,12 +24,3 @@ repos:
       - id: codespell
         name: "codespell (To apply suggested fixes, run: pipenv run codespell -w .)"
         args: ["-C", "0"]
-
-  - repo: local
-    hooks:
-      - id: pipenv-requirements
-        name: Generate requirements.txt
-        entry: bash -c 'pipenv lock && pipenv requirements > requirements.txt'
-        language: system
-        pass_filenames: false
-        files: ^Pipfile$
