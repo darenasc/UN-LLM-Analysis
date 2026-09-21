@@ -209,3 +209,7 @@ notebooks/*.png
 # Keep test JSON fixtures
 !tests/fixtures/
 !tests/fixtures/**/*.json
+
+# Exclude experiment records (mlflow)
+mlartifacts/
+mlflow.db

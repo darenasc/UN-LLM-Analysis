@@ -22,3 +22,12 @@ repos:
     rev: v2.4.3
     hooks:
       - id: codespell
+
+  - repo: local
+    hooks:
+      - id: pipenv-requirements
+        name: Generate requirements.txt
+        entry: bash -c 'pipenv lock && pipenv requirements > requirements.txt'
+        language: system
+        pass_filenames: false
+        files: ^Pipfile$
