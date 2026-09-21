@@ -58,7 +58,7 @@ def conn(tmp_path):
 
 
 def test_get_db_connection(tmp_path):
-    """Test getting a connection to a databse."""
+    """Test getting a connection to a database."""
     # GIVEN a path a to a database
     db_name = "briefings.db"
 
@@ -107,7 +107,7 @@ def test_insert_into_briefing(briefing, conn):
     )
 
     # WHEN no data in the database
-    # THEN resuls is None
+    # THEN results is None
     assert result is None
 
     # WHEN inserting a briefing in the database
@@ -176,7 +176,7 @@ def test_get_briefing_by_date(briefing, conn):
     # WHEN requesting a briefing
     result = get_briefing_by_date(conn=conn, date=briefing.briefing_date)
 
-    # THEN the resuls is equal to the inserted briefing
+    # THEN the results is equal to the inserted briefing
     assert briefing.briefing_date == result.briefing_date
 
 
@@ -193,7 +193,7 @@ def test_get_briefing_id_by_url(briefing, conn):
     briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
     result = get_briefing_id_by_url(conn=conn, url=briefing.url)
 
-    # THEN the resuls is int and the same as the id computed from the extracted briefing
+    # THEN the results is int and the same as the id computed from the extracted briefing
     assert isinstance(result, int)
     assert result == get_briefing_id_from_date(briefing.briefing_date)
     assert result == briefing_id
@@ -208,7 +208,7 @@ def test_get_briefings_between_dates(briefing, conn):
         conn=conn, start_date=briefing.briefing_date, end_date=briefing.briefing_date
     )
 
-    # THEN the lenght of the result list is equal to 1 and is a ExtractedBriefing
+    # THEN the length of the result list is equal to 1 and is a ExtractedBriefing
     if result:
         assert len(result) == 1
         assert isinstance(result[0], ExtractedBriefing)
