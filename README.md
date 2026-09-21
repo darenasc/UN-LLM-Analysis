@@ -88,6 +88,17 @@ The app will be running locally in http://localhost:8501
 ![alt text](figures/home.png)
 ![alt text](figures/reader.png)
 
+## Documentation
+
+The project documentation is built with MkDocs.
+To view the documentation locally, run:
+
+```bash
+pipenv run mkdocs serve -f docs/mkdocs.yml
+```
+
+See the [Getting Started](./docs/getting-started.md) guide for the setup instructions.
+
 ## Design
 
 - [Slides from the first meeting on 08.06.2026 "Volunteer Project Correlaid"](https://docs.google.com/presentation/d/1eMzWXqI4xPCCzbhxbL_EYkOfEE-uKAT6_fdOmvRROlI/edit?usp=sharing)
