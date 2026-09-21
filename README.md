@@ -97,7 +97,9 @@ To view the documentation locally, run:
 pipenv run mkdocs serve -f docs/mkdocs.yml
 ```
 
-See the [Getting Started](./docs/getting-started.md) guide for the setup instructions.
+The documentation will be available in `http://127.0.0.1:8000/` in your browser.
+
+See the [Usage](./docs/index.md) guide for the setup instructions.
 
 ## Design
 
