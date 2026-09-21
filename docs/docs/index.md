@@ -10,6 +10,3 @@ The aim is to identify trends and insights on global issues, policy developments
 ## Project resources
 
 The project includes tools and documentation for collecting and analyzing UN noon briefing data.
-
-
-
