@@ -22,3 +22,5 @@ repos:
     rev: v2.4.3
     hooks:
       - id: codespell
+        name: "codespell (To apply suggested fixes, run: pipenv run codespell -w .)"
+        args: ["-C", "0"]
