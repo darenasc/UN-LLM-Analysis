@@ -15,6 +15,7 @@ from un_llm_analysis.database_cli import (
     _build_parser,
     _resolve_load_request,
 )
+from un_llm_analysis.utils import _parse_date
 
 
 @patch("un_llm_analysis.database_cli.BRIEFINGS_DIR", "/tmp/briefings")

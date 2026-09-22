@@ -14,27 +14,20 @@ The CLI follows a layered architecture:
 """
 
 import argparse
-from collections.abc import Iterator
-from datetime import date, datetime, timedelta
-import os
-from pathlib import Path
-import sqlite3
+from datetime import date, datetime
 import sys
+import sqlite3
 from zoneinfo import ZoneInfo
 from loguru import logger
 
 from un_llm_analysis.config import BRIEFINGS_DIR, MIN_SCRAPE_DATE
 from un_llm_analysis.database import (
     create_database,
-    get_briefing_by_id,
-    get_briefing_id_from_date,
     get_db_connection,
-    insert_into_briefing,
-    insert_into_section,
+    query_by_date, query_by_status,
+    load_between_dates
 )
-from un_llm_analysis.extractor import extract_briefing
-from un_llm_analysis.utils import _dates_between
-
+from un_llm_analysis.utils import _parse_date
 
 
 
@@ -52,73 +45,7 @@ def _is_briefing_json_exists(briefing_date: date) -> bool:
     return briefing_path.exists()
 
 
-
-
-
-def query_by_date(query_date: date) -> None:
-    """Query and display a briefing by date.
-
-    Args:
-        query_date (date): Date of the briefing to query.
-    """
-    with get_db_connection() as conn:
-        briefing_id = get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
-        briefing = get_briefing_by_id(conn, briefing_id)
-
-    if briefing:
-        logger.info(f"Briefing found for {query_date}:")
-        logger.info(f"  URL: {briefing.url}")
-        logger.info(f"  Status: {briefing.status}")
-        logger.info(f"  Speaker: {briefing.speaker_name} ({briefing.speaker_role})")
-        logger.info(f"  Sections: {len(briefing.sections)}")
-    else:
-        logger.info(f"No briefing found for {query_date}")
-
-
-def query_by_status(status: str) -> None:
-    """Query and display briefings by status.
-
-    Args:
-        status (str): Status to filter briefings by, or "all" for all briefings.
-    """
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        if status == "all":
-            cursor.execute("SELECT briefing_date, url, status FROM briefing")
-        else:
-            cursor.execute(
-                "SELECT briefing_date, url, status FROM briefing WHERE status = ?",
-                (status,),
-            )
-        rows = cursor.fetchall()
-
-    logger.info(f"Found {len(rows)} briefings with status '{status}':")
-    for row in rows:
-        logger.info(f"  {row['briefing_date']}: {row['url']}")
-
-
-def _get_existing_briefing_dates(
-    conn: sqlite3.Connection, start_date: date, end_date: date
-) -> set[date]:
-    """Fetch the set of briefing dates already in the database within a range.
-
-    Args:
-        conn (sqlite3.Connection): Database connection object.
-        start_date (date): Start of the range (inclusive).
-        end_date (date): End of the range (inclusive).
-
-    Returns:
-        set[date]: Dates that already have a briefing row in the database.
-    """
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT briefing_date FROM briefing WHERE briefing_date BETWEEN ? AND ?",
-        (start_date.isoformat(), end_date.isoformat()),
-    )
-    return {date.fromisoformat(row["briefing_date"]) for row in cursor.fetchall()}
-
-
-def show_stats() -> None:
+def show_stats(conn: sqlite3.Connection | None = None) -> None:
     """Display database statistics.
 
     Prints total briefings count, date range, and count by status.

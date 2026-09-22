@@ -1,5 +1,5 @@
 import ast
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 import sqlite3
 
@@ -15,8 +15,10 @@ from un_llm_analysis.database import (
     insert_into_briefing,
     insert_into_section,
 )
-from un_llm_analysis.extractor import extract_briefing
+from un_llm_analysis.extractor import extract_briefing, ExtractedBriefing, ExtractedSection
+from un_llm_analysis.scraper import FetchStatus
 from un_llm_analysis.utils import _dates_between
+from un_llm_analysis.database_cli import get_db_connection, _is_briefing_json_exists
 
 def create_database(db_path: str | Path = BRIEFINGS_DB, schema_path: str | Path = SCHEMA_DB):
     """Create the database file and tables if they don't already exist.
@@ -623,8 +625,8 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
         return False
 
 def load_between_dates(
-    start_date: date, end_date: date, overwrite: bool = False, dry_run: bool = False
-) -> bool:
+    start_date: date, end_date: date, overwrite: bool = False,
+        dry_run: bool = False, conn: sqlite3.Connection) -> bool:
     """Load briefings from JSON files into database for a date range.
 
     Args:
@@ -643,7 +645,7 @@ def load_between_dates(
         logger.info("DRY RUN - No changes will be made:")
         for briefing_date in requested_dates:
             date_string = briefing_date.strftime("%Y-%m-%d")
-            file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+            file_path = BRIEFINGS_DIR / date_string[:4]} / {date_string[:7]} / f"{date_string}.json"
             if not _is_briefing_json_exists(briefing_date):
                 logger.info(f"  - No JSON file for {date_string}, would skip")
             else:
@@ -687,3 +689,65 @@ def load_between_dates(
     logger.info("Load complete.")
     return True
 
+
+def query_by_date(query_date: date) -> None:
+    """Query and display a briefing by date.
+
+    Args:
+        query_date (date): Date of the briefing to query.
+    """
+    with get_db_connection() as conn:
+        briefing_id = get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
+        briefing = get_briefing_by_id(conn, briefing_id)
+
+    if briefing:
+        logger.info(f"Briefing found for {query_date}:")
+        logger.info(f"  URL: {briefing.url}")
+        logger.info(f"  Status: {briefing.status}")
+        logger.info(f"  Speaker: {briefing.speaker_name} ({briefing.speaker_role})")
+        logger.info(f"  Sections: {len(briefing.sections)}")
+    else:
+        logger.info(f"No briefing found for {query_date}")
+
+
+def query_by_status(status: FetchStatus, conn=BRIEFINGS_DB) -> None:
+    """Query and display briefings by status.
+
+    Args:
+        status (str): Status to filter briefings by, or "all" for all briefings.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if status == "all":
+            cursor.execute("SELECT briefing_date, url, status FROM briefing")
+        else:
+            cursor.execute(
+                "SELECT briefing_date, url, status FROM briefing WHERE status = ?",
+                (status,),
+            )
+        rows = cursor.fetchall()
+
+    logger.info(f"Found {len(rows)} briefings with status '{status}':")
+    for row in rows:
+        logger.info(f"  {row['briefing_date']}: {row['url']}")
+
+
+def _get_existing_briefing_dates(
+    conn: sqlite3.Connection, start_date: date, end_date: date
+) -> set[date]:
+    """Fetch the set of briefing dates already in the database within a range.
+
+    Args:
+        conn (sqlite3.Connection): Database connection object.
+        start_date (date): Start of the range (inclusive).
+        end_date (date): End of the range (inclusive).
+
+    Returns:
+        set[date]: Dates that already have a briefing row in the database.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT briefing_date FROM briefing WHERE briefing_date BETWEEN ? AND ?",
+        (start_date.isoformat(), end_date.isoformat()),
+    )
+    return {date.fromisoformat(row["briefing_date"]) for row in cursor.fetchall()}
