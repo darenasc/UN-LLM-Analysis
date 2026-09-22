@@ -14,6 +14,7 @@ from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page, sync_playwright
 
 from un_llm_analysis.config import BASE_URL, BRIEFINGS_DIR, MIN_SCRAPE_DATE
+from un_llm_analysis.utils import _dates_between
 
 FetchStatus = Literal["available", "not_published", "failed"]
 
@@ -135,26 +136,6 @@ def _is_briefing_scraped(briefing_date: date) -> bool:
         return False
 
     return True
-
-
-# Check all dates because weekend and holiday exceptions exist, e.g.
-# 2013-08-31 (Saturday) and 2013-09-01 (Sunday).
-def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
-    """Yield dates from start_date to end_date, inclusive
-
-    Args:
-        start_date (date): The date to start the sequence from..
-        end_date (date): The date to end the sequence at.
-
-    Yields:
-        Iterator[date]: An iterator yielding dates in the range
-            [start_date, end_date].
-    """
-
-    current_date = start_date
-    while current_date <= end_date:
-        yield current_date
-        current_date += timedelta(days=1)
 
 
 def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = False) -> None:

@@ -34,26 +34,9 @@ from un_llm_analysis.database import (
     insert_into_section,
 )
 from un_llm_analysis.extractor import extract_briefing
+from un_llm_analysis.utils import _dates_between
 
 
-
-
-def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
-    """Yield dates from start_date to end_date, inclusive.
-
-    Args:
-        start_date (date): The date to start the sequence from.
-        end_date (date): The date to end the sequence at.
-
-    Yields:
-        Iterator[date]: An iterator yielding dates in the range [start_date, end_date].
-    """
-    min_date = min(start_date, end_date)
-    max_date = max(start_date, end_date)
-    current_date = min_date
-    while current_date <= max_date:
-        yield current_date
-        current_date += timedelta(days=1)
 
 
 def _is_briefing_json_exists(briefing_date: date) -> bool:
