@@ -2,6 +2,9 @@ from datetime import timedelta, date
 from collections.abc import Iterator
 import argparse
 
+from un_llm_analysis.config import PROJ_ROOT, BRIEFINGS_DIR
+
+
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
     """Yield dates from start_date to end_date, inclusive.
 
@@ -35,3 +38,21 @@ def _parse_date(value: str) -> date:
         return date.fromisoformat(value)
     except ValueError as exc:
         raise argparse.ArgumentTypeError(f"Invalid date: {value}. Expected YYYY-MM-DD.") from exc
+
+
+SCHEMA_DB = PROJ_ROOT / "database" / "schema.sql"
+BRIEFINGS_DB = PROJ_ROOT / "app" / "briefings.db"
+
+
+def _is_briefing_json_exists(briefing_date: date) -> bool:
+    """Check if a briefing JSON file exists for the given date.
+
+    Args:
+        briefing_date (date): Date of the briefing to check.
+
+    Returns:
+        bool: True if the JSON file exists, False otherwise.
+    """
+    date_string = briefing_date.strftime("%Y-%m-%d")
+    briefing_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+    return briefing_path.exists()

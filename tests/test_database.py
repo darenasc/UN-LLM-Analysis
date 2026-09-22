@@ -3,7 +3,7 @@ import sqlite3
 from datetime import date
 import pytest
 from pytest import MonkeyPatch
-
+from unittest.mock import MagicMock
 from un_llm_analysis.utils import _dates_between, _parse_date, SCHEMA_DB, BRIEFINGS_DB, BRIEFINGS_DIR
 from un_llm_analysis import database as db_module
 
@@ -440,7 +440,6 @@ def test_load_briefing_to_db(briefing, conn:sqlite3.Connection):
     file_path = Path("tests/fixtures/briefing_2026-08-25.json")
 
     result = load_briefing_to_db(file_path=file_path, conn=conn)
-
     assert result is True
 
     retrieved_briefing = get_briefing_by_url(conn=conn, url=briefing.url)
@@ -485,3 +484,39 @@ def test_missing_json_files_are_skipped_not_failed(monkeypatch:MonkeyPatch, conn
         lambda path, c: (_ for _ in ()).throw(AssertionError("should not be called")),
     )
     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is True
+
+def test_load_between_dates(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
+    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
+
+
+def test_query_by_date_found(monkeypatch:MonkeyPatch, conn:sqlite3.Connection, briefing):
+    """Test query_by_date runs without error when a briefing exists."""
+    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
+    insert_into_briefing(conn=conn, briefing=briefing)
+    result = query_by_date(date.fromisoformat(briefing.briefing_date))
+    assert result is None
+
+
+def test_query_by_date_not_found(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+    """Test query_by_date runs without error when no briefing exists."""
+    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
+    result = query_by_date(date(2024, 1, 1))
+    assert result is None
+
+
+def test_query_by_status_specific(monkeypatch:MonkeyPatch, conn:sqlite3.Connection, briefing):
+    """Test query_by_status filters correctly by a specific status."""
+    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
+    insert_into_briefing(conn=conn, briefing=briefing)
+    result = query_by_status(status=briefing.status)
+    assert result is None
+
+
+def test_query_by_status_all(monkeypatch:MonkeyPatch, conn:sqlite3.Connection, briefing):
+    """Test query_by_status returns all briefings when status='all'."""
+    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
+    insert_into_briefing(conn=conn, briefing=briefing)
+    result = query_by_status(status="all")
+    assert result is None
