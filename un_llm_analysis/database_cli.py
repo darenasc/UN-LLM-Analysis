@@ -21,7 +21,6 @@ from pathlib import Path
 import sqlite3
 import sys
 from zoneinfo import ZoneInfo
-
 from loguru import logger
 
 from un_llm_analysis.config import BRIEFINGS_DIR, MIN_SCRAPE_DATE
@@ -49,10 +48,8 @@ def _is_briefing_json_exists(briefing_date: date) -> bool:
         bool: True if the JSON file exists, False otherwise.
     """
     date_string = briefing_date.strftime("%Y-%m-%d")
-    briefing_path = os.path.join(
-        BRIEFINGS_DIR, date_string[:4], date_string[:7], f"{date_string}.json"
-    )
-    return os.path.exists(briefing_path)
+    briefing_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+    return briefing_path.exists()
 
 
 def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
@@ -99,13 +96,11 @@ def load_between_dates(
         logger.info("DRY RUN - No changes will be made:")
         for briefing_date in requested_dates:
             date_string = briefing_date.strftime("%Y-%m-%d")
-            file_path = Path(
-                f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
-            )
+            file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
             if not _is_briefing_json_exists(briefing_date):
                 logger.info(f"  - No JSON file for {date_string}, would skip")
             else:
-                logger.infof"  [{date_string}] Would load from {file_path}")
+                logger.info(f"  [{date_string}] Would load from {file_path}")
         logger.info(f"Total: {len(requested_dates)} dates requested.")
         logger.info("Dry run complete.")
         return True
@@ -127,9 +122,7 @@ def load_between_dates(
 
         for i, briefing_date in enumerate(dates_to_load):
             date_string = briefing_date.strftime("%Y-%m-%d")
-            file_path = Path(
-                f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
-            )
+            file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
 
             if not _is_briefing_json_exists(briefing_date):
                 logger.info(f"  - No JSON file for {date_string}, skipping")
