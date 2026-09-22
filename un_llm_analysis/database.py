@@ -6,11 +6,10 @@ import sqlite3
 from loguru import logger
 import pandas as pd
 
-from un_llm_analysis.config import BRIEFINGS_DIR, BRIEFINGS_DB, SCHEMA_DB
+from un_llm_analysis.config import BRIEFINGS_DIR
 from un_llm_analysis.extractor import extract_briefing, ExtractedBriefing, ExtractedSection
 from un_llm_analysis.scraper import FetchStatus
-from un_llm_analysis.utils import _dates_between
-from un_llm_analysis.database_cli import _is_briefing_json_exists
+from un_llm_analysis.utils import _dates_between, SCHEMA_DB, BRIEFINGS_DB, _is_briefing_json_exists
 
 
 def create_database(db_path: str | Path = BRIEFINGS_DB, schema_path: str | Path = SCHEMA_DB):
@@ -23,11 +22,12 @@ def create_database(db_path: str | Path = BRIEFINGS_DB, schema_path: str | Path 
     with open(schema_path, "r", encoding="utf-8") as f:
         sql_schema = f.read()
 
-    with get_db_connection(str(db_path)) as conn:
+    conn = get_db_connection(str(db_path))
+    try:
         conn.executescript(sql_schema)
-
         logger.info(f'Database created in "{db_path}"')
-
+    finally:
+        conn.close()
 
 def get_db_connection(db_path: str | Path = str(BRIEFINGS_DB)) -> sqlite3.Connection:
     """Connect to SQLite database with foreign keys enabled.

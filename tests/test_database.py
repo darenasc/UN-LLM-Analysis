@@ -4,7 +4,7 @@ from datetime import date
 import pytest
 from pytest import MonkeyPatch
 
-from un_llm_analysis.utils import _dates_between, _parse_date, SCHEMA_DB
+from un_llm_analysis.utils import _dates_between, _parse_date, SCHEMA_DB, BRIEFINGS_DB, BRIEFINGS_DIR
 from un_llm_analysis import database as db_module
 
 from un_llm_analysis.database import (
@@ -75,6 +75,7 @@ def test_get_db_connection(tmp_path):
     # THEN check the database exists and is of the correct type
     assert (tmp_path / db_name).exists()
     assert isinstance(conn, sqlite3.Connection)
+    conn.close()
 
     # delete database from disk
     (tmp_path / db_name).unlink()
