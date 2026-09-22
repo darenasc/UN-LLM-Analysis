@@ -13,12 +13,15 @@ from un_llm_analysis.database import (
     delete_from_sdg,
     delete_section,
     delete_sections,
+    get_briefing_by_date,
     get_briefing_by_id,
     get_briefing_by_url,
     get_briefing_id_by_url,
     get_briefing_id_from_date,
     get_briefings_between_dates,
+    get_dates_with_briefings,
     get_db_connection,
+    get_min_max_dates,
     get_sdgs_between_dates,
     get_section,
     get_sections_by_briefing_id,
@@ -70,21 +73,33 @@ def conn(tmp_path):
 
 
 def test_get_db_connection(tmp_path):
-    """Test getting a connection to a databse."""
+    """Test getting a connection to a database."""
     # GIVEN a path a to a database
-    db_name = "briefings.db"
+    tmp_db_path = tmp_path / "briefings.db"
 
-    # WHEN testing `create_database`
-    create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
-    conn = get_db_connection(db_path=tmp_path / db_name)
+    # WHEN testing `get_db_connection` (DB is created if the parent dir exists)
+    conn = get_db_connection(db_path=tmp_db_path)
 
     # THEN check the database exists and is of the correct type
-    assert (tmp_path / db_name).exists()
+    assert tmp_db_path.exists()
     assert isinstance(conn, sqlite3.Connection)
     conn.close()
 
-    # delete database from disk
-    (tmp_path / db_name).unlink()
+    # close the connection
+    conn.close()
+
+
+@pytest.fixture(scope="function")
+def conn():
+    """Fixture serving an in-memory database connection."""
+    conn = get_db_connection(":memory:")
+
+    sql_schema = Path(SCHEMA_DB).read_text(encoding="utf-8")
+    conn.executescript(sql_schema)
+
+    yield conn
+
+    conn.close()
 
 
 @pytest.mark.parametrize(
@@ -120,7 +135,7 @@ def test_insert_into_briefing(briefing, conn):
     )
 
     # WHEN no data in the database
-    # THEN resuls is None
+    # THEN results is None
     assert result is None
 
     # WHEN inserting a briefing in the database
@@ -181,6 +196,18 @@ def test_get_briefing_by_url(briefing, conn):
     assert get_briefing_id_from_date(result.briefing_date) == briefing_id
 
 
+def test_get_briefing_by_date(briefing, conn):
+    """Test getting a briefing given an url."""
+    # GIVEN a database connection with data
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+
+    # WHEN requesting a briefing
+    result = get_briefing_by_date(conn=conn, date=briefing.briefing_date)
+
+    # THEN the results is equal to the inserted briefing
+    assert briefing.briefing_date == result.briefing_date
+
+
 def test_get_briefing_id_by_url(briefing, conn):
     """Test retrieving a briefing id given an url."""
     # GIVEN a database connections
@@ -194,7 +221,7 @@ def test_get_briefing_id_by_url(briefing, conn):
     briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
     result = get_briefing_id_by_url(conn=conn, url=briefing.url)
 
-    # THEN the resuls is int and the same as the id computed from the extracted briefing
+    # THEN the results is int and the same as the id computed from the extracted briefing
     assert isinstance(result, int)
     assert result == get_briefing_id_from_date(briefing.briefing_date)
     assert result == briefing_id
@@ -209,7 +236,7 @@ def test_get_briefings_between_dates(briefing, conn):
         conn=conn, start_date=briefing.briefing_date, end_date=briefing.briefing_date
     )
 
-    # THEN the lenght of the result list is equal to 1 and is a ExtractedBriefing
+    # THEN the length of the result list is equal to 1 and is a ExtractedBriefing
     if result:
         assert len(result) == 1
         assert isinstance(result[0], ExtractedBriefing)

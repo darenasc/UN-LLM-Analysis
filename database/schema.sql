@@ -41,3 +41,34 @@ CREATE TABLE IF NOT EXISTS sdg (
     model TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+
+CREATE TABLE IF NOT EXISTS analysis_run (
+    analysis_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    analysis_name TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    model_version TEXT,
+    ollama_version TEXT,
+    prompt_version TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    temperature REAL NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sentiment_analysis (
+    analysis_result_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    analysis_id INTEGER NOT NULL,
+    briefing_id INTEGER NOT NULL,
+    section_id INTEGER NOT NULL,
+    briefing_date TEXT,
+    sentiment TEXT,
+    tone TEXT,
+    status TEXT NOT NULL,
+    error_message TEXT,
+    created_at TEXT NOT NULL,
+
+    FOREIGN KEY (analysis_id)
+        REFERENCES analysis_run(analysis_id),
+
+    UNIQUE (analysis_id, briefing_id, section_id)
+);

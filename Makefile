@@ -15,7 +15,7 @@ PYTHON_INTERPRETER = python
 .PHONY: requirements
 requirements:
 	pipenv install
-	
+
 
 
 
@@ -52,7 +52,7 @@ test:
 create_environment:
 	pipenv --python $(PYTHON_VERSION)
 	@echo ">>> New pipenv created. Activate with:\npipenv shell"
-	
+
 
 
 
