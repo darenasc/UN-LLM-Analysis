@@ -7,12 +7,18 @@ name = "un_llm_analysis"
 version = "0.0.1"
 description = "Analysis of the UN noon briefings using LLMs."
 authors = [
+  { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
+  { name = "Daniel Wilkinson" },
   { name = "Diego Arenas", email = "darenasc@gmail.com" },
   { name = "Franz Song", email = "justsyh@gmail.com" },
+  { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
 ]
 maintainers = [
+  { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
+  { name = "Daniel Wilkinson" },
   { name = "Diego Arenas", email = "darenasc@gmail.com" },
   { name = "Franz Song", email = "justsyh@gmail.com" },
+  { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
