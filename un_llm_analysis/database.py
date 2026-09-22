@@ -6,19 +6,12 @@ import sqlite3
 from loguru import logger
 import pandas as pd
 
-
 from un_llm_analysis.config import BRIEFINGS_DIR, BRIEFINGS_DB, SCHEMA_DB
-from un_llm_analysis.database import (
-    get_briefing_by_id,
-    get_briefing_id_from_date,
-    get_db_connection,
-    insert_into_briefing,
-    insert_into_section,
-)
 from un_llm_analysis.extractor import extract_briefing, ExtractedBriefing, ExtractedSection
 from un_llm_analysis.scraper import FetchStatus
 from un_llm_analysis.utils import _dates_between
-from un_llm_analysis.database_cli import get_db_connection, _is_briefing_json_exists
+from un_llm_analysis.database_cli import _is_briefing_json_exists
+
 
 def create_database(db_path: str | Path = BRIEFINGS_DB, schema_path: str | Path = SCHEMA_DB):
     """Create the database file and tables if they don't already exist.
@@ -624,9 +617,14 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
         logger.error(f"Error loading {file_path}: {exc}")
         return False
 
+
 def load_between_dates(
-    start_date: date, end_date: date, overwrite: bool = False,
-        dry_run: bool = False, conn: sqlite3.Connection) -> bool:
+    start_date: date,
+    end_date: date,
+    overwrite: bool = False,
+    dry_run: bool = False,
+    conn: sqlite3.Connection | None = None,
+) -> bool:
     """Load briefings from JSON files into database for a date range.
 
     Args:
@@ -634,6 +632,8 @@ def load_between_dates(
         end_date (date): The date to end loading at.
         overwrite (bool): Whether to overwrite existing briefings. Defaults to False.
         dry_run (bool): If True, preview what would be loaded without actually loading. Defaults to False.
+        conn (sqlite3.Connection | None): Existing connection to reuse. If None,
+            a new connection is opened and closed automatically.
 
     Returns:
         bool: True if every loaded briefing succeeded (or nothing needed loading),
@@ -642,45 +642,27 @@ def load_between_dates(
     requested_dates = list(_dates_between(start_date, end_date))
 
     if dry_run:
-        logger.info("DRY RUN - No changes will be made:")
-        for briefing_date in requested_dates:
-            date_string = briefing_date.strftime("%Y-%m-%d")
-            file_path = BRIEFINGS_DIR / date_string[:4]} / {date_string[:7]} / f"{date_string}.json"
-            if not _is_briefing_json_exists(briefing_date):
-                logger.info(f"  - No JSON file for {date_string}, would skip")
-            else:
-                logger.info(f"  [{date_string}] Would load from {file_path}")
-        logger.info(f"Total: {len(requested_dates)} dates requested.")
-        logger.info("Dry run complete.")
+        _log_dry_run(requested_dates)
         return True
 
-    failed_dates: list[str] = []
+    owns_conn = conn is None
+    if owns_conn:
+        conn = get_db_connection()
 
-    with get_db_connection() as conn:
-        if overwrite:
-            dates_to_load = requested_dates
-        else:
-            existing_dates = _get_existing_briefing_dates(conn, start_date, end_date)
-            dates_to_load = [d for d in requested_dates if d not in existing_dates]
-
+    try:
+        dates_to_load = _resolve_dates_to_load(
+            conn, requested_dates, start_date, end_date, overwrite
+        )
         logger.info(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
 
         if not dates_to_load:
             logger.info("All requested briefings already in database.")
             return True
 
-        for i, briefing_date in enumerate(dates_to_load):
-            date_string = briefing_date.strftime("%Y-%m-%d")
-            file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
-
-            if not _is_briefing_json_exists(briefing_date):
-                logger.info(f"  - No JSON file for {date_string}, skipping")
-                continue
-
-            logger.info(f"  [{i + 1}/{len(dates_to_load)}] {date_string} Loading...")
-            success = load_briefing_to_db(file_path, conn)
-            if not success:
-                failed_dates.append(date_string)
+        failed_dates = _load_dates(conn, dates_to_load)
+    finally:
+        if owns_conn:
+            conn.close()
 
     if failed_dates:
         logger.info(f"Load complete with {len(failed_dates)} failure(s): {', '.join(failed_dates)}")
@@ -688,6 +670,74 @@ def load_between_dates(
 
     logger.info("Load complete.")
     return True
+
+
+def _log_dry_run(requested_dates: list[date]) -> None:
+    """Log a preview of what load_between_dates would do, without loading anything."""
+    logger.info("DRY RUN - No changes will be made:")
+    for briefing_date in requested_dates:
+        date_string = briefing_date.strftime("%Y-%m-%d")
+        file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+        if not _is_briefing_json_exists(briefing_date):
+            logger.info(f"  - No JSON file for {date_string}, would skip")
+        else:
+            logger.info(f"  [{date_string}] Would load from {file_path}")
+    logger.info(f"Total: {len(requested_dates)} dates requested.")
+    logger.info("Dry run complete.")
+
+
+def _resolve_dates_to_load(
+    conn: sqlite3.Connection,
+    requested_dates: list[date],
+    start_date: date,
+    end_date: date,
+    overwrite: bool,
+) -> list[date]:
+    """Filter requested_dates down to the ones that actually need loading.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        requested_dates (list[date]): All dates in the requested range.
+        start_date (date): Start of the range (for existing-briefing lookup).
+        end_date (date): End of the range (for existing-briefing lookup).
+        overwrite (bool): If True, reload every requested date regardless of
+            what's already in the database.
+
+    Returns:
+        list[date]: Dates that still need to be loaded.
+    """
+    if overwrite:
+        return requested_dates
+    existing_dates = _get_existing_briefing_dates(conn, start_date, end_date)
+    return [d for d in requested_dates if d not in existing_dates]
+
+
+def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str]:
+    """Load each date's briefing JSON into the database.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        dates_to_load (list[date]): Dates to attempt loading.
+
+    Returns:
+        list[str]: Date strings (YYYY-MM-DD) that failed to load.
+    """
+    failed_dates: list[str] = []
+
+    for i, briefing_date in enumerate(dates_to_load):
+        date_string = briefing_date.strftime("%Y-%m-%d")
+        file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+
+        if not _is_briefing_json_exists(briefing_date):
+            logger.info(f"  - No JSON file for {date_string}, skipping")
+            continue
+
+        logger.info(f"  [{i + 1}/{len(dates_to_load)}] {date_string} Loading...")
+        success = load_briefing_to_db(file_path, conn)
+        if not success:
+            failed_dates.append(date_string)
+
+    return failed_dates
 
 
 def query_by_date(query_date: date) -> None:
