@@ -20,7 +20,7 @@ import sqlite3
 from zoneinfo import ZoneInfo
 from loguru import logger
 
-from un_llm_analysis.config import BRIEFINGS_DIR, MIN_SCRAPE_DATE
+from un_llm_analysis.config import MIN_SCRAPE_DATE
 from un_llm_analysis.database import (
     create_database,
     get_db_connection,
@@ -28,23 +28,6 @@ from un_llm_analysis.database import (
     load_between_dates
 )
 from un_llm_analysis.utils import _parse_date
-from un_llm_analysis.scraper import scrape_between_dates
-
-
-
-def _is_briefing_json_exists(briefing_date: date) -> bool:
-    """Check if a briefing JSON file exists for the given date.
-
-    Args:
-        briefing_date (date): Date of the briefing to check.
-
-    Returns:
-        bool: True if the JSON file exists, False otherwise.
-    """
-    date_string = briefing_date.strftime("%Y-%m-%d")
-    briefing_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
-    return briefing_path.exists()
-
 
 def show_stats(conn: sqlite3.Connection | None = None) -> None:
     """Display database statistics.
