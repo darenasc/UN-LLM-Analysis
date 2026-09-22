@@ -1,3 +1,18 @@
+
+"""CLI for managing the UN noon briefing database.
+
+This module provides command-line interface for:
+- Initializing the database from schema
+- Loading extracted briefings from JSON files
+- Querying briefings by date or status
+- Displaying database statistics
+
+The CLI follows a layered architecture:
+- Data Layer: extractor.py, database.py
+- Business Logic: Helper functions and core operations
+- CLI Layer: Argument parsing, validation, and dispatch
+"""
+
 import argparse
 from collections.abc import Iterator
 from datetime import date, datetime, timedelta
@@ -20,19 +35,7 @@ from un_llm_analysis.database import (
 )
 from un_llm_analysis.extractor import extract_briefing
 
-"""CLI for managing the UN noon briefing database.
 
-This module provides command-line interface for:
-- Initializing the database from schema
-- Loading extracted briefings from JSON files
-- Querying briefings by date or status
-- Displaying database statistics
-
-The CLI follows a layered architecture:
-- Data Layer: extractor.py, database.py
-- Business Logic: Helper functions and core operations
-- CLI Layer: Argument parsing, validation, and dispatch
-"""
 
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
@@ -45,8 +48,10 @@ def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
     Yields:
         Iterator[date]: An iterator yielding dates in the range [start_date, end_date].
     """
-    current_date = start_date
-    while current_date <= end_date:
+    min_date = min(start_date, end_date)
+    max_date = max(start_date, end_date)
+    current_date = min_date
+    while current_date <= max_date:
         yield current_date
         current_date += timedelta(days=1)
 
