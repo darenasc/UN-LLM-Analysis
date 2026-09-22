@@ -241,22 +241,6 @@ def show_stats() -> None:
         logger.info(f"    {status}: {count}")
 
 
-def _parse_date(value: str) -> date:
-    """Parse a string in YYYY-MM-DD format into a date object.
-
-    Args:
-        value (str): Date string in YYYY-MM-DD format.
-
-    Returns:
-        date: Parsed date object.
-
-    Raises:
-        argparse.ArgumentTypeError: If the date string is invalid.
-    """
-    try:
-        return date.fromisoformat(value)
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError(f"Invalid date: {value}. Expected YYYY-MM-DD.") from exc
 
 
 def _build_parser() -> argparse.ArgumentParser:

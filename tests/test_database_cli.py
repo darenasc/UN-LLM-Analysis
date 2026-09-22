@@ -18,24 +18,6 @@ from un_llm_analysis.database_cli import (
 )
 
 
-def test_parse_date_valid():
-    """Test _parse_date with valid date string."""
-    result = _parse_date("2023-08-12")
-    assert result == date(2023, 8, 12)
-
-
-def test_parse_date_invalid():
-    """Test _parse_date with invalid date string."""
-    with pytest.raises(Exception):  # argparse.ArgumentTypeError
-        _parse_date("2023/08/12")
-
-
-def test_parse_date_invalid_format():
-    """Test _parse_date with malformed date string."""
-    with pytest.raises(Exception):  # argparse.ArgumentTypeError
-        _parse_date("not-a-date")
-
-
 @patch("un_llm_analysis.database_cli.BRIEFINGS_DIR", "/tmp/briefings")
 def test_is_briefing_json_exists_true(tmp_path):
     """Test _is_briefing_json_exists when file exists."""
