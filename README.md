@@ -240,8 +240,8 @@ gantt
 
 # Contributors
 
-**Volunteers**: [Charles Mbayo](https://github.com/MathCodeLab1), [Daniel Wilkinson](https://github.com/daniel-lee-wilkinson), [Franz Song](https://github.com/yuanhes), and [Josmy Mathew](https://github.com/josmyrose)
+**Volunteers**: [Charles Mbayo](https://github.com/MathCodeLab1), [Daniel Wilkinson](https://github.com/daniel-lee-wilkinson), [Franz Song](https://github.com/yuanhes), [Josmy Mathew](https://github.com/josmyrose), and [Roxana Runcan](https://github.com/Roxana-Runcan)
 
 **Mentor**: [Diego Arenas](https://github.com/darenasc)
 
-**Project Partner**: Correlaid
+**Project Partner**: [CorrelAid](https://correlaid.org/en/)

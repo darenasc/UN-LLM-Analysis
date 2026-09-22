@@ -12,6 +12,7 @@ authors = [
   { name = "Diego Arenas", email = "darenasc@gmail.com" },
   { name = "Franz Song", email = "justsyh@gmail.com" },
   { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
+  { name = "Roxana Runcan", email = "runcanroxana@gmail.com" },
 ]
 maintainers = [
   { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
@@ -19,6 +20,7 @@ maintainers = [
   { name = "Diego Arenas", email = "darenasc@gmail.com" },
   { name = "Franz Song", email = "justsyh@gmail.com" },
   { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
+  { name = "Roxana Runcan", email = "runcanroxana@gmail.com" },
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
