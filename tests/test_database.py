@@ -1,11 +1,15 @@
 from pathlib import Path
 import sqlite3
-
+from datetime import date
 import pytest
+from pytest import MonkeyPatch
 
-from un_llm_analysis.config import SCHEMA_DB
+from un_llm_analysis.utils import _dates_between, _parse_date, SCHEMA_DB
+from un_llm_analysis import database as db_module
+
 from un_llm_analysis.database import (
     create_database,
+    get_db_connection,
     delete_briefing,
     delete_from_sdg,
     delete_section,
@@ -15,7 +19,6 @@ from un_llm_analysis.database import (
     get_briefing_id_by_url,
     get_briefing_id_from_date,
     get_briefings_between_dates,
-    get_db_connection,
     get_sdgs_between_dates,
     get_section,
     get_sections_by_briefing_id,
@@ -23,12 +26,17 @@ from un_llm_analysis.database import (
     insert_into_sdg,
     insert_into_section,
     insert_section,
+    load_briefing_to_db,
+    load_between_dates,
+    query_by_date,
+    query_by_status,
 )
 from un_llm_analysis.extractor import (
     ExtractedBriefing,
     ExtractedSection,
     extract_briefing,
 )
+
 
 
 def test_create_database(tmp_path):
@@ -49,8 +57,9 @@ def conn(tmp_path):
     db_name = "briefings.db"
     create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
 
-    yield get_db_connection(db_path=tmp_path / db_name)
-
+    connection =  get_db_connection(db_path=tmp_path / db_name)
+    yield connection
+    connection.close()
     (tmp_path / db_name).unlink()
 
 
@@ -423,3 +432,55 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
     )
     result_df = get_sdgs_between_dates(conn=conn, start_date=created_at, end_date=created_at)
     assert result_df.shape[0] > 0
+
+
+def test_load_briefing_to_db(briefing, conn:sqlite3.Connection):
+    """Test loading a briefing JSON file into the database."""
+    file_path = Path("tests/fixtures/briefing_2026-08-25.json")
+
+    result = load_briefing_to_db(file_path=file_path, conn=conn)
+
+    assert result is True
+
+    retrieved_briefing = get_briefing_by_url(conn=conn, url=briefing.url)
+    assert retrieved_briefing is not None
+    assert retrieved_briefing.url == briefing.url
+
+    sections = get_sections_by_briefing_id(
+        conn=conn,
+        briefing_id=get_briefing_id_from_date(briefing.briefing_date)
+    )
+    assert len(sections) == len(briefing.sections)
+
+
+def test_load_briefing_to_db_invalid_file(conn:sqlite3.Connection):
+    """Test loading an invalid file returns False."""
+    file_path = Path("tests/fixtures/nonexistent.json")
+    result = load_briefing_to_db(file_path=file_path, conn=conn)
+    assert result is False
+
+def test_dry_run_returns_true_and_does_not_load(monkeypatch: MonkeyPatch, conn: sqlite3.Connection) -> None:
+    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+    result = load_between_dates(date(2024, 1, 1), date(2024, 1, 2), dry_run=True, conn=conn)
+    assert result is True
+
+
+def test_all_succeed(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
+    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
+
+
+def test_returns_false_on_failure(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: False)
+    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is False
+
+
+def test_missing_json_files_are_skipped_not_failed(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: False)
+    monkeypatch.setattr(
+        db_module, "load_briefing_to_db",
+        lambda path, c: (_ for _ in ()).throw(AssertionError("should not be called")),
+    )
+    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is True
