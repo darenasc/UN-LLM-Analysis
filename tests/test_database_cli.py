@@ -27,21 +27,21 @@ def test_build_parser():
     """Test _build_parser creates parser with all subcommands."""
     parser = _build_parser()
     assert parser.description == "Manage UN noon briefing database."
-    
+
     # Test init command
     args = parser.parse_args(["init"])
     assert args.command == "init"
-    
+
     # Test load command
     args = parser.parse_args(["load", "2023-01-01"])
     assert args.command == "load"
     assert args.dates == [date(2023, 1, 1)]
-    
+
     # Test query command
     args = parser.parse_args(["query", "--date", "2023-01-01"])
     assert args.command == "query"
     assert args.date == date(2023, 1, 1)
-    
+
     # Test stats command
     args = parser.parse_args(["stats"])
     assert args.command == "stats"
@@ -204,6 +204,7 @@ def conn(tmp_path):
 def briefing():
     """Fixture with an ExtractedBriefing."""
     return extract_briefing(file_path=Path("tests/fixtures/briefing_2026-08-25.json"))
+
 
 def test_show_stats_empty_db(monkeypatch, conn):
     """Test show_stats runs without error on an empty database."""

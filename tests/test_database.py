@@ -66,7 +66,7 @@ def conn(tmp_path):
     db_name = "briefings.db"
     create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
 
-    connection =  get_db_connection(db_path=tmp_path / db_name)
+    connection = get_db_connection(db_path=tmp_path / db_name)
     yield connection
     connection.close()
     (tmp_path / db_name).unlink()
@@ -468,7 +468,7 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
     assert result_df.shape[0] > 0
 
 
-def test_load_briefing_to_db(briefing, conn:sqlite3.Connection):
+def test_load_briefing_to_db(briefing, conn: sqlite3.Connection):
     """Test loading a briefing JSON file into the database."""
     file_path = Path("tests/fixtures/briefing_2026-08-25.json")
 
@@ -480,51 +480,57 @@ def test_load_briefing_to_db(briefing, conn:sqlite3.Connection):
     assert retrieved_briefing.url == briefing.url
 
     sections = get_sections_by_briefing_id(
-        conn=conn,
-        briefing_id=get_briefing_id_from_date(briefing.briefing_date)
+        conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date)
     )
     assert len(sections) == len(briefing.sections)
 
 
-def test_load_briefing_to_db_invalid_file(conn:sqlite3.Connection):
+def test_load_briefing_to_db_invalid_file(conn: sqlite3.Connection):
     """Test loading an invalid file returns False."""
     file_path = Path("tests/fixtures/nonexistent.json")
     result = load_briefing_to_db(file_path=file_path, conn=conn)
     assert result is False
 
-def test_dry_run_returns_true_and_does_not_load(monkeypatch: MonkeyPatch, conn: sqlite3.Connection) -> None:
+
+def test_dry_run_returns_true_and_does_not_load(
+    monkeypatch: MonkeyPatch, conn: sqlite3.Connection
+) -> None:
     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
     result = load_between_dates(date(2024, 1, 1), date(2024, 1, 2), dry_run=True, conn=conn)
     assert result is True
 
 
-def test_all_succeed(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+def test_all_succeed(monkeypatch: MonkeyPatch, conn: sqlite3.Connection):
     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
 
 
-def test_returns_false_on_failure(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+def test_returns_false_on_failure(monkeypatch: MonkeyPatch, conn: sqlite3.Connection):
     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: False)
     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is False
 
 
-def test_missing_json_files_are_skipped_not_failed(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+def test_missing_json_files_are_skipped_not_failed(
+    monkeypatch: MonkeyPatch, conn: sqlite3.Connection
+):
     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: False)
     monkeypatch.setattr(
-        db_module, "load_briefing_to_db",
+        db_module,
+        "load_briefing_to_db",
         lambda path, c: (_ for _ in ()).throw(AssertionError("should not be called")),
     )
     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is True
 
-def test_load_between_dates(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+
+def test_load_between_dates(monkeypatch: MonkeyPatch, conn: sqlite3.Connection):
     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
 
 
-def test_query_by_date_found(monkeypatch:MonkeyPatch, conn:sqlite3.Connection, briefing):
+def test_query_by_date_found(monkeypatch: MonkeyPatch, conn: sqlite3.Connection, briefing):
     """Test query_by_date runs without error when a briefing exists."""
     monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
     insert_into_briefing(conn=conn, briefing=briefing)
@@ -532,14 +538,14 @@ def test_query_by_date_found(monkeypatch:MonkeyPatch, conn:sqlite3.Connection, b
     assert result is None
 
 
-def test_query_by_date_not_found(monkeypatch:MonkeyPatch, conn:sqlite3.Connection):
+def test_query_by_date_not_found(monkeypatch: MonkeyPatch, conn: sqlite3.Connection):
     """Test query_by_date runs without error when no briefing exists."""
     monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
     result = query_by_date(date(2024, 1, 1))
     assert result is None
 
 
-def test_query_by_status_specific(monkeypatch:MonkeyPatch, conn:sqlite3.Connection, briefing):
+def test_query_by_status_specific(monkeypatch: MonkeyPatch, conn: sqlite3.Connection, briefing):
     """Test query_by_status filters correctly by a specific status."""
     monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
     insert_into_briefing(conn=conn, briefing=briefing)
@@ -547,7 +553,7 @@ def test_query_by_status_specific(monkeypatch:MonkeyPatch, conn:sqlite3.Connecti
     assert result is None
 
 
-def test_query_by_status_all(monkeypatch:MonkeyPatch, conn:sqlite3.Connection, briefing):
+def test_query_by_status_all(monkeypatch: MonkeyPatch, conn: sqlite3.Connection, briefing):
     """Test query_by_status returns all briefings when status='all'."""
     monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
     insert_into_briefing(conn=conn, briefing=briefing)

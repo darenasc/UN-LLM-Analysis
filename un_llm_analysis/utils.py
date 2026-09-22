@@ -22,6 +22,7 @@ def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
         yield current_date
         current_date += timedelta(days=1)
 
+
 def _parse_date(value: str) -> date:
     """Parse a string in YYYY-MM-DD format into a date object.
 

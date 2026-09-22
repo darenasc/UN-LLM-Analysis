@@ -38,6 +38,7 @@ def create_database(db_path: str | Path = BRIEFINGS_DB_PATH, schema_path: str | 
     finally:
         conn.close()
 
+
 def get_db_connection(db_path: str | Path = str(BRIEFINGS_DB_PATH)) -> sqlite3.Connection:
     """Connect to SQLite database with foreign keys enabled.
 
@@ -435,7 +436,8 @@ def insert_section(
 
     return section_id
 
-#TODO: rename to get_section_by_id and apply to tests too.
+
+# TODO: rename to get_section_by_id and apply to tests too.
 def get_section(conn: sqlite3.Connection, section_id: int) -> ExtractedSection | None:
     """Retrieve section by ID.
 
@@ -689,7 +691,9 @@ def load_between_dates(
             conn.close()
 
     if failed_dates:
-        logger.info(f"Load complete with {len(failed_dates)} failure(s): {', '.join(failed_dates)}")
+        logger.info(
+            f"Load complete with {len(failed_dates)} failure(s): {', '.join(failed_dates)}"
+        )
         return False
 
     logger.info("Load complete.")
@@ -825,6 +829,8 @@ def _get_existing_briefing_dates(
         (start_date.isoformat(), end_date.isoformat()),
     )
     return {date.fromisoformat(row["briefing_date"]) for row in cursor.fetchall()}
+
+
 # --- streamlit app
 
 

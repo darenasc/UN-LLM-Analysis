@@ -1,4 +1,3 @@
-
 """CLI for managing the UN noon briefing database.
 
 This module provides command-line interface for:
@@ -60,8 +59,6 @@ def show_stats(conn: sqlite3.Connection | None = None) -> None:
     logger.info("  By status:")
     for status, count in status_counts.items():
         logger.info(f"    {status}: {count}")
-
-
 
 
 def _build_parser() -> argparse.ArgumentParser:
