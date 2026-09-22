@@ -7,7 +7,7 @@ from loguru import logger
 import pandas as pd
 
 from un_llm_analysis.config import BRIEFINGS_DB, SCHEMA_DB
-from un_llm_analysis.extractor import ExtractedBriefing, ExtractedSection
+from un_llm_analysis.extractor import ExtractedBriefing, ExtractedSection, extract_briefing
 
 
 def create_database(db_path: str | Path = BRIEFINGS_DB, schema_path: str | Path = SCHEMA_DB):
@@ -590,3 +590,26 @@ def get_sdgs_between_dates(
         return df
     else:
         return pd.DataFrame()
+
+
+def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
+    """Load a single briefing JSON file into the database.
+
+    Args:
+        file_path (Path): Path to the briefing JSON file.
+        conn (sqlite3.Connection): Database connection object.
+
+    Returns:
+        bool: True if loading succeeded, False otherwise.
+    """
+    try:
+        briefing = extract_briefing(file_path)
+        with conn:
+            briefing_id = insert_into_briefing(conn, briefing)
+            if briefing.sections:
+                insert_into_section(conn, briefing_id, briefing.sections)
+        logger.info(f"Loaded briefing from {file_path}")
+        return True
+    except Exception as exc:
+        logger.error(f"Error loading {file_path}: {exc}")
+        return False
