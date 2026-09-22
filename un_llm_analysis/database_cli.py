@@ -108,18 +108,18 @@ def load_between_dates(
     requested_dates = list(_dates_between(start_date, end_date))
 
     if dry_run:
-        print("DRY RUN - No changes will be made:")
+        logger.info("DRY RUN - No changes will be made:")
         for briefing_date in requested_dates:
             date_string = briefing_date.strftime("%Y-%m-%d")
             file_path = Path(
                 f"{BRIEFINGS_DIR}/{date_string[:4]}/{date_string[:7]}/{date_string}.json"
             )
             if not _is_briefing_json_exists(briefing_date):
-                print(f"  - No JSON file for {date_string}, would skip")
+                logger.info(f"  - No JSON file for {date_string}, would skip")
             else:
-                print(f"  [{date_string}] Would load from {file_path}")
-        print(f"Total: {len(requested_dates)} dates requested.")
-        print("Dry run complete.")
+                logger.infof"  [{date_string}] Would load from {file_path}")
+        logger.info(f"Total: {len(requested_dates)} dates requested.")
+        logger.info("Dry run complete.")
         return True
 
     failed_dates: list[str] = []
@@ -131,10 +131,10 @@ def load_between_dates(
             existing_dates = _get_existing_briefing_dates(conn, start_date, end_date)
             dates_to_load = [d for d in requested_dates if d not in existing_dates]
 
-        print(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
+        logger.info(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
 
         if not dates_to_load:
-            print("All requested briefings already in database.")
+            logger.info("All requested briefings already in database.")
             return True
 
         for i, briefing_date in enumerate(dates_to_load):
@@ -144,10 +144,10 @@ def load_between_dates(
             )
 
             if not _is_briefing_json_exists(briefing_date):
-                print(f"  - No JSON file for {date_string}, skipping")
+                logger.info(f"  - No JSON file for {date_string}, skipping")
                 continue
 
-            print(f"  [{i + 1}/{len(dates_to_load)}] {date_string} Loading...")
+            logger.info(f"  [{i + 1}/{len(dates_to_load)}] {date_string} Loading...")
             success = load_briefing_to_db(file_path, conn)
             if not success:
                 failed_dates.append(date_string)
@@ -156,7 +156,7 @@ def load_between_dates(
         print(f"Load complete with {len(failed_dates)} failure(s): {', '.join(failed_dates)}")
         return False
 
-    print("Load complete.")
+    logger.info("Load complete.")
     return True
 
 
@@ -171,13 +171,13 @@ def query_by_date(query_date: date) -> None:
         briefing = get_briefing_by_id(conn, briefing_id)
 
     if briefing:
-        print(f"Briefing found for {query_date}:")
-        print(f"  URL: {briefing.url}")
-        print(f"  Status: {briefing.status}")
-        print(f"  Speaker: {briefing.speaker_name} ({briefing.speaker_role})")
-        print(f"  Sections: {len(briefing.sections)}")
+        logger.info(f"Briefing found for {query_date}:")
+        logger.info(f"  URL: {briefing.url}")
+        logger.info(f"  Status: {briefing.status}")
+        logger.info(f"  Speaker: {briefing.speaker_name} ({briefing.speaker_role})")
+        logger.info(f"  Sections: {len(briefing.sections)}")
     else:
-        print(f"No briefing found for {query_date}")
+        logger.info(f"No briefing found for {query_date}")
 
 
 def query_by_status(status: str) -> None:
@@ -197,9 +197,9 @@ def query_by_status(status: str) -> None:
             )
         rows = cursor.fetchall()
 
-    print(f"Found {len(rows)} briefings with status '{status}':")
+    logger.info(f"Found {len(rows)} briefings with status '{status}':")
     for row in rows:
-        print(f"  {row['briefing_date']}: {row['url']}")
+        logger.info(f"  {row['briefing_date']}: {row['url']}")
 
 
 def _get_existing_briefing_dates(
@@ -245,12 +245,12 @@ def show_stats() -> None:
         )
         date_range = cursor.fetchone()
 
-    print("Database Statistics:")
-    print(f"  Total briefings: {total}")
-    print(f"  Date range: {date_range['min_date']} to {date_range['max_date']}")
-    print("  By status:")
+    logger.info("Database Statistics:")
+    logger.info(f"  Total briefings: {total}")
+    logger.info(f"  Date range: {date_range['min_date']} to {date_range['max_date']}")
+    logger.info("  By status:")
     for status, count in status_counts.items():
-        print(f"    {status}: {count}")
+        logger.info(f"    {status}: {count}")
 
 
 def _parse_date(value: str) -> date:
@@ -420,13 +420,13 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "init":
-        print("Initializing database...")
+        logger.info("Initializing database...")
         create_database()
-        print("Database initialized.")
+        logger.info("Database initialized.")
 
     elif args.command == "load":
         start_date, end_date, overwrite, dry_run = _resolve_load_request(parser, args)
-        print(
+        logger.info(
             f"Loading briefings from {start_date} to {end_date}, overwrite={overwrite}, dry_run={dry_run}..."
         )
         success = load_between_dates(start_date, end_date, overwrite=overwrite, dry_run=dry_run)
