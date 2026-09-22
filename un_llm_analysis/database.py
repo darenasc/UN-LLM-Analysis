@@ -6,7 +6,7 @@ import sqlite3
 from loguru import logger
 import pandas as pd
 
-from un_llm_analysis.config import BRIEFINGS_DIR
+from un_llm_analysis.config import BRIEFINGS_DB_PATH, BRIEFINGS_DIR, SCHEMA_DB
 from un_llm_analysis.extractor import (
     ExtractedBriefing,
     ExtractedSection,
@@ -14,8 +14,6 @@ from un_llm_analysis.extractor import (
 )
 from un_llm_analysis.scraper import FetchStatus
 from un_llm_analysis.utils import (
-    BRIEFINGS_DB,
-    SCHEMA_DB,
     _dates_between,
     _is_briefing_json_exists,
 )
@@ -788,7 +786,7 @@ def query_by_date(query_date: date) -> None:
         logger.info(f"No briefing found for {query_date}")
 
 
-def query_by_status(status: FetchStatus, conn=BRIEFINGS_DB) -> None:
+def query_by_status(status: FetchStatus, conn=BRIEFINGS_DB_PATH) -> None:
     """Query and display briefings by status.
 
     Args:

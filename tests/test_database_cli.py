@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from un_llm_analysis import database_cli as db_cli
+from un_llm_analysis.config import SCHEMA_DB
 from un_llm_analysis.database import (
     create_database,
     get_db_connection,
@@ -20,7 +21,6 @@ from un_llm_analysis.database_cli import (
     show_stats,
 )
 from un_llm_analysis.extractor import extract_briefing
-from un_llm_analysis.utils import SCHEMA_DB
 
 
 def test_build_parser():

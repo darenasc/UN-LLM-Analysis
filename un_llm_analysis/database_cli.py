@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 
 from loguru import logger
 
-from un_llm_analysis.config import MIN_SCRAPE_DATE
+from un_llm_analysis.config import BRIEFINGS_DB_PATH, MIN_SCRAPE_DATE
 from un_llm_analysis.database import (
     create_database,
     get_db_connection,

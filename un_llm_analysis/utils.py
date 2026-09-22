@@ -2,7 +2,7 @@ import argparse
 from collections.abc import Iterator
 from datetime import date, timedelta
 
-from un_llm_analysis.config import BRIEFINGS_DIR, PROJ_ROOT
+from un_llm_analysis.config import BRIEFINGS_DB_PATH, BRIEFINGS_DIR
 
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
@@ -39,10 +39,6 @@ def _parse_date(value: str) -> date:
         return date.fromisoformat(value)
     except ValueError as exc:
         raise argparse.ArgumentTypeError(f"Invalid date: {value}. Expected YYYY-MM-DD.") from exc
-
-
-SCHEMA_DB = PROJ_ROOT / "database" / "schema.sql"
-BRIEFINGS_DB = PROJ_ROOT / "app" / "briefings.db"
 
 
 def _is_briefing_json_exists(briefing_date: date) -> bool:

@@ -7,6 +7,7 @@ import pytest
 from pytest import MonkeyPatch
 
 from un_llm_analysis import database as db_module
+from un_llm_analysis.config import BRIEFINGS_DB_PATH, SCHEMA_DB
 from un_llm_analysis.database import (
     create_database,
     delete_briefing,
@@ -40,9 +41,7 @@ from un_llm_analysis.extractor import (
     extract_briefing,
 )
 from un_llm_analysis.utils import (
-    BRIEFINGS_DB,
     BRIEFINGS_DIR,
-    SCHEMA_DB,
     _dates_between,
     _parse_date,
 )
