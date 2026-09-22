@@ -1,8 +1,8 @@
-from datetime import timedelta, date
-from collections.abc import Iterator
 import argparse
+from collections.abc import Iterator
+from datetime import date, timedelta
 
-from un_llm_analysis.config import PROJ_ROOT, BRIEFINGS_DIR
+from un_llm_analysis.config import BRIEFINGS_DIR, PROJ_ROOT
 
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:

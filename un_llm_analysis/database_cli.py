@@ -15,19 +15,22 @@ The CLI follows a layered architecture:
 
 import argparse
 from datetime import date, datetime
-import sys
 import sqlite3
+import sys
 from zoneinfo import ZoneInfo
+
 from loguru import logger
 
 from un_llm_analysis.config import MIN_SCRAPE_DATE
 from un_llm_analysis.database import (
     create_database,
     get_db_connection,
-    query_by_date, query_by_status,
-    load_between_dates
+    load_between_dates,
+    query_by_date,
+    query_by_status,
 )
 from un_llm_analysis.utils import _parse_date
+
 
 def show_stats(conn: sqlite3.Connection | None = None) -> None:
     """Display database statistics.

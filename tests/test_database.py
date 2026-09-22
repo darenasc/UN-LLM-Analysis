@@ -1,15 +1,14 @@
+from datetime import date
 from pathlib import Path
 import sqlite3
-from datetime import date
+from unittest.mock import MagicMock
+
 import pytest
 from pytest import MonkeyPatch
-from unittest.mock import MagicMock
-from un_llm_analysis.utils import _dates_between, _parse_date, SCHEMA_DB, BRIEFINGS_DB, BRIEFINGS_DIR
-from un_llm_analysis import database as db_module
 
+from un_llm_analysis import database as db_module
 from un_llm_analysis.database import (
     create_database,
-    get_db_connection,
     delete_briefing,
     delete_from_sdg,
     delete_section,
@@ -19,6 +18,7 @@ from un_llm_analysis.database import (
     get_briefing_id_by_url,
     get_briefing_id_from_date,
     get_briefings_between_dates,
+    get_db_connection,
     get_sdgs_between_dates,
     get_section,
     get_sections_by_briefing_id,
@@ -26,8 +26,8 @@ from un_llm_analysis.database import (
     insert_into_sdg,
     insert_into_section,
     insert_section,
-    load_briefing_to_db,
     load_between_dates,
+    load_briefing_to_db,
     query_by_date,
     query_by_status,
 )
@@ -36,7 +36,13 @@ from un_llm_analysis.extractor import (
     ExtractedSection,
     extract_briefing,
 )
-
+from un_llm_analysis.utils import (
+    BRIEFINGS_DB,
+    BRIEFINGS_DIR,
+    SCHEMA_DB,
+    _dates_between,
+    _parse_date,
+)
 
 
 def test_create_database(tmp_path):

@@ -2,43 +2,25 @@
 
 from datetime import date, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 import sqlite3
-
-import pytest
+from unittest.mock import MagicMock, patch
 from zoneinfo import ZoneInfo
 
-from un_llm_analysis.config import BRIEFINGS_DIR, MIN_SCRAPE_DATE
+import pytest
+
+from un_llm_analysis import database_cli as db_cli
+from un_llm_analysis.database import (
+    create_database,
+    get_db_connection,
+    insert_into_briefing,
+)
 from un_llm_analysis.database_cli import (
-    _is_briefing_json_exists,
-    _parse_date,
     _build_parser,
     _resolve_load_request,
+    show_stats,
 )
-from un_llm_analysis.utils import _parse_date
-
-
-@patch("un_llm_analysis.database_cli.BRIEFINGS_DIR", "/tmp/briefings")
-def test_is_briefing_json_exists_true(tmp_path):
-    """Test _is_briefing_json_exists when file exists."""
-    # Create the expected directory structure
-    date_obj = date(2023, 8, 12)
-    date_string = date_obj.strftime("%Y-%m-%d")
-    file_path = tmp_path / date_string[:4] / date_string[:7] / f"{date_string}.json"
-    file_path.parent.mkdir(parents=True)
-    file_path.write_text("{}")
-
-    with patch("un_llm_analysis.database_cli.BRIEFINGS_DIR", str(tmp_path)):
-        result = _is_briefing_json_exists(date_obj)
-        assert result is True
-
-
-@patch("un_llm_analysis.database_cli.BRIEFINGS_DIR", "/tmp/briefings")
-def test_is_briefing_json_exists_false(tmp_path):
-    """Test _is_briefing_json_exists when file does not exist."""
-    with patch("un_llm_analysis.database_cli.BRIEFINGS_DIR", str(tmp_path)):
-        result = _is_briefing_json_exists(date(2023, 8, 12))
-        assert result is False
+from un_llm_analysis.extractor import extract_briefing
+from un_llm_analysis.utils import SCHEMA_DB
 
 
 def test_build_parser():
@@ -204,3 +186,35 @@ def test_resolve_load_request_after_today_error():
     args = parser.parse_args(["load", future_date.isoformat()])
     with pytest.raises(SystemExit):
         _resolve_load_request(parser, args)
+
+
+@pytest.fixture(scope="function")
+def conn(tmp_path):
+    """Fixture serving a database connection."""
+    db_name = "briefings.db"
+    create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
+
+    connection = get_db_connection(db_path=tmp_path / db_name)
+    yield connection
+    connection.close()
+    (tmp_path / db_name).unlink()
+
+
+@pytest.fixture()
+def briefing():
+    """Fixture with an ExtractedBriefing."""
+    return extract_briefing(file_path=Path("tests/fixtures/briefing_2026-08-25.json"))
+
+def test_show_stats_empty_db(monkeypatch, conn):
+    """Test show_stats runs without error on an empty database."""
+    monkeypatch.setattr(db_cli, "get_db_connection", lambda *a, **kw: conn)
+    result = show_stats()
+    assert result is None
+
+
+def test_show_stats_with_data(monkeypatch, conn, briefing):
+    """Test show_stats runs without error when briefings exist."""
+    monkeypatch.setattr(db_cli, "get_db_connection", lambda *a, **kw: conn)
+    insert_into_briefing(conn=conn, briefing=briefing)
+    result = show_stats()
+    assert result is None
