@@ -8,7 +8,6 @@ sort_pipfile = true
 
 [packages]
 beautifulsoup4 = "*"
-curl-cffi = "*"
 ipywidgets = "*"
 jupyter = "*"
 loguru = "*"
