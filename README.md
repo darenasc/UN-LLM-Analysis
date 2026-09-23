@@ -67,6 +67,20 @@ briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2
 ```
 The extracted result includes speaker information, sections, and full text when available.
 
+### `database_cli`
+
+Command line interface to initialise, load and query the database.
+
+```python
+database init
+database load 2023-01-01 2023-12-31
+database load --since 2023-01-01 --dry-run
+database query --date 2023-08-12
+database query --status available
+database stats
+```
+
+
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
 
@@ -97,7 +111,9 @@ To view the documentation locally, run:
 pipenv run mkdocs serve -f docs/mkdocs.yml
 ```
 
-See the [Getting Started](./docs/getting-started.md) guide for the setup instructions.
+The documentation will be available in `http://127.0.0.1:8000/` in your browser.
+
+See the [Usage](./docs/index.md) guide for the setup instructions.
 
 ## Design
 
