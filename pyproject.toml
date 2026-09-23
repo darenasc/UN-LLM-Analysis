@@ -5,15 +5,28 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "un_llm_analysis"
 version = "0.0.1"
-description = "A short description of the project."
+description = "Analysis of the UN noon briefings using LLMs."
 authors = [
-  { name = "Correlaid" },
+  { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
+  { name = "Daniel Wilkinson" },
+  { name = "Diego Arenas", email = "darenasc@gmail.com" },
+  { name = "Franz Song", email = "justsyh@gmail.com" },
+  { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
+  { name = "Roxana Runcan", email = "runcanroxana@gmail.com" },
+]
+maintainers = [
+  { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
+  { name = "Daniel Wilkinson" },
+  { name = "Diego Arenas", email = "darenasc@gmail.com" },
+  { name = "Franz Song", email = "justsyh@gmail.com" },
+  { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
+  { name = "Roxana Runcan", email = "runcanroxana@gmail.com" },
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License"
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
 ]
 requires-python = "~=3.12.0"
 

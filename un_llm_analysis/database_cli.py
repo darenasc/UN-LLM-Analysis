@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 
 from loguru import logger
 
-from un_llm_analysis.config import BRIEFINGS_DB_PATH, MIN_SCRAPE_DATE
+from un_llm_analysis.config import MIN_SCRAPE_DATE
 from un_llm_analysis.database import (
     create_database,
     get_db_connection,
@@ -170,9 +170,12 @@ def _resolve_load_request(
         args (argparse.Namespace): Parsed command-line arguments.
 
     Returns:
-        tuple[date, date, bool, bool]: Tuple containing start_date, end_date, overwrite flag, and dry_run flag.
+        tuple[date, date, bool, bool]: Tuple containing start_date, end_date,
+            overwrite flag, and dry_run flag.
     """
     today = datetime.now(ZoneInfo("America/New_York")).date()
+    start_date = None
+    end_date = None
 
     if args.dates and args.since is not None:
         parser.error("--since cannot be used with positional dates.")

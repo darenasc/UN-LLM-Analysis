@@ -29,7 +29,9 @@ plugins:
             separate_signature: true
             show_signature_annotations: true
             show_signature_type_parameters: true
-
+            filters:
+              - "!^main$"
+              - "!^_[^_]"
 extra:
   social:
     - icon: fontawesome/brands/github-alt
