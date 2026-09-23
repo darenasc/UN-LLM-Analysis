@@ -24,7 +24,7 @@ from un_llm_analysis.database import (
     get_db_connection,
     get_min_max_dates,
     get_sdgs_between_dates,
-    get_section,
+    get_section_by_section_id,
     get_sections_by_briefing_id,
     insert_into_briefing,
     insert_into_sdg,
@@ -320,7 +320,7 @@ def test_insert_section(section_index, expected, briefing, conn):
     assert result_section_id == expected
 
 
-def test_get_section(briefing, conn):
+def test_get_section_by_section_id(briefing, conn):
     """Test get a section by the section_id"""
     # GIVEN a database connection with data in briefing and section
     briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
@@ -333,7 +333,7 @@ def test_get_section(briefing, conn):
         section_id = briefing_id * 100 + i
 
         # WHEN request a section from the database
-        result = get_section(conn=conn, section_id=section_id)
+        result = get_section_by_section_id(conn=conn, section_id=section_id)
 
         # THEN the results are ExtractedSection
         assert isinstance(result, ExtractedSection)
