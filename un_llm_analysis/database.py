@@ -1,14 +1,25 @@
-from datetime import datetime
+import ast
+from datetime import date, datetime
 from pathlib import Path
 import sqlite3
 
 from loguru import logger
+import pandas as pd
 
-from un_llm_analysis.config import BRIEFINGS_DB, SCHEMA_DB
-from un_llm_analysis.extractor import ExtractedBriefing, ExtractedSection
+from un_llm_analysis.config import BRIEFINGS_DB_PATH, BRIEFINGS_DIR, SCHEMA_DB
+from un_llm_analysis.extractor import (
+    ExtractedBriefing,
+    ExtractedSection,
+    extract_briefing,
+)
+from un_llm_analysis.scraper import FetchStatus
+from un_llm_analysis.utils import (
+    _dates_between,
+    _is_briefing_json_exists,
+)
 
 
-def create_database(db_path: str | Path = BRIEFINGS_DB, schema_path: str | Path = SCHEMA_DB):
+def create_database(db_path: str | Path = BRIEFINGS_DB_PATH, schema_path: str | Path = SCHEMA_DB):
     """Create the database file and tables if they don't already exist.
 
     Args:
@@ -18,13 +29,15 @@ def create_database(db_path: str | Path = BRIEFINGS_DB, schema_path: str | Path 
     with open(schema_path, "r", encoding="utf-8") as f:
         sql_schema = f.read()
 
-    with get_db_connection(str(db_path)) as conn:
+    conn = get_db_connection(str(db_path))
+    try:
         conn.executescript(sql_schema)
-
         logger.info(f'Database created in "{db_path}"')
+    finally:
+        conn.close()
 
 
-def get_db_connection(db_path: str | Path = str(BRIEFINGS_DB)) -> sqlite3.Connection:
+def get_db_connection(db_path: str | Path = str(BRIEFINGS_DB_PATH)) -> sqlite3.Connection:
     """Connect to SQLite database with foreign keys enabled.
 
     Args:
@@ -41,7 +54,7 @@ def get_db_connection(db_path: str | Path = str(BRIEFINGS_DB)) -> sqlite3.Connec
 
 
 # --- briefing ------------------------------------------------------------
-def _get_briefing_id_from_date(date: str) -> int:
+def get_briefing_id_from_date(date: str) -> int:
     """Returns a YYYYMMDD int from a 'YYYY-MM-DD' str.
 
     Args:
@@ -75,17 +88,17 @@ def insert_into_briefing(
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);"""
 
     briefing_exists = get_briefing_by_id(
-        conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date)
+        conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date)
     )
     if briefing_exists is not None:
-        delete_briefing(conn=conn, briefing_id=_get_briefing_id_from_date(briefing.briefing_date))
+        delete_briefing(conn=conn, briefing_id=get_briefing_id_from_date(briefing.briefing_date))
 
     with conn:
         cursor = conn.cursor()
         cursor.execute(
             query_insert,
             (
-                _get_briefing_id_from_date(briefing.briefing_date),
+                get_briefing_id_from_date(briefing.briefing_date),
                 briefing.briefing_date,
                 briefing.url,
                 briefing.status,
@@ -102,7 +115,7 @@ def insert_into_briefing(
         cursor.close()
 
         logger.info(f"Briefing from '{briefing.briefing_date}' inserted to the database.")
-    return _get_briefing_id_from_date(briefing.briefing_date)
+    return get_briefing_id_from_date(briefing.briefing_date)
 
 
 def get_sections_by_briefing_id(
@@ -209,11 +222,79 @@ def get_briefing_by_url(conn: sqlite3.Connection, url: str) -> ExtractedBriefing
             speaker_name=row["speaker_name"],
             speaker_role=row["speaker_role"],
             sections=get_sections_by_briefing_id(
-                conn=conn, briefing_id=_get_briefing_id_from_date(row["briefing_date"])
+                conn=conn, briefing_id=get_briefing_id_from_date(row["briefing_date"])
             ),
             full_text=row["full_text"],
         )
         return briefing
+    else:
+        return None
+
+
+def get_briefing_by_date(conn: sqlite3.Connection, date: str) -> ExtractedBriefing | None:
+    """Retrieve briefing by date.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        date (str): Date of the briefing.
+
+    Returns:
+        sqlite3.Row | None: The matching row, or None if not found.
+    """
+    briefing_id = get_briefing_id_from_date(date=date)
+    briefing = get_briefing_by_id(conn=conn, briefing_id=briefing_id)
+    return briefing
+
+
+def get_briefings_between_dates(
+    conn: sqlite3.Connection, start_date: str, end_date: str
+) -> list[ExtractedBriefing] | None:
+    """Retrieve briefings between two dates.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date with format 'YYYY-MM-DD'.
+        end_date (str): End date with format 'YYYY-MM-DD'.
+
+    Returns:
+        list[ExtractedBriefing] | None: List with requested that are in the
+            database briefings or None.
+    """
+    min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+    max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT briefing_id, briefing_date, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at
+        FROM briefing
+        WHERE briefing_id between ? and ?;
+        """,
+        (
+            min_date,
+            max_date,
+        ),
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+
+    if rows:
+        briefings = []
+        for row in rows:
+            briefing = ExtractedBriefing(
+                briefing_date=row["briefing_date"],
+                url=row["url"],
+                status=row["status"],
+                http_status=row["http_status"],
+                error=row["error"],
+                downloaded_at=row["downloaded_at"],
+                speaker_name=row["speaker_name"],
+                speaker_role=row["speaker_role"],
+                sections=get_sections_by_briefing_id(conn=conn, briefing_id=row["briefing_id"]),
+                full_text=row["full_text"],
+            )
+            briefings.append(briefing)
+        return briefings
     else:
         return None
 
@@ -353,7 +434,8 @@ def insert_section(
 
     return section_id
 
-#TODO: rename to get_section_by_id and apply to tests too.
+
+# TODO: rename to get_section_by_id and apply to tests too.
 def get_section(conn: sqlite3.Connection, section_id: int) -> ExtractedSection | None:
     """Retrieve section by ID.
 
@@ -426,121 +508,380 @@ def delete_sections(conn: sqlite3.Connection, briefing_id: int):
     return cur.rowcount > 0
 
 
-# --- country_mentions --------------------------------------------------------
+# --- sdg -------------------------------------------------------------------
 
 
-def insert_country_mentions(
+def insert_into_sdg(
     conn: sqlite3.Connection,
+    briefing_id: int,
     section_id: int,
-    country_code: str,
-    country_name: str,
-    mention_count: int,
-) -> int:
-    """Insert or update country mention count for a section.
+    sdgs: str,
+    model: str,
+    created_at: str,
+    verbose: bool = True,
+) -> None:
+    """Insert data into sdg table.
 
     Args:
-        conn (sqlite3.Connection): Open database connection.
-        section_id (int): ID of the section.
-        country_code (str): ISO country code.
-        country_name (str): Full country name.
-        mention_count (int): Number of mentions in the section.
-
-    Returns:
-        int: The section_id of the inserted/updated row.
+        conn (sqlite3.Connection): Connection to the database.
+        briefing_id (int): Id of the briefing.
+        section_id (int): Id of the section (briefing_id * 100 + section_order)
+        sdgs (str): Text with list of SDG codes. "['SDG1', ..., 'SDG17']"
+        model (str): Model name.
+        created_at (str): Date of the processing.
+        verbose (bool, optional): Show logging of the process. Defaults to True.
     """
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO country_mentions (section_id, country_code, country_name, mention_count, created_at)
-        VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(section_id, country_code) DO UPDATE SET
-            mention_count = excluded.mention_count,
-            created_at = excluded.created_at
-        """,
-        (section_id, country_code, country_name, mention_count, str(datetime.now())),
-    )
-    conn.commit()
-    cursor.close()
+    parsed_sdgs = ast.literal_eval(sdgs)
+    if parsed_sdgs is None:
+        return
+    sql_insert = """INSERT INTO sdg
+                    (briefing_id, section_id, sdg, model, created_at)
+                    VALUES(?, ?, ?, ?, ?);"""
+    with conn:
+        delete_from_sdg(conn=conn, section_id=section_id, model=model, verbose=verbose)
 
-    logger.info(f"Inserted country mention for '{country_name}' in section {section_id}")
-    return section_id
+        cursor = conn.cursor()
+        for sdg in parsed_sdgs:
+            cursor.execute(sql_insert, (briefing_id, section_id, sdg, model, created_at))
+        conn.commit()
 
-
-def get_country_mentions_by_section(
-    conn: sqlite3.Connection, section_id: int
-) -> list[sqlite3.Row]:
-    """Get all country mentions for a specific section.
-
-    Args:
-        conn (sqlite3.Connection): Open database connection.
-        section_id (int): ID of the section.
-
-    Returns:
-        list[sqlite3.Row]: List of country mention rows for the section.
-    """
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT section_id, country_code, country_name, mention_count, created_at
-        FROM country_mentions
-        WHERE section_id = ?
-        ORDER BY mention_count DESC
-        """,
-        (section_id,),
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    return rows
+    if verbose:
+        logger.info(f"{section_id} {sdgs} data inserted into `sdg`")
 
 
-def get_country_mentions_by_briefing(
-    conn: sqlite3.Connection, briefing_id: int
-) -> list[sqlite3.Row]:
-    """Get all country mentions for all sections in a briefing.
-
-    Args:
-        conn (sqlite3.Connection): Open database connection.
-        briefing_id (int): ID of the briefing.
-
-    Returns:
-        list[sqlite3.Row]: List of country mention rows for the briefing.
-    """
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT cm.section_id, cm.country_code, cm.country_name, cm.mention_count, cm.created_at,
-               s.section_order, s.title
-        FROM country_mentions cm
-        JOIN section s ON cm.section_id = s.section_id
-        WHERE s.briefing_id = ?
-        ORDER BY s.section_order, cm.mention_count DESC
-        """,
-        (briefing_id,),
-    )
-    rows = cursor.fetchall()
-    cursor.close()
-    return rows
-
-
-def delete_country_mentions_by_section(
-    conn: sqlite3.Connection, section_id: int
+def delete_from_sdg(
+    conn: sqlite3.Connection, section_id: int, model: str, verbose: bool = True
 ) -> bool:
-    """Delete all country mentions for a section.
+    """Delete data from the sdg table.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Id of the section.
+        model (str): Model name.
+        verbose (bool, optional): Show logging of the process. Defaults to True.
+
+    Returns:
+        bool: Whether or not data was deleted.
+    """
+    query_delete = """DELETE FROM sdg WHERE section_id = ? AND model = ?"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            query_delete,
+            (
+                section_id,
+                model,
+            ),
+        )
+        conn.commit()
+        was_deleted = cursor.rowcount > 1
+        cursor.close()
+
+    if verbose:
+        logger.info(f"Deleted sdg section'{section_id}' of model '{model}'")
+    return was_deleted
+
+
+def get_sdgs_between_dates(
+    conn: sqlite3.Connection, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """Return data from the sdg table.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date with format 'YYYY-MM-DD'.
+        end_date (str): End date with format 'YYYY-MM-DD'.
+
+    Returns:
+        pd.DataFrame: Data from the sdg table.
+    """
+    min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+    max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+
+    sql_query = """SELECT briefing_id, section_id, sdg, model, created_at FROM sdg WHERE briefing_id between ? AND ?;"""
+
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            sql_query,
+            (
+                min_date,
+                max_date,
+            ),
+        )
+        rows = cursor.fetchall()
+        column_names = [x[0] for x in cursor.description]
+        cursor.close()
+    if rows:
+        df = pd.DataFrame(rows, columns=column_names)
+        return df
+    else:
+        return pd.DataFrame()
+
+
+def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
+    """Load a single briefing JSON file into the database.
+
+    Args:
+        file_path (Path): Path to the briefing JSON file.
+        conn (sqlite3.Connection): Database connection object.
+
+    Returns:
+        bool: True if loading succeeded, False otherwise.
+    """
+    try:
+        briefing = extract_briefing(file_path)
+        with conn:
+            briefing_id = insert_into_briefing(conn, briefing)
+            if briefing.sections:
+                insert_into_section(conn, briefing_id, briefing.sections)
+        logger.info(f"Loaded briefing from {file_path}")
+        return True
+    except Exception as exc:
+        logger.error(f"Error loading {file_path}: {exc}")
+        return False
+
+
+def load_between_dates(
+    start_date: date,
+    end_date: date,
+    overwrite: bool = False,
+    dry_run: bool = False,
+    conn: sqlite3.Connection | None = None,
+) -> bool:
+    """Load briefings from JSON files into database for a date range.
+
+    Args:
+        start_date (date): The date to start loading from.
+        end_date (date): The date to end loading at.
+        overwrite (bool): Whether to overwrite existing briefings. Defaults to False.
+        dry_run (bool): If True, preview what would be loaded without actually loading. Defaults to False.
+        conn (sqlite3.Connection | None): Existing connection to reuse. If None,
+            a new connection is opened and closed automatically.
+
+    Returns:
+        bool: True if every loaded briefing succeeded (or nothing needed loading),
+            False if at least one briefing failed to load.
+    """
+    requested_dates = list(_dates_between(start_date, end_date))
+
+    if dry_run:
+        _log_dry_run(requested_dates)
+        return True
+
+    owns_conn = conn is None
+    if owns_conn:
+        conn = get_db_connection()
+
+    try:
+        dates_to_load = _resolve_dates_to_load(
+            conn, requested_dates, start_date, end_date, overwrite
+        )
+        logger.info(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
+
+        if not dates_to_load:
+            logger.info("All requested briefings already in database.")
+            return True
+
+        failed_dates = _load_dates(conn, dates_to_load)
+    finally:
+        if owns_conn:
+            conn.close()
+
+    if failed_dates:
+        logger.info(
+            f"Load complete with {len(failed_dates)} failure(s): {', '.join(failed_dates)}"
+        )
+        return False
+
+    logger.info("Load complete.")
+    return True
+
+
+def _log_dry_run(requested_dates: list[date]) -> None:
+    """Log a preview of what load_between_dates would do, without loading anything."""
+    logger.info("DRY RUN - No changes will be made:")
+    for briefing_date in requested_dates:
+        date_string = briefing_date.strftime("%Y-%m-%d")
+        file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+        if not _is_briefing_json_exists(briefing_date):
+            logger.info(f"  - No JSON file for {date_string}, would skip")
+        else:
+            logger.info(f"  [{date_string}] Would load from {file_path}")
+    logger.info(f"Total: {len(requested_dates)} dates requested.")
+    logger.info("Dry run complete.")
+
+
+def _resolve_dates_to_load(
+    conn: sqlite3.Connection,
+    requested_dates: list[date],
+    start_date: date,
+    end_date: date,
+    overwrite: bool,
+) -> list[date]:
+    """Filter requested_dates down to the ones that actually need loading.
 
     Args:
         conn (sqlite3.Connection): Open database connection.
-        section_id (int): ID of the section.
+        requested_dates (list[date]): All dates in the requested range.
+        start_date (date): Start of the range (for existing-briefing lookup).
+        end_date (date): End of the range (for existing-briefing lookup).
+        overwrite (bool): If True, reload every requested date regardless of
+            what's already in the database.
 
     Returns:
-        bool: True if rows were deleted, False otherwise.
+        list[date]: Dates that still need to be loaded.
     """
-    cur = conn.execute(
-        """
-        DELETE FROM country_mentions
-        WHERE section_id = ?
-        """,
-        (section_id,),
+    if overwrite:
+        return requested_dates
+    existing_dates = _get_existing_briefing_dates(conn, start_date, end_date)
+    return [d for d in requested_dates if d not in existing_dates]
+
+
+def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str]:
+    """Load each date's briefing JSON into the database.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        dates_to_load (list[date]): Dates to attempt loading.
+
+    Returns:
+        list[str]: Date strings (YYYY-MM-DD) that failed to load.
+    """
+    failed_dates: list[str] = []
+
+    for i, briefing_date in enumerate(dates_to_load):
+        date_string = briefing_date.strftime("%Y-%m-%d")
+        file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+
+        if not _is_briefing_json_exists(briefing_date):
+            logger.info(f"  - No JSON file for {date_string}, skipping")
+            continue
+
+        logger.info(f"  [{i + 1}/{len(dates_to_load)}] {date_string} Loading...")
+        success = load_briefing_to_db(file_path, conn)
+        if not success:
+            failed_dates.append(date_string)
+
+    return failed_dates
+
+
+def query_by_date(query_date: date) -> None:
+    """Query and display a briefing by date.
+
+    Args:
+        query_date (date): Date of the briefing to query.
+    """
+    with get_db_connection() as conn:
+        briefing_id = get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
+        briefing = get_briefing_by_id(conn, briefing_id)
+
+    if briefing:
+        logger.info(f"Briefing found for {query_date}:")
+        logger.info(f"  URL: {briefing.url}")
+        logger.info(f"  Status: {briefing.status}")
+        logger.info(f"  Speaker: {briefing.speaker_name} ({briefing.speaker_role})")
+        logger.info(f"  Sections: {len(briefing.sections)}")
+    else:
+        logger.info(f"No briefing found for {query_date}")
+
+
+def query_by_status(status: FetchStatus, conn=BRIEFINGS_DB_PATH) -> None:
+    """Query and display briefings by status.
+
+    Args:
+        status (str): Status to filter briefings by, or "all" for all briefings.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        if status == "all":
+            cursor.execute("SELECT briefing_date, url, status FROM briefing")
+        else:
+            cursor.execute(
+                "SELECT briefing_date, url, status FROM briefing WHERE status = ?",
+                (status,),
+            )
+        rows = cursor.fetchall()
+
+    logger.info(f"Found {len(rows)} briefings with status '{status}':")
+    for row in rows:
+        logger.info(f"  {row['briefing_date']}: {row['url']}")
+
+
+def _get_existing_briefing_dates(
+    conn: sqlite3.Connection, start_date: date, end_date: date
+) -> set[date]:
+    """Fetch the set of briefing dates already in the database within a range.
+
+    Args:
+        conn (sqlite3.Connection): Database connection object.
+        start_date (date): Start of the range (inclusive).
+        end_date (date): End of the range (inclusive).
+
+    Returns:
+        set[date]: Dates that already have a briefing row in the database.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT briefing_date FROM briefing WHERE briefing_date BETWEEN ? AND ?",
+        (start_date.isoformat(), end_date.isoformat()),
     )
-    conn.commit()
-    logger.info(f"Deleted country mentions for section {section_id}")
-    return cur.rowcount > 0
+    return {date.fromisoformat(row["briefing_date"]) for row in cursor.fetchall()}
+
+
+# --- streamlit app
+
+
+def get_min_max_dates(
+    conn: sqlite3.Connection, status: FetchStatus = "available"
+) -> tuple[str, str] | tuple[None, None]:
+    """Returns minimum and maximum dates present in the database with briefings.
+
+    Args:
+        conn (sqlite3.Connection): Connection to a database.
+        status (FetchStatus, optional): Status of the briefing download.
+            Defaults to "available".
+
+    Returns:
+        tuple[str, str]: Min and max dates present in the database
+    """
+    query = """select min(b.briefing_id) as min_briefing_id, max(b.briefing_id) as max_briefing_id from briefing b where b.status = ?;"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query, (status,))
+        row = cursor.fetchall()
+        cursor.close()
+        if row:
+            min_briefing_id, max_briefing_id = row[0]
+            return datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime(
+                "%Y-%m-%d"
+            ), datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+        else:
+            return None, None
+
+
+def get_dates_with_briefings(
+    conn: sqlite3.Connection, status: FetchStatus = "available"
+) -> list[str]:
+    """Return a list with dates ['YYYY-MM-DD', ...] where there is a briefing
+    on the status requested.
+
+    Args:
+        conn (sqlite3.Connection): Connection to a database.
+        status (FetchStatus, optional): Status of the briefing download.
+            Defaults to "available".
+
+    Returns:
+        list[str]: List with dates of the briefings in the database with the
+            status requested.
+    """
+    query = """select distinct b.briefing_id from briefing b where b.status = ?;"""
+    briefing_dates = []
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query, (status,))
+        rows = cursor.fetchall()
+        cursor.close()
+
+    briefing_dates = [datetime.strptime(str(x[0]), "%Y%m%d").strftime("%Y-%m-%d") for x in rows]
+    return briefing_dates

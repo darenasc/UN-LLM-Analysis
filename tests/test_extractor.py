@@ -8,88 +8,78 @@ import pytest
 import un_llm_analysis.extractor as extractor
 
 
-@pytest.mark.parametrize(
-    "markdown_text, expected",
-    [("A test string", False), ("** **", False), ("**A test string**", True)],
-    ids=[
-        "not-bold",
-        "empty-bold",
-        "fully-bold",
-    ],
-)
-def test_is_fully_bold(markdown_text, expected):
+def test_normalize_text():
+    assert extractor._normalize_text("a\u00a0\u202f\u2002\u2003\u2007\u2009b") == "a      b"
 
-    result = extractor._is_fully_bold(markdown_text)
-
-    assert result is expected
-
-
-@pytest.mark.parametrize(
-    "markdown_line, expected",
-    [
-        ("**Bold line.**", "Bold line."),
-        ("* List item", "List item"),
-        ("[Anchor text](URL)", "Anchor text"),
-    ],
-    ids=[
-        "bold-line",
-        "list-item",
-        "link-with-anchor-text",
-    ],
-)
-def test_markdown_to_text(markdown_line, expected):
-
-    result = extractor._markdown_to_text(markdown_line)
-
-    assert result == expected
-
-
-@pytest.mark.parametrize(
-    "html, expected_markdown_lines",
-    [
-        (
-            '<p><span><strong>SECTION TITLE </strong></span></p><p class="nbps-detected"><span>Section text. &nbsp;</span></p>',
-            ["**SECTION TITLE**", "Section text."],
-        ),
-        (
-            "<ul><li>List line-1.</li> <li>List line-2.</li></ul>",
-            ["* List line-1.", "* List line-2."],
-        ),
-        (
-            "<p>First line.<br>Second line.</p>",
-            ["First line.", "Second line."],
-        ),
-        ("<p> </p><p></p> <p> </p>", []),
-    ],
-    ids=[
-        "section-title-and-text",
-        "list-items",
-        "hard-line-breaks",
-        "empty-lines",
-    ],
-)
-def test_extract_hard_lines(html, expected_markdown_lines, monkeypatch):
-
-    monkeypatch.setattr(extractor, "_markdown_to_text", lambda _: None)
-    monkeypatch.setattr(extractor, "_is_fully_bold", lambda _: None)
-    result = extractor._extract_hard_lines(html)
-
-    assert len(result) == len(expected_markdown_lines)
-
-    result_markdown_lines = [line.markdown for line in result]
-    assert result_markdown_lines == expected_markdown_lines
+    assert extractor._normalize_text("a\u200b\u00ad\ufeff\u2060b") == "ab"
 
 
 def make_hard_line(
     text: str,
     fully_bold: bool = False,
-    markdown: str = "",
 ) -> extractor.HardLine:
     return extractor.HardLine(
         text=text,
-        markdown=markdown,
         fully_bold=fully_bold,
     )
+
+
+@pytest.mark.parametrize(
+    "html, expected_lines",
+    [
+        (
+            "<p><span><strong>SECTION TITLE</strong></span></p>"
+            "<p>Section text.</p>"
+            "<p><strong>Bold part.</strong> Normal part.</p>",
+            [
+                ("SECTION TITLE", True),
+                ("Section text.", False),
+                ("Bold part. Normal part.", False),
+            ],
+        ),
+        (
+            "<ul><li>List line-1.</li><li>List line-2.</li></ul>",
+            [
+                ("List line-1.", False),
+                ("List line-2.", False),
+            ],
+        ),
+        (
+            "<p><strong>First<br>Second</strong></p>",
+            [
+                ("First", True),
+                ("Second", True),
+            ],
+        ),
+        (
+            "<p>Before <!-- comment -->"
+            "<script>ignored script</script>"
+            "<style>ignored style</style>"
+            "after.</p>",
+            [
+                ("Before after.", False),
+            ],
+        ),
+        (
+            "<p> </p><p></p><p>   </p>",
+            [],
+        ),
+    ],
+    ids=[
+        "paragraphs-and-bold-state",
+        "list-items",
+        "hard-line-break-in-bold",
+        "ignored-nodes",
+        "empty-lines",
+    ],
+)
+def test_extract_hard_lines(html, expected_lines):
+
+    result = extractor._extract_hard_lines(html)
+
+    expected = [make_hard_line(text, fully_bold=bold) for text, bold in expected_lines]
+
+    assert result == expected
 
 
 @pytest.mark.parametrize(

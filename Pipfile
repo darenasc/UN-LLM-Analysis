@@ -1,41 +1,48 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[pipenv]
+sort_pipfile = true
+
 [packages]
+beautifulsoup4 = "*"
+ipywidgets = "*"
+jupyter = "*"
+loguru = "*"
+markdown = "*"
+markdownify = "*"
+matplotlib = "*"
+mkdocs = "*"
+mlflow = "*"
+nltk = "*"
 numpy = "*"
+ollama = "*"
+openai = "*"
+pandas = "*"
+pandas-stubs = "*"
+playwright = "*"
+plotly = "*"
 python-dotenv = "*"
 scikit-learn = "*"
-"un_llm_analysis" = {editable = true, path = "."}
-pandas-stubs = "*"
-matplotlib = "*"
-wordcloud = "*"
-nltk = "*"
-playwright = "*"
-mkdocs = "*"
 sqlalchemy = "*"
 streamlit = "*"
-markdownify = "*"
-beautifulsoup4 = "*"
-markdown = "*"
-plotly = "*"
-ollama = "*"
-mlflow = "*"
-openai = "*"
-jupyter = "*"
-ipywidgets = "*"
-pipfile = "*"
-pandas = "*"
-bs4 = "*"
-curl-cffi = "*"
-loguru = "*"
+un_llm_analysis = {editable = true, path = "."}
+wordcloud = "*"
 
 [requires]
 python_version = "3.12"
 
 [dev-packages]
-pre-commit = "*"
 black = "*"
-isort = "*"
 ipython = "*"
+isort = "*"
 jupyterlab = "*"
+mkdocs-material = "*"
+mkdocstrings = {extras = ["python"], version = "*"}
 notebook = "*"
+pipfile = "*"
+pre-commit = "*"
 pytest = "*"
 pytest-cov = "*"
-pipfile = "*"

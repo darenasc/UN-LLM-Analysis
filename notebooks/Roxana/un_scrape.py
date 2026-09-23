@@ -1,2 +1,1 @@
-
-print('this is wild')
+print("this is wild")

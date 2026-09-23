@@ -43,16 +43,32 @@ CREATE TABLE IF NOT EXISTS sdg (
 );
 
 
-CREATE TABLE IF NOT EXISTS country_mentions (
+CREATE TABLE IF NOT EXISTS analysis_run (
+    analysis_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    analysis_name TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    model_version TEXT,
+    ollama_version TEXT,
+    prompt_version TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    temperature REAL NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sentiment_analysis (
+    analysis_result_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    analysis_id INTEGER NOT NULL,
+    briefing_id INTEGER NOT NULL,
     section_id INTEGER NOT NULL,
-    country_code TEXT NOT NULL,
-    country_name TEXT NOT NULL,
-    mention_count INTEGER NOT NULL,
+    briefing_date TEXT,
+    sentiment TEXT,
+    tone TEXT,
+    status TEXT NOT NULL,
+    error_message TEXT,
     created_at TEXT NOT NULL,
 
-    FOREIGN KEY (section_id)
-        REFERENCES section(section_id)
-        ON DELETE CASCADE,
+    FOREIGN KEY (analysis_id)
+        REFERENCES analysis_run(analysis_id),
 
-    UNIQUE (section_id, country_code)
+    UNIQUE (analysis_id, briefing_id, section_id)
 );

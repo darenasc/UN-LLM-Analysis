@@ -67,8 +67,53 @@ briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2
 ```
 The extracted result includes speaker information, sections, and full text when available.
 
+### `database_cli`
+
+Command line interface to initialise, load and query the database.
+
+```python
+database init
+database load 2023-01-01 2023-12-31
+database load --since 2023-01-01 --dry-run
+database query --date 2023-08-12
+database query --status available
+database stats
+```
+
+
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
+
+### `streamlit app`
+
+This project adds a streamlit app to visualise some of the data and analysis.
+Run the following command from the terminal to launch it.
+
+```bash
+# Start a streamlit app
+
+streamlit run app/Dashboard.py
+```
+
+The app will be running locally in http://localhost:8501
+
+#### Screeshots from the dashboard
+
+![alt text](figures/home.png)
+![alt text](figures/reader.png)
+
+## Documentation
+
+The project documentation is built with MkDocs.
+To view the documentation locally, run:
+
+```bash
+pipenv run mkdocs serve -f docs/mkdocs.yml
+```
+
+The documentation will be available in `http://127.0.0.1:8000/` in your browser.
+
+See the [Usage](./docs/index.md) guide for the setup instructions.
 
 ## Design
 
@@ -78,7 +123,7 @@ start contributing to the project.
 ## Planning
 
 A generic data science project will look like the following. In theory, the
-implmentation part is planned to last between 4 to 10 weeks. The Gantt chart
+implementation part is planned to last between 4 to 10 weeks. The Gantt chart
 shows dependencies that, in practice, can progress in parallel with
 communication among the assigned people.
 
@@ -170,7 +215,10 @@ gantt
 │   ├── external       <- Data from third party sources.
 │   ├── interim        <- Intermediate data that has been transformed.
 │   ├── processed      <- The final, canonical data sets for modeling.
+│   │   └── database
+│   │      └── briefings.db.zip <- Database with 5 years of data
 │   └── raw            <- The original, immutable data dump.
+│      └── briefings   <- Folder that will store JSON files with briefings.
 │
 ├── docs               <- A default mkdocs project; see www.mkdocs.org for details
 │
@@ -182,8 +230,6 @@ gantt
 │
 ├── pyproject.toml     <- Project configuration file with package metadata for
 │                         un_llm_analysis and configuration for tools like black
-│
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
 │
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
 │   └── figures        <- Generated graphics and figures to be used in reporting
@@ -199,16 +245,11 @@ gantt
     │
     ├── config.py               <- Store useful variables and configuration
     │
-    ├── dataset.py              <- Scripts to download or generate data
+    ├── database.py             <- Scripts to load data to the database
     │
-    ├── features.py             <- Code to create features for modeling
+    ├── extractor.py            <- Scripts to extract information from briefings
     │
-    ├── modeling
-    │   ├── __init__.py
-    │   ├── predict.py          <- Code to run model inference with trained models
-    │   └── train.py            <- Code to train models
-    │
-    └── plots.py                <- Code to create visualizations
+    ├── scraper.py              <- Scripts to download briefings from internet
 ```
 
 --------
