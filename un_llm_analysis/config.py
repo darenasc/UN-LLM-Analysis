@@ -30,3 +30,4 @@ FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 SCHEMA_DB = PROJ_ROOT / "database" / "schema.sql"
 BRIEFINGS_DB_PATH = PROJ_ROOT / "app" / "briefings.db"
+COUNTRY_CSV_PATH = DATA_DIR / "countries_reference.csv"
