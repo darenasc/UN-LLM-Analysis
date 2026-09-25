@@ -912,3 +912,33 @@ def get_dates_with_briefings(
 
     briefing_dates = [datetime.strptime(str(x[0]), "%Y%m%d").strftime("%Y-%m-%d") for x in rows]
     return briefing_dates
+
+
+def show_stats(conn: sqlite3.Connection | None = None) -> None:
+    """Display database statistics.
+
+    Prints total briefings count, date range, and count by status.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Total count
+        cursor.execute("SELECT COUNT(*) as count FROM briefing")
+        total = cursor.fetchone()["count"]
+
+        # Count by status
+        cursor.execute("SELECT status, COUNT(*) as count FROM briefing GROUP BY status")
+        status_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
+
+        # Date range
+        cursor.execute(
+            "SELECT MIN(briefing_date) as min_date, MAX(briefing_date) as max_date FROM briefing"
+        )
+        date_range = cursor.fetchone()
+
+    logger.info("Database Statistics:")
+    logger.info(f"  Total briefings: {total:,}")
+    logger.info(f"  Date range: {date_range['min_date']} to {date_range['max_date']}")
+    logger.info("  By status:")
+    for status, count in status_counts.items():
+        logger.info(f"    {status}: {count:,}")
