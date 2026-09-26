@@ -16,7 +16,7 @@ The aim is to identify trends and insights on global issues, policy developments
 git clone https://github.com/darenasc/correlaid-mentoring-project.git
 cd correlaid-mentoring-project
 pipenv shell
-pipenv install Pipfile
+pipenv install
 ```
 
 # Usage
@@ -25,25 +25,25 @@ pipenv install Pipfile
 Download UN noon briefings and save them as JSON.
 
 ```bash
-# usage: scraper update [-h] [--overwrite] (DATE [DATE] | --since DATE)
+# usage: briefings update [-h] [--overwrite] (DATE [DATE] | --since DATE)
 
 # Update briefing for a single date
-scraper update 2026-08-12
+briefings update 2026-08-12
 
 # Update briefings for a date range
-scraper update 2026-08-01 2026-08-12
+briefings update 2026-08-01 2026-08-12
 
 # Update briefings since a given date:
-scraper update --since 2026-08-01
+briefings update --since 2026-08-01
 ```
 
 ## `scraper check`
 Check if a briefing for a given date has already been downloaded and stored as JSON.
 
 ```bash
-# usage: scraper check [-h] DATE
+# usage: briefings check [-h] DATE
 
-scraper check 2026-08-12
+briefings check 2026-08-12
 ```
 
 Scraped raw data location:
@@ -63,6 +63,19 @@ briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2
 ```
 
 The extracted result includes speaker information, sections, and full text when available.
+
+### `database`
+
+Command line interface to initialise, load and query the database.
+
+```bash
+briefings init
+briefings load 2026-08-12 2026-08-12
+briefings load --since 2026-08-12 --dry-run
+briefings query --date 2026-08-12
+briefings query --status available
+briefings stats
+```
 
 ## `streamlit app`
 

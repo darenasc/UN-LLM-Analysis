@@ -32,13 +32,13 @@ Download UN noon briefings and save them as JSON.
 # usage: scraper update [-h] [--overwrite] (DATE [DATE] | --since DATE)
 
 # Update briefing for a single date
-scraper update 2026-08-12
+briefings update 2026-08-12
 
 # Update briefings for a date range
-scraper update 2026-08-01 2026-08-12
+briefings update 2026-08-01 2026-08-12
 
 # Update briefings since a given date:
-scraper update --since 2026-08-01
+briefings update --since 2026-08-01
 ```
 
 ### `scraper check`
@@ -47,7 +47,7 @@ Check if a briefing for a given date has already been downloaded and stored as J
 ```bash
 # usage: scraper check [-h] DATE
 
-scraper check 2026-08-12
+briefings check 2026-08-12
 ```
 
 Scraped raw data location:
@@ -67,19 +67,18 @@ briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2
 ```
 The extracted result includes speaker information, sections, and full text when available.
 
-### `database_cli`
+### `database`
 
 Command line interface to initialise, load and query the database.
 
-```python
-database init
-database load 2023-01-01 2023-12-31
-database load --since 2023-01-01 --dry-run
-database query --date 2023-08-12
-database query --status available
-database stats
+```bash
+briefings init
+briefings load 2026-08-12 2026-08-12
+briefings load --since 2026-08-12 --dry-run
+briefings query --date 2026-08-12
+briefings query --status available
+briefings stats
 ```
-
 
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
