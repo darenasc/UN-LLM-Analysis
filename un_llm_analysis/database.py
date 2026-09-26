@@ -790,13 +790,13 @@ def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str
     return failed_dates
 
 
-def query_by_date(query_date: date) -> None:
+def query_by_date(conn: sqlite3.Connection, query_date: date) -> None:
     """Query and display a briefing by date.
 
     Args:
         query_date (date): Date of the briefing to query.
     """
-    with get_db_connection() as conn:
+    with conn:
         briefing_id = get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
         briefing = get_briefing_by_id(conn, briefing_id)
 
@@ -810,13 +810,13 @@ def query_by_date(query_date: date) -> None:
         logger.info(f"No briefing found for {query_date}")
 
 
-def query_by_status(status: FetchStatus, conn=BRIEFINGS_DB_PATH) -> None:
+def query_by_status(conn: sqlite3.Connection, status: FetchStatus) -> None:
     """Query and display briefings by status.
 
     Args:
         status (str): Status to filter briefings by, or "all" for all briefings.
     """
-    with get_db_connection() as conn:
+    with conn:
         cursor = conn.cursor()
         if status == "all":
             cursor.execute("SELECT briefing_date, url, status FROM briefing")
@@ -919,7 +919,9 @@ def show_stats(conn: sqlite3.Connection | None = None) -> None:
 
     Prints total briefings count, date range, and count by status.
     """
-    with get_db_connection() as conn:
+    if conn is None:
+        conn = get_db_connection()
+    with conn:
         cursor = conn.cursor()
 
         # Total count

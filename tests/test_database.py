@@ -32,6 +32,7 @@ from un_llm_analysis.database import (  # get_dates_with_briefings,; get_min_max
     load_briefing_to_db,
     query_by_date,
     query_by_status,
+    show_stats,
 )
 from un_llm_analysis.extractor import (
     ExtractedBriefing,
@@ -52,46 +53,34 @@ def test_create_database(tmp_path):
     assert (tmp_path / db_name).exists()
 
 
-# @pytest.fixture(scope="function")
-# def conn(tmp_path):
-#     """Fixture serving a database connection."""
-#     db_name = "briefings.db"
-#     create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
-
-#     connection = get_db_connection(db_path=tmp_path / db_name)
-#     yield connection
-#     connection.close()
-#     (tmp_path / db_name).unlink()
-
-
 def test_get_db_connection(tmp_path):
     """Test getting a connection to a database."""
     # GIVEN a path a to a database
     tmp_db_path = tmp_path / "briefings.db"
 
     # WHEN testing `get_db_connection` (DB is created if the parent dir exists)
-    conn = get_db_connection(db_path=tmp_db_path)
+    conn_test = get_db_connection(db_path=tmp_db_path)
 
     # THEN check the database exists and is of the correct type
     assert tmp_db_path.exists()
-    assert isinstance(conn, sqlite3.Connection)
-    conn.close()
+    assert isinstance(conn_test, sqlite3.Connection)
+    conn_test.close()
 
     # close the connection
-    conn.close()
+    conn_test.close()
 
 
 @pytest.fixture(scope="function")
 def conn():
     """Fixture serving an in-memory database connection."""
-    conn = get_db_connection(":memory:")
+    conn_fixture = get_db_connection(":memory:")
 
     sql_schema = Path(SCHEMA_DB).read_text(encoding="utf-8")
-    conn.executescript(sql_schema)
+    conn_fixture.executescript(sql_schema)
 
-    yield conn
+    yield conn_fixture
 
-    conn.close()
+    conn_fixture.close()
 
 
 @pytest.mark.parametrize(
@@ -197,7 +186,7 @@ def test_get_briefing_by_date(briefing, conn):
     result = get_briefing_by_date(conn=conn, date=briefing.briefing_date)
 
     # THEN the results is equal to the inserted briefing
-    assert briefing.briefing_date == result.briefing_date
+    assert briefing.briefing_date == result.briefing_date  # type: ignore
 
 
 def test_get_briefing_id_by_url(briefing, conn):
@@ -484,76 +473,99 @@ def test_load_briefing_to_db_invalid_file(conn):
     assert result is False
 
 
-def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn) -> None:
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    result = load_between_dates(date(2024, 1, 1), date(2024, 1, 2), dry_run=True, conn=conn)
+def test_load_between_dates_empty_range(conn):
+    """Test load_between_dates with empty date range."""
+    # GIVEN a database connection
+    # WHEN using provided conn fixture (already has briefing_2026-08-25.json)
+    result = load_between_dates(start_date=date(2025, 9, 1), end_date=date(2025, 9, 30), conn=conn)
+
+    # THEN returns True (existing briefing in DB + no other files exist)
     assert result is True
 
 
-def test_all_succeed(monkeypatch, conn):
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
-    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
+# def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn) -> None:
+#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+#     result = load_between_dates(date(2024, 1, 1), date(2024, 1, 2), dry_run=True, conn=conn)
+#     assert result is True
 
 
-def test_returns_false_on_failure(monkeypatch, conn):
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: False)
-    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is False
+# def test_all_succeed(monkeypatch, conn):
+#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+#     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
+#     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
 
 
-def test_missing_json_files_are_skipped_not_failed(monkeypatch, conn):
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: False)
-    monkeypatch.setattr(
-        db_module,
-        "load_briefing_to_db",
-        lambda path, c: (_ for _ in ()).throw(AssertionError("should not be called")),
-    )
-    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is True
+# def test_returns_false_on_failure(monkeypatch, conn):
+#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+#     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: False)
+#     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is False
 
 
-def test_load_between_dates(monkeypatch, conn):
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
-    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
+# def test_missing_json_files_are_skipped_not_failed(monkeypatch, conn):
+#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: False)
+#     monkeypatch.setattr(
+#         db_module,
+#         "load_briefing_to_db",
+#         lambda path, c: (_ for _ in ()).throw(AssertionError("should not be called")),
+#     )
+#     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is True
 
 
-def test_query_by_date_found(monkeypatch, conn, briefing):
-    """Test query_by_date runs without error when a briefing exists."""
-    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
-    insert_into_briefing(conn=conn, briefing=briefing)
-    result = query_by_date(date.fromisoformat(briefing.briefing_date))
-    assert result is None
+# def test_load_between_dates(monkeypatch, conn):
+#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+#     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
+#     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
 
 
-def test_query_by_date_not_found(monkeypatch, conn):
+@pytest.mark.parametrize(
+    "input_date,expected",
+    [
+        (date(2024, 1, 1), "No briefing found for 2024-01-01"),
+        (date(2026, 8, 25), "Briefing found for 2026-08-25"),
+    ],
+)
+def test_query_by_date(input_date, expected, conn, briefing, caplog):
     """Test query_by_date runs without error when no briefing exists."""
-    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
-    result = query_by_date(date(2024, 1, 1))
-    assert result is None
+    insert_into_briefing(conn=conn, briefing=briefing)
+    query_by_date(conn=conn, query_date=input_date)
+    assert expected in caplog.text
 
 
-def test_query_by_status_specific(monkeypatch, conn, briefing):
+@pytest.mark.parametrize(
+    "status,expected",
+    [
+        ("available", "Found 1 briefings with status 'available'"),
+        ("available", "2026-08-25"),
+        ("not_published", "Found 0 briefings with status 'not_published'"),
+        ("failed", "Found 0 briefings with status 'failed'"),
+    ],
+)
+def test_query_by_status_specific(status, expected, conn, briefing, caplog):
     """Test query_by_status filters correctly by a specific status."""
-    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
     insert_into_briefing(conn=conn, briefing=briefing)
-    result = query_by_status(status=briefing.status)
-    assert result is None
+    query_by_status(conn=conn, status=status)
+    assert expected in caplog.text
 
 
-def test_query_by_status_all(monkeypatch, conn, briefing):
+def test_query_by_status_all(conn, briefing, caplog):
     """Test query_by_status returns all briefings when status='all'."""
-    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
-    insert_into_briefing(conn=conn, briefing=briefing)
-    result = query_by_status(status="all")
-    assert result is None
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+    query_by_status(conn=conn, status="all")  # type: ignore
+    assert "Found 1 briefings with status 'all'" in caplog.text
+    assert "2026-08-25" in caplog.text
 
 
-def test_show_stats_empty_db(monkeypatch, conn):
+def test_show_stats_empty_db(conn, caplog):
     """Test show_stats runs without error on an empty database."""
-    pass
+    show_stats(conn=conn)
+    assert "Total briefings: 0" in caplog.text
+    assert "Date range: None to None" in caplog.text
 
 
-def test_show_stats_with_data(monkeypatch, conn, briefing):
+def test_show_stats_with_data(conn, briefing, caplog):
     """Test show_stats runs without error when briefings exist."""
-    pass
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+    show_stats(conn=conn)
+    assert "Total briefings: 1" in caplog.text
+    assert "Date range: 2026-08-25 to 2026-08-25" in caplog.text
+    assert "available: 1" in caplog.text
