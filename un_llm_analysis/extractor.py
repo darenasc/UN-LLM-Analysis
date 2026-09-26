@@ -68,6 +68,7 @@ class HardLine:
 
     text: str
     fully_bold: bool
+    fully_underlined: bool
 
 
 _TEXT_TRANSLATION = str.maketrans(
@@ -111,7 +112,7 @@ def _extract_hard_lines(html: str) -> list[HardLine]:
         list[HardLine]: Structured hard lines extracted from the HTML.
     """
 
-    block_tags = {
+    BLOCK_TAGS = {
         "p",
         "div",
         "li",
@@ -132,8 +133,24 @@ def _extract_hard_lines(html: str) -> list[HardLine]:
         "hr",
     }
 
+    FORMAT_TAGS = {
+        "strong": "bold",
+        "b": "bold",
+        "u": "underline",
+        "ins": "underline",
+    }
+
     hard_lines: list[HardLine] = []
-    fragments: list[tuple[str, bool]] = []
+    fragments: list[tuple[str, frozenset[str]]] = []
+
+    def fully_formatted(format_: str) -> bool:
+        """Check whether all text fragments use the specified format, ignoring symbol-only fragments."""
+        text_fragments = [formats for part, formats in fragments if any(c.isalnum() for c in part)]
+
+        if not text_fragments:
+            return False
+
+        return all(format_ in formats for formats in text_fragments)
 
     def flush_line() -> None:
         """Convert accumulated fragments into a hard line and reset the buffer."""
@@ -142,18 +159,19 @@ def _extract_hard_lines(html: str) -> list[HardLine]:
             hard_lines.append(
                 HardLine(
                     text=text,
-                    fully_bold=all(bold for part, bold in fragments if part.strip()),
+                    fully_bold=fully_formatted("bold"),
+                    fully_underlined=fully_formatted("underline"),
                 )
             )
         fragments.clear()
 
-    def visit(node: Tag | NavigableString, bold: bool = False) -> None:
-        """Recursively process an HTML node, tracking line boundaries and bold text."""
+    def visit(node: Tag | NavigableString, formats: frozenset[str] = frozenset()) -> None:
+        """Recursively process an HTML node, tracking line boundaries and bold/underlined text."""
         if isinstance(node, Comment):
             return
 
         if isinstance(node, NavigableString):
-            fragments.append((_normalize_text(str(node)), bold))
+            fragments.append((_normalize_text(str(node)), formats))
             return
 
         if node.name in {"script", "style"}:
@@ -163,13 +181,16 @@ def _extract_hard_lines(html: str) -> list[HardLine]:
             flush_line()
             return
 
-        is_block = node.name in block_tags
+        is_block = node.name in BLOCK_TAGS
         if is_block:
             flush_line()
 
-        bold = bold or node.name in {"strong", "b"}
+        format_ = FORMAT_TAGS.get(node.name)
+        if format_:
+            formats = formats | {format_}
+
         for child in node.children:
-            visit(child, bold)
+            visit(child, formats)
 
         if is_block:
             flush_line()
@@ -247,8 +268,8 @@ def _is_section_title_candidate(line: HardLine) -> bool:
 
     MAX_LOWERCASE_RATIO = 0.25
 
-    if not line.fully_bold:
-        return False
+    if line.fully_bold or line.fully_underlined:
+        return True
 
     num_lowercase = sum(char.islower() for char in line.text)
     num_uppercase = sum(char.isupper() for char in line.text)
