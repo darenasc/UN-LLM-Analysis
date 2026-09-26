@@ -47,9 +47,9 @@ def _build_parser() -> argparse.ArgumentParser:
   %(prog)s update --since 2026-08-01
   %(prog)s check 2026-08-12
   %(prog)s init
-  %(prog)s load 2023-01-01 2023-12-31
-  %(prog)s load --since 2023-01-01
-  %(prog)s query --date 2023-08-12
+  %(prog)s load 2026-08-01 2026-08-12
+  %(prog)s load --since 2026-08-01
+  %(prog)s query --date 2026-08-01
   %(prog)s query --status available
   %(prog)s stats
 
