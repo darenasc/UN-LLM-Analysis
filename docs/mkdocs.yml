@@ -1,4 +1,44 @@
-site_name: un_llm_analysis
-# 
+theme:
+  name: material
+
+site_name: "UN LLM Analysis - Correlaid Mentoring Project"
+site_description: Correlaid mentoring project 2026.
 site_author: Correlaid
-# 
+site_url: https://darenasc.github.io/auto-fes/correlaid-mentoring-project
+repo_url: https://github.com/darenasc/correlaid-mentoring-project/
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            members_order: source
+            docstring_section_style: list
+            summary: true
+            heading_level: 1
+            parameter_headings: true
+            type_parameter_headings: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            separate_signature: true
+            show_signature_annotations: true
+            show_signature_type_parameters: true
+            filters:
+              - "!^main$"
+              - "!^_[^_]"
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/correlaid
+    - icon: fontawesome/brands/instagram
+      link: https://www.instagram.com/correlaid
+    - icon: fontawesome/brands/linkedin
+      link: https://de.linkedin.com/company/correlaid
+    - icon: fontawesome/brands/facebook
+      link: https://facebook.com/WeAreCorrelAid

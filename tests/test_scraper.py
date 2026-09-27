@@ -31,19 +31,6 @@ def test_parse_date_invalid():
         scraper._parse_date(date_string)
 
 
-def test_dates_between():
-    # GIVEN a start date and an end date
-    start_date = date(2026, 1, 30)
-    end_date = date(2026, 2, 1)
-    expected_dates = [date(2026, 1, 30), date(2026, 1, 31), date(2026, 2, 1)]
-
-    # WHEN _dates_between is called
-    result = list(scraper._dates_between(start_date, end_date))
-
-    # THEN the result should match the expected dates
-    assert result == expected_dates
-
-
 @pytest.mark.parametrize(
     "status, expected",
     [

@@ -5,16 +5,16 @@ briefing JSON records, extracting speaker and section information from
 available HTML.
 
 Extracted data:
-- briefing_date
-- url
-- status
-- http_status
-- error
-- downloaded_at
-- speaker_name
-- speaker_role
-- sections
-- full_text
+    - `briefing_date`
+    - `url`
+    - `status`
+    - `http_status`
+    - `error`
+    - `downloaded_at`
+    - `speaker_name`
+    - `speaker_role`
+    - `sections`
+    - `full_text`
 """
 
 from dataclasses import dataclass

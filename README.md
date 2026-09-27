@@ -67,6 +67,20 @@ briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2
 ```
 The extracted result includes speaker information, sections, and full text when available.
 
+### `database_cli`
+
+Command line interface to initialise, load and query the database.
+
+```python
+database init
+database load 2023-01-01 2023-12-31
+database load --since 2023-01-01 --dry-run
+database query --date 2023-08-12
+database query --status available
+database stats
+```
+
+
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
 
@@ -87,6 +101,19 @@ The app will be running locally in http://localhost:8501
 
 ![alt text](figures/home.png)
 ![alt text](figures/reader.png)
+
+## Documentation
+
+The project documentation is built with MkDocs.
+To view the documentation locally, run:
+
+```bash
+pipenv run mkdocs serve -f docs/mkdocs.yml
+```
+
+The documentation will be available in `http://127.0.0.1:8000/` in your browser.
+
+See the [Usage](./docs/index.md) guide for the setup instructions.
 
 ## Design
 
@@ -226,3 +253,11 @@ gantt
 ```
 
 --------
+
+# Contributors
+
+**Volunteers**: [Charles Mbayo](https://github.com/MathCodeLab1), [Daniel Wilkinson](https://github.com/daniel-lee-wilkinson), [Franz Song](https://github.com/yuanhes), [Josmy Mathew](https://github.com/josmyrose), and [Roxana Runcan](https://github.com/Roxana-Runcan)
+
+**Mentor**: [Diego Arenas](https://github.com/darenasc)
+
+**Project Partner**: [CorrelAid](https://correlaid.org/en/)
