@@ -664,3 +664,361 @@ def get_dates_with_briefings(
 
     briefing_dates = [datetime.strptime(str(x[0]), "%Y%m%d").strftime("%Y-%m-%d") for x in rows]
     return briefing_dates
+# --- section analysis ---------------------------------------------------------------
+
+
+def insert_into_analysisrun(
+    conn: sqlite3.Connection,
+    analysis_name: str,
+    model_name: str,
+    model_version: str,
+    ollama_version: None | str,
+    prompt_version: str,
+    prompt: str,
+    temperature: float,
+) -> int:
+    """Create one sentiment/tone analysis run and return analysis_id."""
+
+    cursor = conn.execute(
+        """
+        INSERT INTO analysis_run (
+            analysis_name,
+            model_name,
+            model_version,
+            ollama_version,
+            prompt_version,
+            prompt,
+            temperature,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            analysis_name,
+            model_name,
+            model_version,
+            ollama_version,
+            prompt_version,
+            prompt,
+            temperature,
+            datetime.now().isoformat(),
+        ),
+    )
+
+    conn.commit()
+
+    return int(cursor.lastrowid)
+
+
+def get_analysis_run(
+    conn: sqlite3.Connection,
+    analysis_id: int,
+):
+    """Return metadata for one analysis run."""
+
+    return conn.execute(
+        """
+        SELECT
+            analysis_id,
+            analysis_name,
+            model_name,
+            model_version,
+            ollama_version,
+            prompt_version,
+            temperature,
+            created_at
+        FROM analysis_run
+        WHERE analysis_id = ?
+        """,
+        (analysis_id,),
+    ).fetchone()
+
+
+def get_sections_for_sentiment_analysis(
+    conn: sqlite3.Connection,
+) -> pd.DataFrame:
+    """
+    Get the existing briefing sections that will be analysed.
+
+    Data comes from the project's existing briefing and section tables.
+    """
+
+    query = """
+        SELECT
+            s.section_id,
+            s.briefing_id,
+            b.briefing_date,
+            s.section_order,
+            s.title,
+            s.text AS section_text
+        FROM section AS s
+        JOIN briefing AS b
+            ON s.briefing_id = b.briefing_id
+        WHERE s.text IS NOT NULL
+          AND TRIM(s.text) != ''
+        ORDER BY b.briefing_date, s.section_order
+    """
+
+    cursor = conn.execute(query)
+    rows = cursor.fetchall()
+    column_names = [column[0] for column in cursor.description]
+    cursor.close()
+
+    df = pd.DataFrame(rows, columns=column_names)
+
+    if df.empty:
+        return df
+
+    df["briefing_date"] = pd.to_datetime(
+        df["briefing_date"],
+        errors="coerce",
+    )
+
+    return (
+        df.drop_duplicates(
+            ["briefing_id", "section_id"],
+            keep="first",
+        )
+        .reset_index(drop=True)
+    )
+
+
+def get_completed_section_ids(
+    conn: sqlite3.Connection,
+    analysis_id: int,
+) -> set[int]:
+    """
+    Return section IDs already successfully analysed
+    for this analysis run.
+    """
+
+    rows = conn.execute(
+        """
+        SELECT section_id
+        FROM sentiment_analysis
+        WHERE analysis_id = ?
+          AND status = 'success'
+        """,
+        (analysis_id,),
+    ).fetchall()
+
+    return {int(row["section_id"]) for row in rows}
+
+
+def insert_sentiment_analysis(
+    conn: sqlite3.Connection,
+    analysis_id: int,
+    briefing_id: int,
+    section_id: int,
+    briefing_date: str | None,
+    sentiment: str | None,
+    tone: str | None,
+    status: str,
+    error_message: str | None = None,
+) -> None:
+    """
+    Store one sentiment/tone result.
+
+    This matches the notebook's sentiment_analysis table:
+        analysis_id
+        briefing_id
+        section_id
+        briefing_date
+        sentiment
+        tone
+        status
+        error_message
+        created_at
+    """
+    # Normalize briefing date for SQLite
+    if briefing_date is not None:
+        if hasattr(briefing_date, "strftime"):
+            briefing_date = briefing_date.strftime("%Y-%m-%d")
+        else:
+            briefing_date = str(briefing_date)
+    conn.execute(
+        """
+        INSERT INTO sentiment_analysis (
+            analysis_id,
+            briefing_id,
+            section_id,
+            briefing_date,
+            sentiment,
+            tone,
+            status,
+            error_message,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            analysis_id,
+            briefing_id,
+            section_id,
+            briefing_date,
+            sentiment,
+            tone,
+            status,
+            error_message,
+            datetime.now().isoformat(),
+        ),
+    )
+
+    conn.commit()
+
+
+def get_sentiment_results(
+    conn: sqlite3.Connection,
+    analysis_id: int,
+) -> pd.DataFrame:
+    """
+    Return sentiment/tone results together with the original
+    briefing and section information.
+    """
+
+    query = """
+        SELECT
+            sa.analysis_result_id,
+            sa.analysis_id,
+            sa.briefing_id,
+            sa.section_id,
+            sa.briefing_date,
+            s.section_order,
+            s.title,
+            s.text AS section_text,
+            sa.sentiment,
+            sa.tone,
+            sa.status,
+            sa.error_message,
+            sa.created_at
+        FROM sentiment_analysis AS sa
+        JOIN section AS s
+            ON sa.section_id = s.section_id
+        WHERE sa.analysis_id = ?
+        ORDER BY sa.briefing_date, s.section_order
+    """
+
+    return pd.read_sql_query(
+        query,
+        conn,
+        params=(analysis_id,),
+    )
+
+
+def get_sentiment_distribution(
+    conn: sqlite3.Connection,
+    analysis_id: int,
+) -> pd.DataFrame:
+    """Return sentiment counts for one analysis run."""
+
+    return pd.read_sql_query(
+        """
+        SELECT
+            sentiment,
+            COUNT(*) AS count
+        FROM sentiment_analysis
+        WHERE analysis_id = ?
+          AND status = 'success'
+        GROUP BY sentiment
+        ORDER BY count DESC
+        """,
+        conn,
+        params=(analysis_id,),
+    )
+
+
+def get_tone_distribution(
+    conn: sqlite3.Connection,
+    analysis_id: int,
+) -> pd.DataFrame:
+    """Return tone counts for one analysis run."""
+
+    return pd.read_sql_query(
+        """
+        SELECT
+            tone,
+            COUNT(*) AS count
+        FROM sentiment_analysis
+        WHERE analysis_id = ?
+          AND status = 'success'
+        GROUP BY tone
+        ORDER BY count DESC
+        """,
+        conn,
+        params=(analysis_id,),
+    )
+# Get the latest analysis run for the given analysis name.
+def get_latest_analysis_run(conn, analysis_name):
+    """
+    Get the latest analysis run for the given analysis name.
+    """
+
+    row = conn.execute(
+        """
+        SELECT analysis_id
+        FROM analysis_run
+        WHERE analysis_name = ?
+        ORDER BY analysis_id DESC
+        LIMIT 1
+        """,
+        (analysis_name,),
+    ).fetchone()
+
+    if row is None:
+        return None
+
+    return row[0]
+# Get count of successfully analysed sections for an analysis run.
+def count_successful_sections(conn, analysis_id):
+    """
+    Count successfully analysed sections for an analysis run.
+    """
+
+    row = conn.execute(
+        """
+        SELECT COUNT(DISTINCT section_id)
+        FROM sentiment_analysis
+        WHERE analysis_id = ?
+          AND status = 'success'
+        """,
+        (analysis_id,),
+    ).fetchone()
+
+    return row[0] if row else 0
+
+def verify_sentiment_tables(
+    conn: sqlite3.Connection,
+) -> list[str]:
+    """Return the analysis tables currently present in the database."""
+
+    required = {
+        "analysis_run",
+        "sentiment_analysis",
+    }
+
+    rows = conn.execute(
+        """
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+        """
+    ).fetchall()
+
+    existing = {row["name"] for row in rows}
+
+    return sorted(required.intersection(existing))
+
+if __name__ == "__main__":
+    # Run this file directly only to create/verify the two
+    # sentiment-analysis tables in the existing project database.
+    conn = sqlite3.connect(BRIEFINGS_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+
+    create_sentiment_tables(conn)
+
+    print("Sentiment/tone database tables are ready.")
+    print("Database:", BRIEFINGS_DB_PATH)
+    print("Tables:", verify_sentiment_tables(conn))
+
+    conn.close()
