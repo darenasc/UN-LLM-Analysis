@@ -664,6 +664,8 @@ def get_dates_with_briefings(
 
     briefing_dates = [datetime.strptime(str(x[0]), "%Y%m%d").strftime("%Y-%m-%d") for x in rows]
     return briefing_dates
+
+
 # --- section analysis ---------------------------------------------------------------
 
 
@@ -774,13 +776,10 @@ def get_sections_for_sentiment_analysis(
         errors="coerce",
     )
 
-    return (
-        df.drop_duplicates(
-            ["briefing_id", "section_id"],
-            keep="first",
-        )
-        .reset_index(drop=True)
-    )
+    return df.drop_duplicates(
+        ["briefing_id", "section_id"],
+        keep="first",
+    ).reset_index(drop=True)
 
 
 def get_completed_section_ids(
@@ -947,6 +946,8 @@ def get_tone_distribution(
         conn,
         params=(analysis_id,),
     )
+
+
 # Get the latest analysis run for the given analysis name.
 def get_latest_analysis_run(conn, analysis_name):
     """
@@ -968,6 +969,8 @@ def get_latest_analysis_run(conn, analysis_name):
         return None
 
     return row[0]
+
+
 # Get count of successfully analysed sections for an analysis run.
 def count_successful_sections(conn, analysis_id):
     """
@@ -986,6 +989,7 @@ def count_successful_sections(conn, analysis_id):
 
     return row[0] if row else 0
 
+
 def verify_sentiment_tables(
     conn: sqlite3.Connection,
 ) -> list[str]:
@@ -996,17 +1000,16 @@ def verify_sentiment_tables(
         "sentiment_analysis",
     }
 
-    rows = conn.execute(
-        """
+    rows = conn.execute("""
         SELECT name
         FROM sqlite_master
         WHERE type = 'table'
-        """
-    ).fetchall()
+        """).fetchall()
 
     existing = {row["name"] for row in rows}
 
     return sorted(required.intersection(existing))
+
 
 if __name__ == "__main__":
     # Run this file directly only to create/verify the two
