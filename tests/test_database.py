@@ -1,10 +1,8 @@
 from datetime import date
 from pathlib import Path
 import sqlite3
-from unittest.mock import MagicMock
 
 import pytest
-from pytest import MonkeyPatch
 
 from un_llm_analysis import database as db_module
 from un_llm_analysis.config import SCHEMA_DB
@@ -39,6 +37,11 @@ from un_llm_analysis.extractor import (
     ExtractedSection,
     extract_briefing,
 )
+
+# from unittest.mock import MagicMock
+
+
+# from pytest import MonkeyPatch
 
 
 def test_create_database(tmp_path):
@@ -209,6 +212,7 @@ def test_get_briefing_id_by_url(briefing, conn):
 
 
 def test_get_briefings_between_dates(briefing, conn):
+    """Test retrieving briefings between dates."""
     # GIVEN a database with data
     _ = insert_into_briefing(conn=conn, briefing=briefing)
 
@@ -239,6 +243,7 @@ def test_delete_briefing(briefing, conn):
 
 
 def test_delete_briefing_false(conn):
+    """Test deleting a briefing that doesn't exists."""
     # GIVEN a database with data
     # WHEN deleting a non-existing record
     result = delete_briefing(conn=conn, briefing_id=20260231)
@@ -371,7 +376,7 @@ def test_delete_sections(briefing, conn):
     assert result is True
 
 
-def test_delete_sections_false(briefing, conn):
+def test_delete_sections_false(conn):
     """Test deleting all the sections when the briefing_id does not exists."""
     # GIVEN a database connection without data
     # WHEN deleting sections of a non-existing briefing_id
@@ -389,6 +394,7 @@ def test_delete_sections_false(briefing, conn):
     ],
 )
 def test_insert_into_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+    """Test insert data into the sdg table."""
     # GIVEN a database connection
     # WHEN inserting data into the sdg table
     insert_into_sdg(
@@ -413,6 +419,7 @@ def test_insert_into_sdg(conn, briefing_id, section_id, sdgs, model, created_at)
     ],
 )
 def test_delete_from_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+    """Test deleting data from sdg."""
     insert_into_sdg(
         conn=conn,
         briefing_id=briefing_id,
@@ -437,6 +444,7 @@ def test_delete_from_sdg(conn, briefing_id, section_id, sdgs, model, created_at)
     ],
 )
 def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, created_at):
+    """Test retrieving data from the sdg table."""
     insert_into_sdg(
         conn=conn,
         briefing_id=briefing_id,
@@ -483,10 +491,10 @@ def test_load_between_dates_empty_range(conn):
     assert result is True
 
 
-# def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn) -> None:
-#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-#     result = load_between_dates(date(2024, 1, 1), date(2024, 1, 2), dry_run=True, conn=conn)
-#     assert result is True
+def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn) -> None:
+    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
+    result = load_between_dates(date(2024, 1, 1), date(2024, 1, 2), dry_run=True, conn=conn)
+    assert result is True
 
 
 # def test_all_succeed(monkeypatch, conn):
