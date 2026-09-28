@@ -59,18 +59,6 @@ def test_create_database(tmp_path):
     assert (tmp_path / db_name).exists()
 
 
-@pytest.fixture(scope="function")
-def conn(tmp_path):
-    """Fixture serving a database connection."""
-    db_name = "briefings.db"
-    create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
-
-    connection = get_db_connection(db_path=tmp_path / db_name)
-    yield connection
-    connection.close()
-    (tmp_path / db_name).unlink()
-
-
 def test_get_db_connection(tmp_path):
     """Test getting a connection to a database."""
     # GIVEN a path a to a database
@@ -123,7 +111,9 @@ def test__get_briefing_id_from_date(date, expected):
 @pytest.fixture()
 def briefing():
     """Fixture with an ExtractedBriefing."""
-    return extract_briefing(file_path=Path("tests/fixtures/briefing_2026-08-25.json"))
+    return extract_briefing(
+        file_path=Path("tests/fixtures/briefings/2026/2026-08/2026-08-25.json")
+    )
 
 
 def test_insert_into_briefing(briefing, conn):
@@ -469,7 +459,7 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
 
 def test_load_briefing_to_db(briefing, conn: sqlite3.Connection):
     """Test loading a briefing JSON file into the database."""
-    file_path = Path("tests/fixtures/briefing_2026-08-25.json")
+    file_path = Path("tests/fixtures/briefings/2026/2026-08/2026-08-25.json")
 
     result = load_briefing_to_db(file_path=file_path, conn=conn)
     assert result is True

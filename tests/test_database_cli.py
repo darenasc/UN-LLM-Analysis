@@ -189,21 +189,24 @@ def test_resolve_load_request_after_today_error():
 
 
 @pytest.fixture(scope="function")
-def conn(tmp_path):
-    """Fixture serving a database connection."""
-    db_name = "briefings.db"
-    create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
+def conn():
+    """Fixture serving an in-memory database connection."""
+    conn = get_db_connection(":memory:")
 
-    connection = get_db_connection(db_path=tmp_path / db_name)
-    yield connection
-    connection.close()
-    (tmp_path / db_name).unlink()
+    sql_schema = Path(SCHEMA_DB).read_text(encoding="utf-8")
+    conn.executescript(sql_schema)
+
+    yield conn
+
+    conn.close()
 
 
 @pytest.fixture()
 def briefing():
     """Fixture with an ExtractedBriefing."""
-    return extract_briefing(file_path=Path("tests/fixtures/briefing_2026-08-25.json"))
+    return extract_briefing(
+        file_path=Path("tests/fixtures/briefings/2026/2026-08/2026-08-25.json")
+    )
 
 
 def test_show_stats_empty_db(monkeypatch, conn):
