@@ -395,10 +395,18 @@ def test_extract_briefing_with_real_fixture(selected_date):
 
     fixtures_dir = Path(__file__).parent / "fixtures"
 
-    result = extractor.extract_briefing(fixtures_dir / f"briefing_{selected_date}.json")
+    result = extractor.extract_briefing(
+        fixtures_dir
+        / "briefings"
+        / selected_date[:4]
+        / selected_date[:7]
+        / f"{selected_date}.json"
+    )
 
     expected = json.loads(
-        (fixtures_dir / f"extracted_briefing_{selected_date}.json").read_text(encoding="utf-8")
+        (
+            fixtures_dir / "extracted_briefings" / f"extracted_briefing_{selected_date}.json"
+        ).read_text(encoding="utf-8")
     )
 
     expected["sections"] = tuple(expected["sections"])
