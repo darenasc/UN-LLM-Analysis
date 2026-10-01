@@ -2,8 +2,6 @@ import argparse
 from collections.abc import Iterator
 from datetime import date, timedelta
 
-from un_llm_analysis.config import BRIEFINGS_DIR
-
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
     """Yield dates from start_date to end_date, inclusive.
