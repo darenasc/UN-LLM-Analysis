@@ -506,6 +506,38 @@ def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn, caplog) -> No
 @pytest.mark.parametrize(
     "start_date,end_date,expected",
     [
+        (date(2026, 6, 12), date(2026, 6, 12), True),
+        (date(2026, 6, 29), date(2026, 6, 29), True),
+        (date(2026, 8, 25), date(2026, 8, 25), True),
+    ],
+)
+def test_all_succeed(start_date, end_date, expected, monkeypatch, conn):
+    """Tests successful load of briefings to the database"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    result = load_briefings_between_dates(start_date, end_date, conn=conn)
+    assert result is expected
+
+
+@pytest.mark.parametrize(
+    "start_date,end_date,expected",
+    [
+        (date(2026, 6, 13), date(2026, 6, 13), False),
+        (date(2026, 6, 30), date(2026, 6, 30), False),
+        (date(2026, 8, 26), date(2026, 8, 26), False),
+    ],
+)
+def test_returns_false_on_failure(start_date, end_date, expected, monkeypatch, conn):
+    """Tests unsuccessful load of briefings to the database"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    result = load_briefings_between_dates(start_date, end_date, conn=conn)
+    assert result is expected
+
+
+@pytest.mark.parametrize(
+    "start_date,end_date,expected",
+    [
         (date(2026, 6, 13), date(2026, 6, 13), "No JSON file for 2026-06-13, would skip"),
         (date(2026, 6, 30), date(2026, 6, 30), "No JSON file for 2026-06-30, would skip"),
         (date(2026, 8, 26), date(2026, 8, 26), "No JSON file for 2026-08-26, would skip"),
@@ -528,12 +560,9 @@ def test_missing_json_files_are_skipped_not_failed(
         (date(2026, 6, 12), date(2026, 6, 12), True),
         (date(2026, 6, 29), date(2026, 6, 29), True),
         (date(2026, 8, 25), date(2026, 8, 25), True),
-        (date(2026, 6, 13), date(2026, 6, 13), False),
-        (date(2026, 6, 30), date(2026, 6, 30), False),
-        (date(2026, 8, 26), date(2026, 8, 26), False),
     ],
 )
-def test_load_briefings_between_dates(start_date, end_date, expected, monkeypatch, conn):
+def test_load_briefings_between_dates(start_date, end_date, expected, monkeypatch, conn, caplog):
     """Tests loading briefings from JSON files to the database"""
     briefings_path = Path("tests/fixtures/briefings")
     monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
