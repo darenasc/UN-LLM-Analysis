@@ -14,12 +14,13 @@ The CLI follows a layered architecture:
 
 import argparse
 from datetime import date, datetime
+import subprocess
 import sys
 from zoneinfo import ZoneInfo
 
 from loguru import logger
 
-from un_llm_analysis.config import MIN_SCRAPE_DATE
+from un_llm_analysis.config import APP_DIR, MIN_SCRAPE_DATE
 from un_llm_analysis.database import (
     create_database,
     load_briefings_between_dates,
@@ -52,6 +53,7 @@ def _build_parser() -> argparse.ArgumentParser:
   %(prog)s query --date 2026-08-01
   %(prog)s query --status available
   %(prog)s stats
+  %(prog)s app
 
 Run '%(prog)s COMMAND --help' for details about a command.
 """,
@@ -188,6 +190,13 @@ Scraped raw data location:
         "stats",
         help="Show database statistics.",
         description="Display statistics about the database contents.",
+    )
+
+    # streamlit app
+    app_parser = subparsers.add_parser(
+        "app",
+        help="Start a streamlit app.",
+        description="Explore and visualise the briefings database.",
     )
 
     return parser
@@ -331,6 +340,16 @@ def main() -> None:
 
     elif args.command == "stats":
         show_stats()
+
+    elif args.command == "app":
+
+        _ = subprocess.Popen(
+            [
+                "streamlit",
+                "run",
+                APP_DIR / "Dashboard.py",
+            ]
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -86,7 +86,7 @@ Run the following command from the terminal to launch it.
 
 ```bash
 # Start a streamlit app
-
+briefings app # or
 streamlit run app/Dashboard.py
 ```
 

@@ -65,6 +65,7 @@ briefings load --since 2026-08-12
 briefings query --date 2026-08-12
 briefings query --status available
 briefings stats
+briedings app
 ```
 
 ### Extractor module
@@ -91,7 +92,7 @@ Run the following command from the terminal to launch it.
 
 ```bash
 # Start a streamlit app
-
+briefings app # or
 streamlit run app/Dashboard.py
 ```
 
