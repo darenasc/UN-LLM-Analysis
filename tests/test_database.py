@@ -5,8 +5,10 @@ import sqlite3
 import pytest
 
 from un_llm_analysis import database as db_module
+from un_llm_analysis import utils
 from un_llm_analysis.config import SCHEMA_DB
 from un_llm_analysis.database import (  # get_dates_with_briefings,; get_min_max_dates,; show_stats,
+    _load_dates,
     create_database,
     delete_briefing,
     delete_from_sdg,
@@ -529,8 +531,9 @@ def test_all_succeed(start_date, end_date, expected, monkeypatch, conn):
 )
 def test_returns_false_on_failure(start_date, end_date, expected, monkeypatch, conn):
     """Tests unsuccessful load of briefings to the database"""
-    briefings_path = Path("tests/fixtures/briefings")
-    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    monkeypatch.setattr(
+        db_module, "_load_dates", lambda *args, **kwargs: [start_date.strftime("%Y-%m-%d")]
+    )
     result = load_briefings_between_dates(start_date, end_date, conn=conn)
     assert result is expected
 

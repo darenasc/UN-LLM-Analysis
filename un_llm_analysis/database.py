@@ -778,7 +778,7 @@ def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str
         date_string = briefing_date.strftime("%Y-%m-%d")
         file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
 
-        if not _is_briefing_json_exists(briefing_date):
+        if not file_path.exists():
             logger.info(f"  - No JSON file for {date_string}, skipping")
             continue
 
