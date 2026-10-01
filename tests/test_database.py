@@ -533,7 +533,7 @@ def test_missing_json_files_are_skipped_not_failed(
         (date(2026, 8, 26), date(2026, 8, 26), False),
     ],
 )
-def test_load_briefings_between_dates(start_date, end_date, expected, monkeypatch, conn, caplog):
+def test_load_briefings_between_dates(start_date, end_date, expected, monkeypatch, conn):
     """Tests loading briefings from JSON files to the database"""
     briefings_path = Path("tests/fixtures/briefings")
     monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
