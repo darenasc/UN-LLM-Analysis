@@ -29,7 +29,6 @@ from un_llm_analysis.extractor import (
 from un_llm_analysis.scraper import FetchStatus
 from un_llm_analysis.utils import (
     _dates_between,
-    _is_briefing_json_exists,
 )
 
 
