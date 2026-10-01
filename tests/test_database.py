@@ -6,7 +6,7 @@ import pytest
 
 from un_llm_analysis import database as db_module
 from un_llm_analysis.config import SCHEMA_DB
-from un_llm_analysis.database import (  # get_dates_with_briefings,; get_min_max_dates,; show_stats,; _load_dates,
+from un_llm_analysis.database import (
     create_database,
     delete_briefing,
     delete_from_sdg,
@@ -18,7 +18,9 @@ from un_llm_analysis.database import (  # get_dates_with_briefings,; get_min_max
     get_briefing_id_by_url,
     get_briefing_id_from_date,
     get_briefings_between_dates,
+    get_dates_with_briefings,
     get_db_connection,
+    get_min_max_dates,
     get_sdgs_between_dates,
     get_section_by_section_id,
     get_sections_by_briefing_id,
@@ -72,6 +74,8 @@ def test_get_db_connection(tmp_path):
 def conn():
     """Fixture serving an in-memory database connection."""
     conn_fixture = get_db_connection(":memory:")
+    conn_fixture.execute("PRAGMA foreign_keys = ON")
+    conn_fixture.row_factory = sqlite3.Row
 
     sql_schema = Path(SCHEMA_DB).read_text(encoding="utf-8")
     conn_fixture.executescript(sql_schema)
@@ -623,3 +627,56 @@ def test_show_stats_with_data(conn, briefing, caplog):
     assert "Total briefings: 1" in caplog.text
     assert "Date range: 2026-08-25 to 2026-08-25" in caplog.text
     assert "available: 1" in caplog.text
+
+
+# -- sdg queries
+
+
+@pytest.mark.parametrize(
+    "start_date,end_date,status,expected",
+    [
+        (date(2026, 6, 12), date(2026, 6, 12), "available", ["2026-06-12"]),
+        (date(2026, 6, 29), date(2026, 6, 29), "available", ["2026-06-29"]),
+        (date(2026, 8, 25), date(2026, 8, 25), "available", ["2026-08-25"]),
+        (
+            date(2026, 6, 12),
+            date(2026, 6, 29),
+            "available",
+            ["2026-06-12", "2026-06-29"],
+        ),
+        (date(2026, 8, 25), date(2026, 8, 25), "not_published", []),
+        (date(2026, 8, 25), date(2026, 8, 25), "failed", []),
+    ],
+)
+def test_get_dates_with_briefings(conn, monkeypatch, start_date, end_date, status, expected):
+    """Tests retrieving the dates with brifings in the database given a status."""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    _ = load_briefings_between_dates(start_date, end_date, conn=conn)
+    result = get_dates_with_briefings(conn=conn, status=status)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "start_date,end_date,status,expected",
+    [
+        (date(2026, 6, 12), date(2026, 6, 12), "available", ("2026-06-12", "2026-06-12")),
+        (date(2026, 6, 29), date(2026, 6, 29), "available", ("2026-06-29", "2026-06-29")),
+        (date(2026, 8, 25), date(2026, 8, 25), "available", ("2026-08-25", "2026-08-25")),
+        (
+            date(2026, 6, 12),
+            date(2026, 8, 25),
+            "available",
+            ("2026-06-12", "2026-08-25"),
+        ),
+        (date(2026, 8, 25), date(2026, 8, 25), "not_published", (None, None)),
+        (date(2026, 8, 25), date(2026, 8, 25), "failed", (None, None)),
+    ],
+)
+def test_get_min_max_dates(conn, monkeypatch, start_date, end_date, status, expected):
+    """Tests retrieving the min and max dates with briefings of a given status."""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    _ = load_briefings_between_dates(start_date, end_date, conn=conn)
+    result = get_min_max_dates(conn=conn, status=status)
+    assert result == expected

@@ -709,7 +709,8 @@ def load_briefings_between_dates(
 
         failed_dates = _load_dates(conn=conn, dates_to_load=dates_to_load)
     finally:
-        conn.close()
+        # conn.close()
+        pass
 
     if failed_dates:
         logger.info(
@@ -859,7 +860,7 @@ def _get_existing_briefing_dates(
 
 def get_min_max_dates(
     conn: sqlite3.Connection, status: FetchStatus = "available"
-) -> tuple[str, str] | tuple[None, None]:
+) -> tuple[str | None, str | None] | tuple[None, None]:
     """Returns minimum and maximum dates present in the database with briefings.
 
     Args:
@@ -881,9 +882,15 @@ def get_min_max_dates(
         cursor.close()
         if row:
             min_briefing_id, max_briefing_id = row[0]
-            return datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime(
-                "%Y-%m-%d"
-            ), datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+            return (
+                datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+                if min_briefing_id
+                else None
+            ), (
+                datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+                if max_briefing_id
+                else None
+            )
         else:
             return None, None
 
