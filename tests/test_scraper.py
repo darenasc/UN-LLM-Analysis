@@ -9,27 +9,6 @@ import pytest
 import un_llm_analysis.scraper as scraper
 
 
-def test_parse_date_valid():
-    # GIVEN a valid date
-    date_string = "2026-08-01"
-
-    # WHEN _parse_date is called
-    result = scraper._parse_date(date_string)
-
-    # THEN the result should match the expected date
-    assert result == date(2026, 8, 1)
-
-
-def test_parse_date_invalid():
-    # GIVEN an invalid date
-    date_string = "2026-02-30"
-
-    # WHEN _parse_date is called
-    # THEN ArgumentTypeError is raised.
-    with pytest.raises(argparse.ArgumentTypeError):
-        scraper._parse_date(date_string)
-
-
 @pytest.mark.parametrize(
     "status, expected",
     [

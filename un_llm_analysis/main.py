@@ -29,9 +29,9 @@ from un_llm_analysis.database import (
 )
 from un_llm_analysis.scraper import (
     _is_briefing_scraped,
-    _parse_date,
     scrape_between_dates,
 )
+from un_llm_analysis.utils import _parse_date
 
 
 def _build_parser() -> argparse.ArgumentParser:

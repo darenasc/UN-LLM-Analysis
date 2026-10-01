@@ -5,10 +5,8 @@ import sqlite3
 import pytest
 
 from un_llm_analysis import database as db_module
-from un_llm_analysis import utils
 from un_llm_analysis.config import SCHEMA_DB
-from un_llm_analysis.database import (  # get_dates_with_briefings,; get_min_max_dates,; show_stats,
-    _load_dates,
+from un_llm_analysis.database import (  # get_dates_with_briefings,; get_min_max_dates,; show_stats,; _load_dates,
     create_database,
     delete_briefing,
     delete_from_sdg,

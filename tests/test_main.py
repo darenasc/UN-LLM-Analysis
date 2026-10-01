@@ -522,15 +522,3 @@ def test_resolve_load_request_after_today_error():
     args = parser.parse_args(["load", future_date.isoformat()])
     with pytest.raises(SystemExit):
         _resolve_load_request(parser, args)
-
-
-# @pytest.fixture(scope="function")
-# def conn(tmp_path):
-#     """Fixture serving a database connection."""
-#     db_name = "briefings.db"
-#     create_database(db_path=tmp_path / db_name, schema_path=SCHEMA_DB)
-
-#     connection = get_db_connection(db_path=tmp_path / db_name)
-#     yield connection
-#     connection.close()
-#     (tmp_path / db_name).unlink()

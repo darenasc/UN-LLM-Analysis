@@ -1,19 +1,16 @@
-import argparse
-from collections.abc import Iterator
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 import json
 import os
 from pathlib import Path
 import time
 from typing import Literal
-from zoneinfo import ZoneInfo
 
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page, sync_playwright
 
-from un_llm_analysis.config import BASE_URL, BRIEFINGS_DIR, MIN_SCRAPE_DATE
+from un_llm_analysis.config import BASE_URL, BRIEFINGS_DIR
 from un_llm_analysis.utils import _dates_between
 
 FetchStatus = Literal["available", "not_published", "failed"]
@@ -207,21 +204,3 @@ def scrape_between_dates(start_date: date, end_date: date, overwrite: bool = Fal
                 print(f"  ✗ Error: {exc}")
 
             time.sleep(1)
-
-
-def _parse_date(value: str) -> date:
-    """Parse a string in YYYY-MM-DD format into a date object.
-
-    Args:
-        value (str): Date in str type. YYYY-MM-DD format is expected.
-
-    Raises:
-        argparse.ArgumentTypeError: Exception for type.
-
-    Returns:
-        date: date type returned from str.
-    """
-    try:
-        return date.fromisoformat(value)
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError(f"Invalid date: {value}. Expected YYYY-MM-DD.") from exc

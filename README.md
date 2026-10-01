@@ -25,7 +25,7 @@ pipenv shell
 pipenv install -d Pipfile
 ```
 
-### `scraper update`
+### CLI scraper update
 Download UN noon briefings and save them as JSON.
 
 ```bash
@@ -41,7 +41,7 @@ briefings update 2026-08-01 2026-08-12
 briefings update --since 2026-08-01
 ```
 
-### `scraper check`
+### CLI scraper check
 Check if a briefing for a given date has already been downloaded and stored as JSON.
 
 ```bash
@@ -53,21 +53,7 @@ briefings check 2026-08-12
 Scraped raw data location:
   `data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json`
 
-### `extractor`
-
-Extract structured content from a scraped briefing JSON file.
-
-```python
-from pathlib import Path
-
-from un_llm_analysis.config import RAW_DATA_DIR
-from un_llm_analysis.extractor import extract_briefing
-
-briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2026-08-12.json")
-```
-The extracted result includes speaker information, sections, and full text when available.
-
-### `database`
+### CLI database
 
 Command line interface to initialise, load and query the database.
 
@@ -80,6 +66,20 @@ briefings query --date 2026-08-12
 briefings query --status available
 briefings stats
 ```
+
+### Extractor module
+
+Extract structured content from a scraped briefing JSON file.
+
+```python
+from pathlib import Path
+
+from un_llm_analysis.config import RAW_DATA_DIR
+from un_llm_analysis.extractor import extract_briefing
+
+briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2026-08-12.json")
+```
+The extracted result includes speaker information, sections, and full text when available.
 
 See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
 start contributing to the project.
