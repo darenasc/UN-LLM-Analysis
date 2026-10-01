@@ -26,8 +26,8 @@ from un_llm_analysis.database import (  # get_dates_with_briefings,; get_min_max
     insert_into_sdg,
     insert_into_section,
     insert_section,
-    load_between_dates,
     load_briefing_to_db,
+    load_briefings_between_dates,
     query_by_date,
     query_by_status,
     show_stats,
@@ -37,11 +37,6 @@ from un_llm_analysis.extractor import (
     ExtractedSection,
     extract_briefing,
 )
-
-# from unittest.mock import MagicMock
-
-
-# from pytest import MonkeyPatch
 
 
 def test_create_database(tmp_path):
@@ -487,44 +482,63 @@ def test_load_between_dates_empty_range(conn):
     """Test load_between_dates with empty date range."""
     # GIVEN a database connection
     # WHEN using provided conn fixture (already has briefing_2026-08-25.json)
-    result = load_between_dates(start_date=date(2025, 9, 1), end_date=date(2025, 9, 30), conn=conn)
+    result = load_briefings_between_dates(
+        start_date=date(2025, 9, 1), end_date=date(2025, 9, 30), conn=conn
+    )
 
     # THEN returns True (existing briefing in DB + no other files exist)
     assert result is True
 
 
-def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn) -> None:
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    result = load_between_dates(date(2024, 1, 1), date(2024, 1, 2), dry_run=True, conn=conn)
-    assert result is True
+def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn, caplog) -> None:
+    """Tests dry run using JSON files in `tests/fixtures`"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    _ = load_briefings_between_dates(date(2026, 6, 12), date(2026, 8, 25), dry_run=True, conn=conn)
+    assert "DRY RUN - No changes will be made:" in caplog.text
+    assert "Total: 75 dates requested." in caplog.text
+    assert "[2026-06-12] Would load" in caplog.text
+    assert "[2026-06-29] Would load" in caplog.text
+    assert "[2026-08-25] Would load" in caplog.text
+    assert "No JSON file for 2026-06-13" in caplog.text
 
 
-# def test_all_succeed(monkeypatch, conn):
-#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-#     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
-#     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
+@pytest.mark.parametrize(
+    "start_date,end_date,expected",
+    [
+        (date(2026, 6, 13), date(2026, 6, 13), "No JSON file for 2026-06-13, would skip"),
+        (date(2026, 6, 30), date(2026, 6, 30), "No JSON file for 2026-06-30, would skip"),
+        (date(2026, 8, 26), date(2026, 8, 26), "No JSON file for 2026-08-26, would skip"),
+    ],
+)
+def test_missing_json_files_are_skipped_not_failed(
+    start_date, end_date, expected, monkeypatch, conn, caplog
+):
+    """Tests that correctly skips missing files"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    _ = load_briefings_between_dates(start_date, end_date, dry_run=True, conn=conn)
+    assert "DRY RUN - No changes will be made:" in caplog.text
+    assert expected in caplog.text
 
 
-# def test_returns_false_on_failure(monkeypatch, conn):
-#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-#     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: False)
-#     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is False
-
-
-# def test_missing_json_files_are_skipped_not_failed(monkeypatch, conn):
-#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: False)
-#     monkeypatch.setattr(
-#         db_module,
-#         "load_briefing_to_db",
-#         lambda path, c: (_ for _ in ()).throw(AssertionError("should not be called")),
-#     )
-#     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is True
-
-
-# def test_load_between_dates(monkeypatch, conn):
-#     monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-#     monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
-#     assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
+@pytest.mark.parametrize(
+    "start_date,end_date,expected",
+    [
+        (date(2026, 6, 12), date(2026, 6, 12), True),
+        (date(2026, 6, 29), date(2026, 6, 29), True),
+        (date(2026, 8, 25), date(2026, 8, 25), True),
+        (date(2026, 6, 13), date(2026, 6, 13), False),
+        (date(2026, 6, 30), date(2026, 6, 30), False),
+        (date(2026, 8, 26), date(2026, 8, 26), False),
+    ],
+)
+def test_load_briefings_between_dates(start_date, end_date, expected, monkeypatch, conn, caplog):
+    """Tests loading briefings from JSON files to the database"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    result = load_briefings_between_dates(start_date, end_date, conn=conn)
+    assert expected == result
 
 
 @pytest.mark.parametrize(

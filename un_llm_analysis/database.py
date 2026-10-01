@@ -662,7 +662,7 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
         return False
 
 
-def load_between_dates(
+def load_briefings_between_dates(
     start_date: date,
     end_date: date,
     overwrite: bool = False,
@@ -728,7 +728,7 @@ def _log_dry_run(requested_dates: list[date]) -> None:
     for briefing_date in requested_dates:
         date_string = briefing_date.strftime("%Y-%m-%d")
         file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
-        if not _is_briefing_json_exists(briefing_date):
+        if not file_path.exists():
             logger.info(f"  - No JSON file for {date_string}, would skip")
         else:
             logger.info(f"  [{date_string}] Would load from {file_path}")

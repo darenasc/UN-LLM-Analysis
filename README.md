@@ -75,6 +75,7 @@ Command line interface to initialise, load and query the database.
 briefings init
 briefings load 2026-08-12 2026-08-12
 briefings load --since 2026-08-12 --dry-run
+briefings load --since 2026-08-12
 briefings query --date 2026-08-12
 briefings query --status available
 briefings stats

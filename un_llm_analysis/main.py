@@ -22,7 +22,7 @@ from loguru import logger
 from un_llm_analysis.config import MIN_SCRAPE_DATE
 from un_llm_analysis.database import (
     create_database,
-    load_between_dates,
+    load_briefings_between_dates,
     query_by_date,
     query_by_status,
     show_stats,
@@ -317,7 +317,9 @@ def main() -> None:
         logger.info(
             f"Loading briefings from {start_date} to {end_date}, overwrite={overwrite}, dry_run={dry_run}..."
         )
-        success = load_between_dates(start_date, end_date, overwrite=overwrite, dry_run=dry_run)
+        success = load_briefings_between_dates(
+            start_date, end_date, overwrite=overwrite, dry_run=dry_run
+        )
         if not success:
             sys.exit(1)
 
