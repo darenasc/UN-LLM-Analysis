@@ -29,7 +29,6 @@ from un_llm_analysis.extractor import (
 from un_llm_analysis.scraper import FetchStatus
 from un_llm_analysis.utils import (
     _dates_between,
-    _is_briefing_json_exists,
 )
 
 
@@ -662,7 +661,7 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
         return False
 
 
-def load_between_dates(
+def load_briefings_between_dates(
     start_date: date,
     end_date: date,
     overwrite: bool = False,
@@ -710,7 +709,8 @@ def load_between_dates(
 
         failed_dates = _load_dates(conn=conn, dates_to_load=dates_to_load)
     finally:
-        conn.close()
+        # conn.close()
+        pass
 
     if failed_dates:
         logger.info(
@@ -728,7 +728,7 @@ def _log_dry_run(requested_dates: list[date]) -> None:
     for briefing_date in requested_dates:
         date_string = briefing_date.strftime("%Y-%m-%d")
         file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
-        if not _is_briefing_json_exists(briefing_date):
+        if not file_path.exists():
             logger.info(f"  - No JSON file for {date_string}, would skip")
         else:
             logger.info(f"  [{date_string}] Would load from {file_path}")
@@ -778,7 +778,7 @@ def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str
         date_string = briefing_date.strftime("%Y-%m-%d")
         file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
 
-        if not _is_briefing_json_exists(briefing_date):
+        if not file_path.exists():
             logger.info(f"  - No JSON file for {date_string}, skipping")
             continue
 
@@ -790,13 +790,14 @@ def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str
     return failed_dates
 
 
-def query_by_date(query_date: date) -> None:
+def query_by_date(query_date: date, conn: sqlite3.Connection | None = None) -> None:
     """Query and display a briefing by date.
 
     Args:
         query_date (date): Date of the briefing to query.
     """
-    with get_db_connection() as conn:
+    conn = conn or get_db_connection()
+    with conn:
         briefing_id = get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
         briefing = get_briefing_by_id(conn, briefing_id)
 
@@ -810,13 +811,14 @@ def query_by_date(query_date: date) -> None:
         logger.info(f"No briefing found for {query_date}")
 
 
-def query_by_status(status: FetchStatus, conn=BRIEFINGS_DB_PATH) -> None:
+def query_by_status(status: FetchStatus, conn: sqlite3.Connection | None = None) -> None:
     """Query and display briefings by status.
 
     Args:
         status (str): Status to filter briefings by, or "all" for all briefings.
     """
-    with get_db_connection() as conn:
+    conn = conn or get_db_connection()
+    with conn:
         cursor = conn.cursor()
         if status == "all":
             cursor.execute("SELECT briefing_date, url, status FROM briefing")
@@ -858,7 +860,7 @@ def _get_existing_briefing_dates(
 
 def get_min_max_dates(
     conn: sqlite3.Connection, status: FetchStatus = "available"
-) -> tuple[str, str] | tuple[None, None]:
+) -> tuple[str | None, str | None] | tuple[None, None]:
     """Returns minimum and maximum dates present in the database with briefings.
 
     Args:
@@ -880,9 +882,15 @@ def get_min_max_dates(
         cursor.close()
         if row:
             min_briefing_id, max_briefing_id = row[0]
-            return datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime(
-                "%Y-%m-%d"
-            ), datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+            return (
+                datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+                if min_briefing_id
+                else None
+            ), (
+                datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+                if max_briefing_id
+                else None
+            )
         else:
             return None, None
 
@@ -912,3 +920,35 @@ def get_dates_with_briefings(
 
     briefing_dates = [datetime.strptime(str(x[0]), "%Y%m%d").strftime("%Y-%m-%d") for x in rows]
     return briefing_dates
+
+
+def show_stats(conn: sqlite3.Connection | None = None) -> None:
+    """Display database statistics.
+
+    Prints total briefings count, date range, and count by status.
+    """
+    if conn is None:
+        conn = get_db_connection()
+    with conn:
+        cursor = conn.cursor()
+
+        # Total count
+        cursor.execute("SELECT COUNT(*) as count FROM briefing")
+        total = cursor.fetchone()["count"]
+
+        # Count by status
+        cursor.execute("SELECT status, COUNT(*) as count FROM briefing GROUP BY status")
+        status_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
+
+        # Date range
+        cursor.execute(
+            "SELECT MIN(briefing_date) as min_date, MAX(briefing_date) as max_date FROM briefing"
+        )
+        date_range = cursor.fetchone()
+
+    logger.info("Database Statistics:")
+    logger.info(f"  Total briefings: {total:,}")
+    logger.info(f"  Date range: {date_range['min_date']} to {date_range['max_date']}")
+    logger.info("  By status:")
+    for status, count in status_counts.items():
+        logger.info(f"    {status}: {count:,}")

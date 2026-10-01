@@ -1,13 +1,11 @@
 from datetime import date
 from pathlib import Path
 import sqlite3
-from unittest.mock import MagicMock
 
 import pytest
-from pytest import MonkeyPatch
 
 from un_llm_analysis import database as db_module
-from un_llm_analysis.config import BRIEFINGS_DB_PATH, SCHEMA_DB
+from un_llm_analysis.config import SCHEMA_DB
 from un_llm_analysis.database import (
     create_database,
     delete_briefing,
@@ -30,20 +28,16 @@ from un_llm_analysis.database import (
     insert_into_sdg,
     insert_into_section,
     insert_section,
-    load_between_dates,
     load_briefing_to_db,
+    load_briefings_between_dates,
     query_by_date,
     query_by_status,
+    show_stats,
 )
 from un_llm_analysis.extractor import (
     ExtractedBriefing,
     ExtractedSection,
     extract_briefing,
-)
-from un_llm_analysis.utils import (
-    BRIEFINGS_DIR,
-    _dates_between,
-    _parse_date,
 )
 
 
@@ -65,28 +59,30 @@ def test_get_db_connection(tmp_path):
     tmp_db_path = tmp_path / "briefings.db"
 
     # WHEN testing `get_db_connection` (DB is created if the parent dir exists)
-    conn = get_db_connection(db_path=tmp_db_path)
+    conn_test = get_db_connection(db_path=tmp_db_path)
 
     # THEN check the database exists and is of the correct type
     assert tmp_db_path.exists()
-    assert isinstance(conn, sqlite3.Connection)
-    conn.close()
+    assert isinstance(conn_test, sqlite3.Connection)
+    conn_test.close()
 
     # close the connection
-    conn.close()
+    conn_test.close()
 
 
 @pytest.fixture(scope="function")
 def conn():
     """Fixture serving an in-memory database connection."""
-    conn = get_db_connection(":memory:")
+    conn_fixture = get_db_connection(":memory:")
+    conn_fixture.execute("PRAGMA foreign_keys = ON")
+    conn_fixture.row_factory = sqlite3.Row
 
     sql_schema = Path(SCHEMA_DB).read_text(encoding="utf-8")
-    conn.executescript(sql_schema)
+    conn_fixture.executescript(sql_schema)
 
-    yield conn
+    yield conn_fixture
 
-    conn.close()
+    conn_fixture.close()
 
 
 @pytest.mark.parametrize(
@@ -194,7 +190,7 @@ def test_get_briefing_by_date(briefing, conn):
     result = get_briefing_by_date(conn=conn, date=briefing.briefing_date)
 
     # THEN the results is equal to the inserted briefing
-    assert briefing.briefing_date == result.briefing_date
+    assert briefing.briefing_date == result.briefing_date  # type: ignore
 
 
 def test_get_briefing_id_by_url(briefing, conn):
@@ -217,6 +213,7 @@ def test_get_briefing_id_by_url(briefing, conn):
 
 
 def test_get_briefings_between_dates(briefing, conn):
+    """Test retrieving briefings between dates."""
     # GIVEN a database with data
     _ = insert_into_briefing(conn=conn, briefing=briefing)
 
@@ -247,6 +244,7 @@ def test_delete_briefing(briefing, conn):
 
 
 def test_delete_briefing_false(conn):
+    """Test deleting a briefing that doesn't exists."""
     # GIVEN a database with data
     # WHEN deleting a non-existing record
     result = delete_briefing(conn=conn, briefing_id=20260231)
@@ -379,7 +377,7 @@ def test_delete_sections(briefing, conn):
     assert result is True
 
 
-def test_delete_sections_false(briefing, conn):
+def test_delete_sections_false(conn):
     """Test deleting all the sections when the briefing_id does not exists."""
     # GIVEN a database connection without data
     # WHEN deleting sections of a non-existing briefing_id
@@ -397,6 +395,7 @@ def test_delete_sections_false(briefing, conn):
     ],
 )
 def test_insert_into_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+    """Test insert data into the sdg table."""
     # GIVEN a database connection
     # WHEN inserting data into the sdg table
     insert_into_sdg(
@@ -421,6 +420,7 @@ def test_insert_into_sdg(conn, briefing_id, section_id, sdgs, model, created_at)
     ],
 )
 def test_delete_from_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+    """Test deleting data from sdg."""
     insert_into_sdg(
         conn=conn,
         briefing_id=briefing_id,
@@ -445,6 +445,7 @@ def test_delete_from_sdg(conn, briefing_id, section_id, sdgs, model, created_at)
     ],
 )
 def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, created_at):
+    """Test retrieving data from the sdg table."""
     insert_into_sdg(
         conn=conn,
         briefing_id=briefing_id,
@@ -457,7 +458,7 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
     assert result_df.shape[0] > 0
 
 
-def test_load_briefing_to_db(briefing, conn: sqlite3.Connection):
+def test_load_briefing_to_db(briefing, conn):
     """Test loading a briefing JSON file into the database."""
     file_path = Path("tests/fixtures/briefings/2026/2026-08/2026-08-25.json")
 
@@ -474,77 +475,208 @@ def test_load_briefing_to_db(briefing, conn: sqlite3.Connection):
     assert len(sections) == len(briefing.sections)
 
 
-def test_load_briefing_to_db_invalid_file(conn: sqlite3.Connection):
+def test_load_briefing_to_db_invalid_file(conn):
     """Test loading an invalid file returns False."""
     file_path = Path("tests/fixtures/nonexistent.json")
     result = load_briefing_to_db(file_path=file_path, conn=conn)
     assert result is False
 
 
-def test_dry_run_returns_true_and_does_not_load(
-    monkeypatch: MonkeyPatch, conn: sqlite3.Connection
-) -> None:
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    result = load_between_dates(date(2024, 1, 1), date(2024, 1, 2), dry_run=True, conn=conn)
+def test_load_between_dates_empty_range(conn):
+    """Test load_between_dates with empty date range."""
+    # GIVEN a database connection
+    # WHEN using provided conn fixture (already has briefing_2026-08-25.json)
+    result = load_briefings_between_dates(
+        start_date=date(2025, 9, 1), end_date=date(2025, 9, 30), conn=conn
+    )
+
+    # THEN returns True (existing briefing in DB + no other files exist)
     assert result is True
 
 
-def test_all_succeed(monkeypatch: MonkeyPatch, conn: sqlite3.Connection):
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
-    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
+def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn, caplog) -> None:
+    """Tests dry run using JSON files in `tests/fixtures`"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    _ = load_briefings_between_dates(date(2026, 6, 12), date(2026, 8, 25), dry_run=True, conn=conn)
+    assert "DRY RUN - No changes will be made:" in caplog.text
+    assert "Total: 75 dates requested." in caplog.text
+    assert "[2026-06-12] Would load" in caplog.text
+    assert "[2026-06-29] Would load" in caplog.text
+    assert "[2026-08-25] Would load" in caplog.text
+    assert "No JSON file for 2026-06-13" in caplog.text
 
 
-def test_returns_false_on_failure(monkeypatch: MonkeyPatch, conn: sqlite3.Connection):
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: False)
-    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is False
+@pytest.mark.parametrize(
+    "start_date,end_date,expected",
+    [
+        (date(2026, 6, 12), date(2026, 6, 12), True),
+        (date(2026, 6, 29), date(2026, 6, 29), True),
+        (date(2026, 8, 25), date(2026, 8, 25), True),
+    ],
+)
+def test_all_succeed(start_date, end_date, expected, monkeypatch, conn):
+    """Tests successful load of briefings to the database"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    result = load_briefings_between_dates(start_date, end_date, conn=conn)
+    assert result is expected
 
 
-def test_missing_json_files_are_skipped_not_failed(
-    monkeypatch: MonkeyPatch, conn: sqlite3.Connection
-):
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: False)
+@pytest.mark.parametrize(
+    "start_date,end_date,expected",
+    [
+        (date(2026, 6, 13), date(2026, 6, 13), False),
+        (date(2026, 6, 30), date(2026, 6, 30), False),
+        (date(2026, 8, 26), date(2026, 8, 26), False),
+    ],
+)
+def test_returns_false_on_failure(start_date, end_date, expected, monkeypatch, conn):
+    """Tests unsuccessful load of briefings to the database"""
     monkeypatch.setattr(
-        db_module,
-        "load_briefing_to_db",
-        lambda path, c: (_ for _ in ()).throw(AssertionError("should not be called")),
+        db_module, "_load_dates", lambda *args, **kwargs: [start_date.strftime("%Y-%m-%d")]
     )
-    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 1), conn=conn) is True
+    result = load_briefings_between_dates(start_date, end_date, conn=conn)
+    assert result is expected
 
 
-def test_load_between_dates(monkeypatch: MonkeyPatch, conn: sqlite3.Connection):
-    monkeypatch.setattr(db_module, "_is_briefing_json_exists", lambda d: True)
-    monkeypatch.setattr(db_module, "load_briefing_to_db", lambda path, c: True)
-    assert load_between_dates(date(2024, 1, 1), date(2024, 1, 2), conn=conn) is True
+@pytest.mark.parametrize(
+    "start_date,end_date,expected",
+    [
+        (date(2026, 6, 13), date(2026, 6, 13), "No JSON file for 2026-06-13, would skip"),
+        (date(2026, 6, 30), date(2026, 6, 30), "No JSON file for 2026-06-30, would skip"),
+        (date(2026, 8, 26), date(2026, 8, 26), "No JSON file for 2026-08-26, would skip"),
+    ],
+)
+def test_missing_json_files_are_skipped_not_failed(
+    start_date, end_date, expected, monkeypatch, conn, caplog
+):
+    """Tests that correctly skips missing files"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    _ = load_briefings_between_dates(start_date, end_date, dry_run=True, conn=conn)
+    assert "DRY RUN - No changes will be made:" in caplog.text
+    assert expected in caplog.text
 
 
-def test_query_by_date_found(monkeypatch: MonkeyPatch, conn: sqlite3.Connection, briefing):
-    """Test query_by_date runs without error when a briefing exists."""
-    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
-    insert_into_briefing(conn=conn, briefing=briefing)
-    result = query_by_date(date.fromisoformat(briefing.briefing_date))
-    assert result is None
+@pytest.mark.parametrize(
+    "start_date,end_date,expected",
+    [
+        (date(2026, 6, 12), date(2026, 6, 12), True),
+        (date(2026, 6, 29), date(2026, 6, 29), True),
+        (date(2026, 8, 25), date(2026, 8, 25), True),
+    ],
+)
+def test_load_briefings_between_dates(start_date, end_date, expected, monkeypatch, conn, caplog):
+    """Tests loading briefings from JSON files to the database"""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    result = load_briefings_between_dates(start_date, end_date, conn=conn)
+    assert expected == result
 
 
-def test_query_by_date_not_found(monkeypatch: MonkeyPatch, conn: sqlite3.Connection):
+@pytest.mark.parametrize(
+    "input_date,expected",
+    [
+        (date(2024, 1, 1), "No briefing found for 2024-01-01"),
+        (date(2026, 8, 25), "Briefing found for 2026-08-25"),
+    ],
+)
+def test_query_by_date(input_date, expected, conn, briefing, caplog):
     """Test query_by_date runs without error when no briefing exists."""
-    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
-    result = query_by_date(date(2024, 1, 1))
-    assert result is None
+    insert_into_briefing(conn=conn, briefing=briefing)
+    query_by_date(conn=conn, query_date=input_date)
+    assert expected in caplog.text
 
 
-def test_query_by_status_specific(monkeypatch: MonkeyPatch, conn: sqlite3.Connection, briefing):
+@pytest.mark.parametrize(
+    "status,expected",
+    [
+        ("available", "Found 1 briefings with status 'available'"),
+        ("available", "2026-08-25"),
+        ("not_published", "Found 0 briefings with status 'not_published'"),
+        ("failed", "Found 0 briefings with status 'failed'"),
+    ],
+)
+def test_query_by_status_specific(status, expected, conn, briefing, caplog):
     """Test query_by_status filters correctly by a specific status."""
-    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
     insert_into_briefing(conn=conn, briefing=briefing)
-    result = query_by_status(status=briefing.status)
-    assert result is None
+    query_by_status(conn=conn, status=status)
+    assert expected in caplog.text
 
 
-def test_query_by_status_all(monkeypatch: MonkeyPatch, conn: sqlite3.Connection, briefing):
+def test_query_by_status_all(conn, briefing, caplog):
     """Test query_by_status returns all briefings when status='all'."""
-    monkeypatch.setattr(db_module, "get_db_connection", lambda *a, **kw: conn)
-    insert_into_briefing(conn=conn, briefing=briefing)
-    result = query_by_status(status="all")
-    assert result is None
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+    query_by_status(conn=conn, status="all")  # type: ignore
+    assert "Found 1 briefings with status 'all'" in caplog.text
+    assert "2026-08-25" in caplog.text
+
+
+def test_show_stats_empty_db(conn, caplog):
+    """Test show_stats runs without error on an empty database."""
+    show_stats(conn=conn)
+    assert "Total briefings: 0" in caplog.text
+    assert "Date range: None to None" in caplog.text
+
+
+def test_show_stats_with_data(conn, briefing, caplog):
+    """Test show_stats runs without error when briefings exist."""
+    _ = insert_into_briefing(conn=conn, briefing=briefing)
+    show_stats(conn=conn)
+    assert "Total briefings: 1" in caplog.text
+    assert "Date range: 2026-08-25 to 2026-08-25" in caplog.text
+    assert "available: 1" in caplog.text
+
+
+# -- sdg queries
+
+
+@pytest.mark.parametrize(
+    "start_date,end_date,status,expected",
+    [
+        (date(2026, 6, 12), date(2026, 6, 12), "available", ["2026-06-12"]),
+        (date(2026, 6, 29), date(2026, 6, 29), "available", ["2026-06-29"]),
+        (date(2026, 8, 25), date(2026, 8, 25), "available", ["2026-08-25"]),
+        (
+            date(2026, 6, 12),
+            date(2026, 6, 29),
+            "available",
+            ["2026-06-12", "2026-06-29"],
+        ),
+        (date(2026, 8, 25), date(2026, 8, 25), "not_published", []),
+        (date(2026, 8, 25), date(2026, 8, 25), "failed", []),
+    ],
+)
+def test_get_dates_with_briefings(conn, monkeypatch, start_date, end_date, status, expected):
+    """Tests retrieving the dates with brifings in the database given a status."""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    _ = load_briefings_between_dates(start_date, end_date, conn=conn)
+    result = get_dates_with_briefings(conn=conn, status=status)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "start_date,end_date,status,expected",
+    [
+        (date(2026, 6, 12), date(2026, 6, 12), "available", ("2026-06-12", "2026-06-12")),
+        (date(2026, 6, 29), date(2026, 6, 29), "available", ("2026-06-29", "2026-06-29")),
+        (date(2026, 8, 25), date(2026, 8, 25), "available", ("2026-08-25", "2026-08-25")),
+        (
+            date(2026, 6, 12),
+            date(2026, 8, 25),
+            "available",
+            ("2026-06-12", "2026-08-25"),
+        ),
+        (date(2026, 8, 25), date(2026, 8, 25), "not_published", (None, None)),
+        (date(2026, 8, 25), date(2026, 8, 25), "failed", (None, None)),
+    ],
+)
+def test_get_min_max_dates(conn, monkeypatch, start_date, end_date, status, expected):
+    """Tests retrieving the min and max dates with briefings of a given status."""
+    briefings_path = Path("tests/fixtures/briefings")
+    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
+    _ = load_briefings_between_dates(start_date, end_date, conn=conn)
+    result = get_min_max_dates(conn=conn, status=status)
+    assert result == expected
