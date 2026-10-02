@@ -213,3 +213,6 @@ notebooks/*.png
 # Exclude experiment records (mlflow)
 mlartifacts/
 mlflow.db
+
+# Database
+app/briefings.db

@@ -1,7 +1,10 @@
+import zipfile
+
 from logos import CORRELAID_LOGO
 import streamlit as st
 
 from un_llm_analysis import database
+from un_llm_analysis.config import APP_DIR, BRIEFINGS_DB_PATH
 
 st.logo(
     CORRELAID_LOGO,
@@ -9,6 +12,13 @@ st.logo(
     size="large",
 )
 
+if "database_init" not in st.session_state:
+    if not BRIEFINGS_DB_PATH.exists():
+        with zipfile.ZipFile(APP_DIR / "briefings.db.zip", "r") as zip_ref:
+            zip_ref.extractall(APP_DIR)
+
+    st.toast("Database connected!", icon="✅")
+    st.session_state.database_init = True
 
 st.set_page_config(
     page_title="UN LLM Analysis",
