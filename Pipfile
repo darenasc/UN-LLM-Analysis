@@ -1,29 +1,49 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[pipenv]
+sort_pipfile = true
+
 [packages]
+beautifulsoup4 = "*"
+ipywidgets = "*"
+jupyter = "*"
+loguru = "*"
+markdown = "*"
+markdownify = "*"
+matplotlib = "*"
+mkdocs = "*"
+mlflow = "*"
+nltk = "*"
 numpy = "*"
+ollama = "*"
+openai = "*"
+pandas = "*"
+pandas-stubs = "*"
+playwright = "*"
+plotly = "*"
 python-dotenv = "*"
 scikit-learn = "*"
-"un_llm_analysis" ={editable = true, path = "."}
-pandas-stubs = "*"
-matplotlib = "*"
-wordcloud = "*"
-nltk = "*"
-pandas = "*"
-playwright = "*"
-mkdocs = "*"
 sqlalchemy = "*"
 streamlit = "*"
-pipfile = "*"
+un_llm_analysis = {editable = true, path = "."}
+wordcloud = "*"
 
 [requires]
 python_version = "3.12"
 
 [dev-packages]
+black = "*"
+ipython = "*"
+isort = "*"
+jupyterlab = "*"
+mkdocs-material = "*"
+mkdocstrings = {extras = ["python"], version = "*"}
+notebook = "*"
 pipfile = "*"
+pre-commit = "*"
 pytest = "*"
 pytest-cov = "*"
-pre-commit = "*"
-black = "*"
-isort = "*"
-ipython = "*"
-jupyterlab = "*"
-notebook = "*"
+pytest-loguru = "*"

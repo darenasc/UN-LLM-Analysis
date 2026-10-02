@@ -6,6 +6,7 @@ MIN_SCRAPE_DATE = date(2004, 4, 5)
 
 PROJ_ROOT = Path(__file__).resolve().parents[1]
 
+APP_DIR = PROJ_ROOT / "app"
 DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 BRIEFINGS_DIR = RAW_DATA_DIR / "briefings"
@@ -18,6 +19,7 @@ MODELS_DIR = PROJ_ROOT / "models"
 REPORTS_DIR = PROJ_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
+APP_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
@@ -27,3 +29,6 @@ EXTERNAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+
+SCHEMA_DB = PROJ_ROOT / "database" / "schema.sql"
+BRIEFINGS_DB_PATH = PROJ_ROOT / "app" / "briefings.db"

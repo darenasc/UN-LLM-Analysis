@@ -140,7 +140,7 @@ Environment Setup
 ```bash
 git clone git@github.com:darenasc/correlaid-mentoring-project.git
 cd correlaid-mentoring-project
-pipenv shell # to create or enter into the virual environment
+pipenv shell # to create or enter into the virtual environment
 pipenv install -d Pipfile # installs the libraries in the Pipfile of the repository
 ```
 
@@ -151,9 +151,9 @@ pipenv install pandas # to install a library, in this case called pandas
 pipenv uninstall pandas # to uninstall a library, in this case called pandas
 ```
 
-Before start working on the Python code, make sure you create a new branch for your work, that is branched off from the `main` branch. With `git checkout main` you change to the main branch, and then make sure that you have the latest version of the respository with `git pull`.
+Before start working on the Python code, make sure you create a new branch for your work, that is branched off from the `main` branch. With `git checkout main` you change to the main branch, and then make sure that you have the latest version of the repository with `git pull`.
 
-Then create your own branch to work on the code you want to include to the repository. Branch names are usually short descritions of the task at hand, for example, an issue number 10 with the task of create a database schema for the project, you can create it as follows `git branch -b 10_database_schema`. With that everyone can know that the task is described in the issue number 10 and to what it refers to.
+Then create your own branch to work on the code you want to include to the repository. Branch names are usually short descriptions of the task at hand, for example, an issue number 10 with the task of create a database schema for the project, you can create it as follows `git branch -b 10_database_schema`. With that everyone can know that the task is described in the issue number 10 and to what it refers to.
 
 With you new branch just created feel free to add, delete, modify the files of the project. There is a good practice of writing [atomic commits](https://medium.com/@sandrodz/a-developers-guide-to-atomic-git-commits-c7b873b39223), meaning, small commits that contains meaningful changes. So when you are working on a task from an issue, you can create multiple commits to complete the work.
 
@@ -179,7 +179,7 @@ git commit -m 'Add your (atomic) commit message here' # to create a new commit t
 # You can create multiple commits while working on an issue, just repeat the
 # previous steps of status -> add -> commit and then repeat until finish
 
-# Once you finish your work you can push the code to the remote respository
+# Once you finish your work you can push the code to the remote repository
 git push # or if the branch exists in the remote repository
 git push --set-upstream origin <name_of_your_new_branch> # to create your feature branch in the remote repository
 
@@ -188,7 +188,7 @@ git push --set-upstream origin <name_of_your_new_branch> # to create your featur
 
 # And once the PR has been merged you can delete the feature branch
 git checkout main # change to the main branch
-git pull # pull the changes from the remote respository that will include the changes of the PR
+git pull # pull the changes from the remote repository that will include the changes of the PR
 git branch -d <name_of_your_new_branch> # to delete the feature branch locally
 ```
 
@@ -216,13 +216,14 @@ pre-commit install # run before the next command:
 From the project root:
 
 ```bash
-pytest --cov=path_to_tests_folder
+pytest --cov=un_llm_analysis
 ```
 
 Generate a html coverage report:
 
 ```bash
-pytest --cov=path_to_tests_folder --cov-report=html
+pytest --cov=pytest --cov=un_llm_analysis --cov-report=html
+open htmlcov/index.html
 ```
 
 #### Minimum Coverage Threshold
@@ -230,7 +231,7 @@ pytest --cov=path_to_tests_folder --cov-report=html
 You can set a minimum coverage threshold:
 
 ```bash
-pytest --cov=path_to_tests_folder --cov-fall-under=80
+pytest --cov=pytest --cov=un_llm_analysis --cov-fall-under=80
 ```
 
 ### Improving The Documentation
