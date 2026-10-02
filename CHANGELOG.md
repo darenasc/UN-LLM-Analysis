@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- #52 Sentiment & tone over time
+- #50 Proportionality of issues/topics
+- #47 Country mention heatmap
+
 ## [1.0.0]
 
 ### Features
@@ -15,13 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Streamlit app for visualising project data and LLM analysis.
 - SDG analysis of briefing sections using the 17 UN Sustainable Development Goals.
 - Project documentation using MkDocs.
-
-### To be added
-
-- #52 Sentiment & tone over time
-- #50 Proportionality of issues/topics
-- #47 Country mention heatmap
-- #40 List of Data Analysis Ideas
+- CHANGELOG.md file with notable changes of the project
 
 ### Dependencies/Updates
 
