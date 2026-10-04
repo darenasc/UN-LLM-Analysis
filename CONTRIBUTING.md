@@ -216,13 +216,14 @@ pre-commit install # run before the next command:
 From the project root:
 
 ```bash
-pytest --cov=path_to_tests_folder
+pytest --cov=un_llm_analysis
 ```
 
 Generate a html coverage report:
 
 ```bash
-pytest --cov=path_to_tests_folder --cov-report=html
+pytest --cov=pytest --cov=un_llm_analysis --cov-report=html
+open htmlcov/index.html
 ```
 
 #### Minimum Coverage Threshold
@@ -230,7 +231,7 @@ pytest --cov=path_to_tests_folder --cov-report=html
 You can set a minimum coverage threshold:
 
 ```bash
-pytest --cov=path_to_tests_folder --cov-fall-under=80
+pytest --cov=pytest --cov=un_llm_analysis --cov-fall-under=80
 ```
 
 ### Improving The Documentation
