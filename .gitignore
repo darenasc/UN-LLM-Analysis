@@ -217,3 +217,5 @@ mlflow.db
 
 exportToHTML/
 *.html
+# Database
+app/briefings.db

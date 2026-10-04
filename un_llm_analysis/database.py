@@ -1,3 +1,17 @@
+"""UN database module for persisting and querying UN briefing data.
+Provides access to five tables:
+
+Tables:
+    - `briefing`
+    - `section`
+    - `sdg`
+    - `analysis_run`
+    - `sentiment_analysis`
+
+Supports inserting, updating, and deleting briefings, sections, SDG mappings,
+analysis runs, and sentiment results via SQL or Python interfaces.
+"""
+
 import ast
 from datetime import date, datetime
 from pathlib import Path
@@ -15,7 +29,6 @@ from un_llm_analysis.extractor import (
 from un_llm_analysis.scraper import FetchStatus
 from un_llm_analysis.utils import (
     _dates_between,
-    _is_briefing_json_exists,
 )
 
 
@@ -164,7 +177,8 @@ def get_briefing_by_id(conn: sqlite3.Connection, briefing_id: int) -> ExtractedB
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT briefing_id, briefing_date, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at
+        SELECT briefing_id, briefing_date, url, status, http_status, error,
+            speaker_name, speaker_role, full_text, downloaded_at, processed_at
         FROM briefing
         WHERE briefing_id = ?
         """,
@@ -204,7 +218,8 @@ def get_briefing_by_url(conn: sqlite3.Connection, url: str) -> ExtractedBriefing
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT briefing_id, briefing_date, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at
+        SELECT briefing_id, briefing_date, url, status, http_status, error,
+            speaker_name, speaker_role, full_text, downloaded_at, processed_at
         FROM briefing
         WHERE url = ?
         """,
@@ -266,7 +281,8 @@ def get_briefings_between_dates(
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT briefing_id, briefing_date, url, status, http_status, error, speaker_name, speaker_role, full_text, downloaded_at, processed_at
+        SELECT briefing_id, briefing_date, url, status, http_status, error,
+            speaker_name, speaker_role, full_text, downloaded_at, processed_at
         FROM briefing
         WHERE briefing_id between ? and ?;
         """,
@@ -358,9 +374,9 @@ def insert_into_section(
     """Insert a section into the database.
 
     Args:
+        conn (sqlite3.Connection): Open database connection.
         briefing_id (int): ID of the parent briefing.
         sections (tuple[ExtractedSection, ...]): Sections from the briefing.
-        db_path (str | Path): Path to find the database.
         insert_all (bool): Whether or not to insert all the sections at once or
             one by one. Default to True.
     """
@@ -383,7 +399,7 @@ def insert_into_section(
             cursor.close()
     else:
         for i, section in enumerate(sections, start=1):
-            section_exists = get_section(conn=conn, section_id=briefing_id * 100 + i)
+            section_exists = get_section_by_section_id(conn=conn, section_id=briefing_id * 100 + i)
             if section_exists:
                 delete_section(conn=conn, section_id=briefing_id * 100 + i)
             insert_section(conn=conn, briefing_id=briefing_id, section=section, section_order=i)
@@ -395,7 +411,7 @@ def insert_section(
     briefing_id: int,
     section: ExtractedSection,
     section_order: int,
-):
+) -> int:
     """Insert a section into the database.
 
     Args:
@@ -436,7 +452,9 @@ def insert_section(
 
 
 # TODO: rename to get_section_by_id and apply to tests too.
-def get_section(conn: sqlite3.Connection, section_id: int) -> ExtractedSection | None:
+def get_section_by_section_id(
+    conn: sqlite3.Connection, section_id: int
+) -> ExtractedSection | None:
     """Retrieve section by ID.
 
     Args:
@@ -484,7 +502,7 @@ def delete_section(conn: sqlite3.Connection, section_id: int) -> bool:
     return cur.rowcount > 0
 
 
-def delete_sections(conn: sqlite3.Connection, briefing_id: int):
+def delete_sections(conn: sqlite3.Connection, briefing_id: int) -> bool:
     """Delete all sections with the same briefing_id.
 
     Args:
@@ -598,7 +616,8 @@ def get_sdgs_between_dates(
     min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
     max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
 
-    sql_query = """SELECT briefing_id, section_id, sdg, model, created_at FROM sdg WHERE briefing_id between ? AND ?;"""
+    sql_query = """SELECT briefing_id, section_id, sdg, model, created_at
+                    FROM sdg WHERE briefing_id between ? AND ?;"""
 
     with conn:
         cursor = conn.cursor()
@@ -642,7 +661,7 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
         return False
 
 
-def load_between_dates(
+def load_briefings_between_dates(
     start_date: date,
     end_date: date,
     overwrite: bool = False,
@@ -654,8 +673,10 @@ def load_between_dates(
     Args:
         start_date (date): The date to start loading from.
         end_date (date): The date to end loading at.
-        overwrite (bool): Whether to overwrite existing briefings. Defaults to False.
-        dry_run (bool): If True, preview what would be loaded without actually loading. Defaults to False.
+        overwrite (bool): Whether to overwrite existing briefings. Defaults to
+            False.
+        dry_run (bool): If True, preview what would be loaded without actually
+            loading. Defaults to False.
         conn (sqlite3.Connection | None): Existing connection to reuse. If None,
             a new connection is opened and closed automatically.
 
@@ -669,13 +690,16 @@ def load_between_dates(
         _log_dry_run(requested_dates)
         return True
 
-    owns_conn = conn is None
-    if owns_conn:
+    if conn is None:
         conn = get_db_connection()
 
     try:
         dates_to_load = _resolve_dates_to_load(
-            conn, requested_dates, start_date, end_date, overwrite
+            conn=conn,
+            requested_dates=requested_dates,
+            start_date=start_date,
+            end_date=end_date,
+            overwrite=overwrite,
         )
         logger.info(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
 
@@ -683,10 +707,10 @@ def load_between_dates(
             logger.info("All requested briefings already in database.")
             return True
 
-        failed_dates = _load_dates(conn, dates_to_load)
+        failed_dates = _load_dates(conn=conn, dates_to_load=dates_to_load)
     finally:
-        if owns_conn:
-            conn.close()
+        # conn.close()
+        pass
 
     if failed_dates:
         logger.info(
@@ -704,7 +728,7 @@ def _log_dry_run(requested_dates: list[date]) -> None:
     for briefing_date in requested_dates:
         date_string = briefing_date.strftime("%Y-%m-%d")
         file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
-        if not _is_briefing_json_exists(briefing_date):
+        if not file_path.exists():
             logger.info(f"  - No JSON file for {date_string}, would skip")
         else:
             logger.info(f"  [{date_string}] Would load from {file_path}")
@@ -754,7 +778,7 @@ def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str
         date_string = briefing_date.strftime("%Y-%m-%d")
         file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
 
-        if not _is_briefing_json_exists(briefing_date):
+        if not file_path.exists():
             logger.info(f"  - No JSON file for {date_string}, skipping")
             continue
 
@@ -766,13 +790,14 @@ def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str
     return failed_dates
 
 
-def query_by_date(query_date: date) -> None:
+def query_by_date(query_date: date, conn: sqlite3.Connection | None = None) -> None:
     """Query and display a briefing by date.
 
     Args:
         query_date (date): Date of the briefing to query.
     """
-    with get_db_connection() as conn:
+    conn = conn or get_db_connection()
+    with conn:
         briefing_id = get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
         briefing = get_briefing_by_id(conn, briefing_id)
 
@@ -786,13 +811,14 @@ def query_by_date(query_date: date) -> None:
         logger.info(f"No briefing found for {query_date}")
 
 
-def query_by_status(status: FetchStatus, conn=BRIEFINGS_DB_PATH) -> None:
+def query_by_status(status: FetchStatus, conn: sqlite3.Connection | None = None) -> None:
     """Query and display briefings by status.
 
     Args:
         status (str): Status to filter briefings by, or "all" for all briefings.
     """
-    with get_db_connection() as conn:
+    conn = conn or get_db_connection()
+    with conn:
         cursor = conn.cursor()
         if status == "all":
             cursor.execute("SELECT briefing_date, url, status FROM briefing")
@@ -834,7 +860,7 @@ def _get_existing_briefing_dates(
 
 def get_min_max_dates(
     conn: sqlite3.Connection, status: FetchStatus = "available"
-) -> tuple[str, str] | tuple[None, None]:
+) -> tuple[str | None, str | None] | tuple[None, None]:
     """Returns minimum and maximum dates present in the database with briefings.
 
     Args:
@@ -845,7 +871,10 @@ def get_min_max_dates(
     Returns:
         tuple[str, str]: Min and max dates present in the database
     """
-    query = """select min(b.briefing_id) as min_briefing_id, max(b.briefing_id) as max_briefing_id from briefing b where b.status = ?;"""
+    query = """select min(b.briefing_id) as min_briefing_id
+                , max(b.briefing_id) as max_briefing_id
+                from briefing b
+                where b.status = ?;"""
     with conn:
         cursor = conn.cursor()
         cursor.execute(query, (status,))
@@ -853,9 +882,15 @@ def get_min_max_dates(
         cursor.close()
         if row:
             min_briefing_id, max_briefing_id = row[0]
-            return datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime(
-                "%Y-%m-%d"
-            ), datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+            return (
+                datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+                if min_briefing_id
+                else None
+            ), (
+                datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+                if max_briefing_id
+                else None
+            )
         else:
             return None, None
 
@@ -885,3 +920,35 @@ def get_dates_with_briefings(
 
     briefing_dates = [datetime.strptime(str(x[0]), "%Y%m%d").strftime("%Y-%m-%d") for x in rows]
     return briefing_dates
+
+
+def show_stats(conn: sqlite3.Connection | None = None) -> None:
+    """Display database statistics.
+
+    Prints total briefings count, date range, and count by status.
+    """
+    if conn is None:
+        conn = get_db_connection()
+    with conn:
+        cursor = conn.cursor()
+
+        # Total count
+        cursor.execute("SELECT COUNT(*) as count FROM briefing")
+        total = cursor.fetchone()["count"]
+
+        # Count by status
+        cursor.execute("SELECT status, COUNT(*) as count FROM briefing GROUP BY status")
+        status_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
+
+        # Date range
+        cursor.execute(
+            "SELECT MIN(briefing_date) as min_date, MAX(briefing_date) as max_date FROM briefing"
+        )
+        date_range = cursor.fetchone()
+
+    logger.info("Database Statistics:")
+    logger.info(f"  Total briefings: {total:,}")
+    logger.info(f"  Date range: {date_range['min_date']} to {date_range['max_date']}")
+    logger.info("  By status:")
+    for status, count in status_counts.items():
+        logger.info(f"    {status}: {count:,}")
