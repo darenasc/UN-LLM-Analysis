@@ -23,4 +23,5 @@ repos:
     hooks:
       - id: codespell
         name: "codespell (To apply suggested fixes, run: pipenv run codespell -w .)"
-        args: ["-C", "0"]
+        args: ["-C", "0", "--ignore-words-list=caf,YoT"]
+        exclude: ^(vendor/|package-lock\.json|.*\.pdf|notebooks/daniel/)
