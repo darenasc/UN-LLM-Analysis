@@ -8,14 +8,14 @@ in the country_mentions table.
 import argparse
 import sqlite3
 
-import pandas as pd
 from loguru import logger
+import pandas as pd
 
 from un_llm_analysis.config import BRIEFINGS_DB, get_country_data
 from un_llm_analysis.database import (
+    delete_country_mentions_by_section,
     get_db_connection,
     insert_country_mentions,
-    delete_country_mentions_by_section,
 )
 
 

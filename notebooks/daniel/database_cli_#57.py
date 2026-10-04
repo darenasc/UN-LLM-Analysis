@@ -1,23 +1,23 @@
 import argparse
 from collections.abc import Iterator
 from datetime import date, datetime, timedelta
-from pathlib import Path
 import os
+from pathlib import Path
 import sqlite3
 from zoneinfo import ZoneInfo
 
 from loguru import logger
 
 from un_llm_analysis.config import BRIEFINGS_DIR, MIN_SCRAPE_DATE
-from un_llm_analysis.extractor import extract_briefing
 from un_llm_analysis.database import (
+    _get_briefing_id_from_date,
     create_database,
+    get_briefing_by_id,
     get_db_connection,
     insert_into_briefing,
     insert_into_section,
-    get_briefing_by_id,
-    _get_briefing_id_from_date,
 )
+from un_llm_analysis.extractor import extract_briefing
 
 """
 # Mental Model
@@ -37,6 +37,7 @@ CLI layer:
 - user-facing output: print
 
 """
+
 
 def _dates_between(start_date: date, end_date: date) -> Iterator[date]:
     """Yield dates from start_date to end_date, inclusive.
@@ -92,7 +93,9 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
         return False
 
 
-def load_between_dates(start_date: date, end_date: date, overwrite: bool = False, dry_run: bool = False) -> None:
+def load_between_dates(
+    start_date: date, end_date: date, overwrite: bool = False, dry_run: bool = False
+) -> None:
     """Load briefings from JSON files into database for a date range.
 
     Args:
@@ -102,9 +105,7 @@ def load_between_dates(start_date: date, end_date: date, overwrite: bool = False
         dry_run (bool): If True, preview what would be loaded without actually loading. Defaults to False.
     """
     requested_dates = list(_dates_between(start_date, end_date))
-    dates_to_load = [
-        d for d in requested_dates if overwrite or not _is_briefing_in_db(d)
-    ]
+    dates_to_load = [d for d in requested_dates if overwrite or not _is_briefing_in_db(d)]
 
     print(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
 
@@ -187,9 +188,7 @@ def query_by_status(status: str) -> None:
     with get_db_connection() as conn:
         cursor = conn.cursor()
         if status == "all":
-            cursor.execute(
-                "SELECT briefing_date, url, status FROM briefing"
-            )
+            cursor.execute("SELECT briefing_date, url, status FROM briefing")
         else:
             cursor.execute(
                 "SELECT briefing_date, url, status FROM briefing WHERE status = ?",
@@ -219,7 +218,9 @@ def show_stats() -> None:
         status_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
 
         # Date range
-        cursor.execute("SELECT MIN(briefing_date) as min_date, MAX(briefing_date) as max_date FROM briefing")
+        cursor.execute(
+            "SELECT MIN(briefing_date) as min_date, MAX(briefing_date) as max_date FROM briefing"
+        )
         date_range = cursor.fetchone()
 
     print("Database Statistics:")
@@ -403,7 +404,9 @@ def main() -> None:
 
     elif args.command == "load":
         start_date, end_date, overwrite, dry_run = _resolve_load_request(parser, args)
-        print(f"Loading briefings from {start_date} to {end_date}, overwrite={overwrite}, dry_run={dry_run}...")
+        print(
+            f"Loading briefings from {start_date} to {end_date}, overwrite={overwrite}, dry_run={dry_run}..."
+        )
         load_between_dates(start_date, end_date, overwrite=overwrite, dry_run=dry_run)
 
     elif args.command == "query":
