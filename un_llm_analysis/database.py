@@ -638,6 +638,117 @@ def get_sdgs_between_dates(
         return pd.DataFrame()
 
 
+# --- issue -------------------------------------------------------------------
+
+
+def insert_into_issue(
+    conn: sqlite3.Connection,
+    briefing_id: int,
+    section_id: int,
+    issues: str,
+    model: str,
+    created_at: str,
+    verbose: bool = True,
+) -> None:
+    """Insert data into issue table.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        briefing_id (int): Id of the briefing.
+        section_id (int): Id of the section (briefing_id * 100 + section_order)
+        issues (str): Text with list of ISSUE codes. "['ISSUE-1', ..., 'ISSUE-24']"
+        model (str): Model name.
+        created_at (str): Date of the processing.
+        verbose (bool, optional): Show logging of the process. Defaults to True.
+    """
+    parsed_issues = ast.literal_eval(issues)
+    if parsed_issues is None:
+        return
+    sql_insert = """INSERT INTO issue
+                    (briefing_id, section_id, issue, model, created_at)
+                    VALUES(?, ?, ?, ?, ?);"""
+    with conn:
+        delete_from_issue(conn=conn, section_id=section_id, model=model, verbose=verbose)
+
+        cursor = conn.cursor()
+        for issue in parsed_issues:
+            cursor.execute(sql_insert, (briefing_id, section_id, issue, model, created_at))
+        conn.commit()
+
+    if verbose:
+        logger.info(f"{section_id} {issues} data inserted into `issue`")
+
+
+def delete_from_issue(
+    conn: sqlite3.Connection, section_id: int, model: str, verbose: bool = True
+) -> bool:
+    """Delete data from the issue table.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Id of the section.
+        model (str): Model name.
+        verbose (bool, optional): Show logging of the process. Defaults to True.
+
+    Returns:
+        bool: Whether or not data was deleted.
+    """
+    query_delete = """DELETE FROM issue WHERE section_id = ? AND model = ?"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            query_delete,
+            (
+                section_id,
+                model,
+            ),
+        )
+        conn.commit()
+        was_deleted = cursor.rowcount > 1
+        cursor.close()
+
+    if was_deleted and verbose:
+        logger.info(f"Deleted issue section'{section_id}' of model '{model}'")
+    return was_deleted
+
+
+def get_issues_between_dates(
+    conn: sqlite3.Connection, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """Return data from the issue table.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date with format 'YYYY-MM-DD'.
+        end_date (str): End date with format 'YYYY-MM-DD'.
+
+    Returns:
+        pd.DataFrame: Data from the issue table.
+    """
+    min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+    max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+
+    sql_query = """SELECT briefing_id, section_id, issue, model, created_at FROM issue WHERE briefing_id between ? AND ?;"""
+
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            sql_query,
+            (
+                min_date,
+                max_date,
+            ),
+        )
+        rows = cursor.fetchall()
+        column_names = [x[0] for x in cursor.description]
+        cursor.close()
+    if rows:
+        df = pd.DataFrame(rows, columns=column_names)
+        return df
+    else:
+        return pd.DataFrame()
+
+
 def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
     """Load a single briefing JSON file into the database.
 
