@@ -8,6 +8,7 @@ sort_pipfile = true
 
 [packages]
 beautifulsoup4 = "*"
+bokeh = "*"
 ipywidgets = "*"
 jupyter = "*"
 loguru = "*"
@@ -24,6 +25,7 @@ pandas = "*"
 pandas-stubs = "*"
 playwright = "*"
 plotly = "*"
+pyahocorasick = "*"
 python-dotenv = "*"
 scikit-learn = "*"
 sqlalchemy = "*"

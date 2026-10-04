@@ -1,6 +1,8 @@
 from pathlib import Path
 import re
+import sqlite3
 import sys
+import tempfile
 
 import pandas as pd
 
@@ -18,6 +20,7 @@ from un_llm_analysis.heatmap import (
     create_bokeh_heatmap,
     get_countries_data,
     process_sections_to_heatmap,
+    save_heatmap_to_db,
 )
 
 
@@ -150,6 +153,107 @@ def test_create_bokeh_heatmap(tmp_path):
 
     assert output_path.exists()
     assert output_path.stat().st_size > 0
+
+
+@pytest.fixture
+def sample_heatmap_df():
+    """Create sample heatmap dataframe."""
+    return pd.DataFrame(
+        {
+            "month": ["2024-01", "2024-01", "2024-02", "2024-02"],
+            "country_code": ["USA", "CHN", "USA", "RUS"],
+            "count": [42, 28, 35, 19],
+        }
+    )
+
+
+@pytest.fixture
+def temp_db():
+    """Create a temporary database file."""
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+        db_path = Path(f.name)
+    yield db_path
+    # Cleanup
+    db_path.unlink(missing_ok=True)
+
+
+def test_save_heatmap_creates_table(temp_db, sample_heatmap_df):
+    """Test that function creates table with correct schema."""
+    save_heatmap_to_db(sample_heatmap_df, temp_db)
+
+    # Read back and verify
+    conn = sqlite3.connect(temp_db)
+    result_df = pd.read_sql_query("SELECT * FROM country_mention_heatmap", conn)
+    conn.close()
+
+    assert len(result_df) == 4
+    assert list(result_df.columns) == ["month", "country_code", "count"]
+
+
+def test_save_heatmap_data_integrity(temp_db, sample_heatmap_df):
+    """Test that data is saved correctly without modification."""
+    save_heatmap_to_db(sample_heatmap_df, temp_db)
+
+    conn = sqlite3.connect(temp_db)
+    result_df = pd.read_sql_query("SELECT * FROM country_mention_heatmap", conn)
+    conn.close()
+
+    # Check specific values
+    assert result_df[result_df["country_code"] == "USA"]["count"].tolist() == [42, 35]
+    assert result_df[result_df["country_code"] == "CHN"]["count"].iloc[0] == 28
+
+
+def test_append_behavior(temp_db, sample_heatmap_df):
+    """Test that calling twice appends, not replaces."""
+    # First save
+    save_heatmap_to_db(sample_heatmap_df, temp_db)
+
+    # Second save with different data
+    new_df = pd.DataFrame({"month": ["2024-03"], "country_code": ["GBR"], "count": [15]})
+    save_heatmap_to_db(new_df, temp_db)
+
+    # Verify both sets are in the database
+    conn = sqlite3.connect(temp_db)
+    result_df = pd.read_sql_query("SELECT * FROM country_mention_heatmap", conn)
+    conn.close()
+
+    assert len(result_df) == 5  # 4 original + 1 new
+    assert "GBR" in result_df["country_code"].values
+    assert "USA" in result_df["country_code"].values
+
+
+def test_save_empty_dataframe(temp_db):
+    """Test behavior with empty dataframe."""
+    empty_df = pd.DataFrame({"month": [], "country_code": [], "count": []})
+
+    # Should not raise an error
+    save_heatmap_to_db(empty_df, temp_db)
+
+    conn = sqlite3.connect(temp_db)
+    result_df = pd.read_sql_query("SELECT * FROM country_mention_heatmap", conn)
+    conn.close()
+
+    assert len(result_df) == 0
+
+
+def test_save_large_dataset(temp_db):
+    """Test with larger dataset."""
+    large_df = pd.DataFrame(
+        {
+            "month": ["2024-01"] * 100,
+            "country_code": [f"C{i:03d}" for i in range(100)],
+            "count": list(range(1, 101)),
+        }
+    )
+
+    save_heatmap_to_db(large_df, temp_db)
+
+    conn = sqlite3.connect(temp_db)
+    result_df = pd.read_sql_query("SELECT * FROM country_mention_heatmap", conn)
+    conn.close()
+
+    assert len(result_df) == 100
+    assert result_df["count"].sum() == sum(range(1, 101))
 
 
 if __name__ == "__main__":

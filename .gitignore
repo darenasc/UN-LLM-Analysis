@@ -213,3 +213,7 @@ notebooks/*.png
 # Exclude experiment records (mlflow)
 mlartifacts/
 mlflow.db
+
+
+exportToHTML/
+*.html

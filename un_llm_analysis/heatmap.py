@@ -277,6 +277,29 @@ def create_bokeh_heatmap(
     logger.info(f"Heatmap saved to {output_path}")
 
 
+def save_heatmap_to_db(heatmap_df: pd.DataFrame, db_path: Path | str) -> None:
+    """
+    Save heatmap data to SQLite database.
+
+    Appends to table: country_mention_heatmap
+    Columns: month, country_code, count
+    """
+    conn = get_db_connection(str(db_path))
+
+    try:
+        heatmap_df.to_sql(
+            "country_mention_heatmap",
+            conn,
+            index=False,
+            if_exists="append",  # Changed from "replace"
+        )
+
+        conn.commit()
+        logger.info(f"✓ Appended {len(heatmap_df)} rows to country_mention_heatmap")
+    finally:
+        conn.close()
+
+
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
@@ -331,11 +354,9 @@ def main() -> None:
     heatmap_df = process_sections_to_heatmap(sections_df, country_df)
     logger.info(f"✓ Generated heatmap with {len(heatmap_df)} data points")
 
-    # Step 5: Export data
-    logger.info("\nStep 5: Exporting data...")
-    csv_path = OUTPUT_DIR / "heatmap_data.csv"
-    heatmap_df.to_csv(csv_path, index=False)
-    logger.info(f"✓ Exported to {csv_path}")
+    # Step 5: Save to database
+    logger.info("\nStep 5: Saving to database...")
+    save_heatmap_to_db(heatmap_df, DB_PATH)
 
     # Step 6: Create visualization
     logger.info("\nStep 6: Creating Bokeh visualization...")
