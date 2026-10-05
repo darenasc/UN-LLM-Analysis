@@ -9,6 +9,7 @@ from un_llm_analysis.config import SCHEMA_DB
 from un_llm_analysis.database import (
     create_database,
     delete_briefing,
+    delete_from_issue,
     delete_from_sdg,
     delete_section,
     delete_sections,
@@ -20,11 +21,13 @@ from un_llm_analysis.database import (
     get_briefings_between_dates,
     get_dates_with_briefings,
     get_db_connection,
+    get_issues_between_dates,
     get_min_max_dates,
     get_sdgs_between_dates,
     get_section_by_section_id,
     get_sections_by_briefing_id,
     insert_into_briefing,
+    insert_into_issue,
     insert_into_sdg,
     insert_into_section,
     insert_section,
@@ -455,6 +458,77 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
         created_at=created_at,
     )
     result_df = get_sdgs_between_dates(conn=conn, start_date=created_at, end_date=created_at)
+    assert result_df.shape[0] > 0
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,issues,model,created_at",
+    [
+        (20260801, 2026080101, "['ISSUE-1', 'ISSUE-2']", "llama3.2", "2026-08-01"),
+        (20260801, 2026080102, "['ISSUE-3', 'ISSUE-4']", "llama3.2", "2026-08-01"),
+    ],
+)
+def test_insert_into_issue(conn, briefing_id, section_id, issues, model, created_at):
+    """Test insert data into the issue table."""
+    # GIVEN a database connection
+    # WHEN inserting data into the issue table
+    insert_into_issue(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        issues=issues,
+        model=model,
+        created_at=created_at,
+    )
+    result_df = get_issues_between_dates(conn=conn, start_date=created_at, end_date=created_at)
+
+    # THEN data is returned from the database
+    assert result_df.shape[0] > 0
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,issues,model,created_at",
+    [
+        (20260801, 2026080101, "['ISSUE-1', 'ISSUE-2']", "llama3.2", "2026-08-01"),
+        (20260801, 2026080102, "['ISSUE-3', 'ISSUE-4']", "llama3.2", "2026-08-01"),
+    ],
+)
+def test_delete_from_issue(conn, briefing_id, section_id, issues, model, created_at):
+    """Test deleting data from issue."""
+    insert_into_issue(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        issues=issues,
+        model=model,
+        created_at=created_at,
+    )
+    result_df = get_issues_between_dates(conn=conn, start_date=created_at, end_date=created_at)
+    assert result_df.shape[0] > 0
+
+    delete_from_issue(conn=conn, section_id=section_id, model=model)
+    result_df = get_issues_between_dates(conn=conn, start_date=created_at, end_date=created_at)
+    assert result_df.shape[0] == 0
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,issues,model,created_at",
+    [
+        (20260801, 2026080101, "['ISSUE-1', 'ISSUE-2']", "llama3.2", "2026-08-01"),
+        (20260801, 2026080102, "['ISSUE-3', 'ISSUE-4']", "llama3.2", "2026-08-01"),
+    ],
+)
+def test_get_issues_between_dates(conn, briefing_id, section_id, issues, model, created_at):
+    """Test retrieving data from the issue table."""
+    insert_into_issue(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        issues=issues,
+        model=model,
+        created_at=created_at,
+    )
+    result_df = get_issues_between_dates(conn=conn, start_date=created_at, end_date=created_at)
     assert result_df.shape[0] > 0
 
 
