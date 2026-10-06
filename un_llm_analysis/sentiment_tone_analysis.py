@@ -43,7 +43,7 @@ from un_llm_analysis.database import (
     get_db_connection,
     get_latest_analysis_run,
     get_sections_for_sentiment_analysis,
-    insert_into_analysisrun,
+    insert_into_analysis_run,
     insert_sentiment_analysis,
 )
 
@@ -308,6 +308,8 @@ def test_model(df) -> None:
 
 
 def run_analysis(
+    start_date: str | None = None,
+    end_date: str | None = None,
     resume_analysis_id: int | None = None,
 ):
     """
@@ -332,7 +334,11 @@ def run_analysis(
         # B. Get source sections from database.py
         # ----------------------------------------------------
 
-        df = get_sections_for_sentiment_analysis(conn)
+        df = get_sections_for_sentiment_analysis(
+            conn,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         if df.empty:
             print("No sections available for analysis.")
@@ -365,7 +371,7 @@ def run_analysis(
             if latest_analysis_id is None:
 
                 # No previous run exists
-                analysis_id = insert_into_analysisrun(
+                analysis_id = insert_into_analysis_run(
                     conn=conn,
                     analysis_name=ANALYSIS_NAME,
                     model_name=MODEL_NAME,
@@ -407,7 +413,7 @@ def run_analysis(
 
                     # Previous run is completely finished.
                     # Start a NEW analysis run.
-                    analysis_id = insert_into_analysisrun(
+                    analysis_id = insert_into_analysis_run(
                         conn=conn,
                         analysis_name=ANALYSIS_NAME,
                         model_name=MODEL_NAME,
