@@ -7,7 +7,11 @@ from loguru import logger
 import pandas as pd
 
 from un_llm_analysis.config import BRIEFINGS_DB_PATH, BRIEFINGS_DIR, SCHEMA_DB
-from un_llm_analysis.extractor import ExtractedBriefing, ExtractedSection
+from un_llm_analysis.extractor import (
+    ExtractedBriefing,
+    ExtractedSection,
+    extract_briefing,
+)
 from un_llm_analysis.scraper import FetchStatus
 from un_llm_analysis.utils import _dates_between
 
@@ -427,6 +431,31 @@ def insert_section(
 
 
 def get_section(conn: sqlite3.Connection, section_id: int) -> ExtractedSection | None:
+    """Retrieve section by ID.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        section_id (int): Primary key of the section.
+
+    Returns:
+        sqlite3.Row | None: The matching row, or None if not found.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+            SELECT section_id, title, "text"
+            FROM section
+            WHERE section_id = ?
+            """,
+        (section_id,),
+    )
+    rows = cursor.fetchone()
+    return ExtractedSection(rows["title"], rows["text"]) if rows else None
+
+
+def get_section_by_section_id(
+    conn: sqlite3.Connection, section_id: int
+) -> ExtractedSection | None:
     """Retrieve section by ID.
 
     Args:
