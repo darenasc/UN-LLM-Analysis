@@ -17,10 +17,12 @@ def test_normalize_text():
 def make_hard_line(
     text: str,
     fully_bold: bool = False,
+    fully_underlined: bool = False,
 ) -> extractor.HardLine:
     return extractor.HardLine(
         text=text,
         fully_bold=fully_bold,
+        fully_underlined=fully_underlined,
     )
 
 
@@ -82,6 +84,20 @@ def test_extract_hard_lines(html, expected_lines):
     assert result == expected
 
 
+def test_extract_hard_lines_underlined():
+    html = "<p><u>UNDERLINED TITLE</u></p>"
+
+    result = extractor._extract_hard_lines(html)
+
+    assert result == [
+        make_hard_line(
+            "UNDERLINED TITLE",
+            fully_bold=False,
+            fully_underlined=True,
+        )
+    ]
+
+
 @pytest.mark.parametrize(
     "lines, expected_name, expected_role",
     [
@@ -126,23 +142,25 @@ def test_extract_speaker(lines, expected_name, expected_role):
 
 
 @pytest.mark.parametrize(
-    "line, fully_bold, expected",
+    "line, fully_bold, fully_underlined, expected",
     [
-        ("SECTION TITLE", True, True),
-        ("SECTION TITLE", False, False),
-        ("Section Title", True, False),
-        ("2026-08-25", True, False),
+        ("Section Title", True, False, True),
+        ("Section Title", False, True, True),
+        ("SECTION TITLE", False, False, True),
+        ("Section Title", False, False, False),
+        ("2026-08-25", False, False, False),
     ],
     ids=[
-        "valid-title",
-        "not-bold",
+        "fully-bold",
+        "fully-underlined",
+        "mostly-uppercase",
         "too-much-lowercase",
         "no-cased-characters",
     ],
 )
-def test_is_section_title_candidate(line, fully_bold, expected):
+def test_is_section_title_candidate(line, fully_bold, fully_underlined, expected):
 
-    input_line = make_hard_line(line, fully_bold=fully_bold)
+    input_line = make_hard_line(line, fully_bold=fully_bold, fully_underlined=fully_underlined)
 
     result = extractor._is_section_title_candidate(input_line)
 
@@ -369,14 +387,26 @@ def test_extract_briefing_unavailable(monkeypatch, tmp_path):
     )
 
 
-def test_extract_briefing_with_real_fixture():
+@pytest.mark.parametrize(
+    "selected_date",
+    ["2026-08-25", "2026-06-29", "2026-06-12", "2025-01-28"],
+)
+def test_extract_briefing_with_real_fixture(selected_date):
 
     fixtures_dir = Path(__file__).parent / "fixtures"
 
-    result = extractor.extract_briefing(fixtures_dir / "briefing_2026-08-25.json")
+    result = extractor.extract_briefing(
+        fixtures_dir
+        / "briefings"
+        / selected_date[:4]
+        / selected_date[:7]
+        / f"{selected_date}.json"
+    )
 
     expected = json.loads(
-        (fixtures_dir / "extracted_briefing_2026-08-25.json").read_text(encoding="utf-8")
+        (
+            fixtures_dir / "extracted_briefings" / f"extracted_briefing_{selected_date}.json"
+        ).read_text(encoding="utf-8")
     )
 
     expected["sections"] = tuple(expected["sections"])

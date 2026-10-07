@@ -1,14 +1,15 @@
 import ast
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 import sqlite3
 
 from loguru import logger
 import pandas as pd
 
-from un_llm_analysis.config import BRIEFINGS_DB_PATH, SCHEMA_DB
+from un_llm_analysis.config import BRIEFINGS_DB_PATH, BRIEFINGS_DIR, SCHEMA_DB
 from un_llm_analysis.extractor import ExtractedBriefing, ExtractedSection
 from un_llm_analysis.scraper import FetchStatus
+from un_llm_analysis.utils import _dates_between
 
 
 def create_database(db_path: str | Path = BRIEFINGS_DB_PATH, schema_path: str | Path = SCHEMA_DB):
@@ -608,12 +609,340 @@ def get_sdgs_between_dates(
         return pd.DataFrame()
 
 
+# --- issue ---------------------------------------------
+
+
+def insert_into_issue(
+    conn: sqlite3.Connection,
+    briefing_id: int,
+    section_id: int,
+    issues: str,
+    model: str,
+    created_at: str,
+    verbose: bool = True,
+) -> None:
+    """Insert data into issue table.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        briefing_id (int): Id of the briefing.
+        section_id (int): Id of the section (briefing_id * 100 + section_order)
+        issues (str): Text with list of ISSUE codes. "['ISSUE-1', ..., 'ISSUE-24']"
+        model (str): Model name.
+        created_at (str): Date of the processing.
+        verbose (bool, optional): Show logging of the process. Defaults to True.
+    """
+    parsed_issues = ast.literal_eval(issues)
+    if parsed_issues is None:
+        return
+    sql_insert = """INSERT INTO issue
+                    (briefing_id, section_id, issue, model, created_at)
+                    VALUES(?, ?, ?, ?, ?);"""
+    with conn:
+        delete_from_issue(conn=conn, section_id=section_id, model=model, verbose=verbose)
+
+        cursor = conn.cursor()
+        for issue in parsed_issues:
+            cursor.execute(sql_insert, (briefing_id, section_id, issue, model, created_at))
+        conn.commit()
+
+    if verbose:
+        logger.info(f"{section_id} {issues} data inserted into `issue`")
+
+
+def delete_from_issue(
+    conn: sqlite3.Connection, section_id: int, model: str, verbose: bool = True
+) -> bool:
+    """Delete data from the issue table.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Id of the section.
+        model (str): Model name.
+        verbose (bool, optional): Show logging of the process. Defaults to True.
+
+    Returns:
+        bool: Whether or not data was deleted.
+    """
+    query_delete = """DELETE FROM issue WHERE section_id = ? AND model = ?"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            query_delete,
+            (
+                section_id,
+                model,
+            ),
+        )
+        conn.commit()
+        was_deleted = cursor.rowcount > 1
+        cursor.close()
+
+    if was_deleted and verbose:
+        logger.info(f"Deleted issue section'{section_id}' of model '{model}'")
+    return was_deleted
+
+
+def get_issues_between_dates(
+    conn: sqlite3.Connection, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """Return data from the issue table.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date with format 'YYYY-MM-DD'.
+        end_date (str): End date with format 'YYYY-MM-DD'.
+
+    Returns:
+        pd.DataFrame: Data from the issue table.
+    """
+    min_date = min(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+    max_date = max(get_briefing_id_from_date(start_date), get_briefing_id_from_date(end_date))
+
+    sql_query = """SELECT briefing_id, section_id, issue, model, created_at FROM issue WHERE briefing_id between ? AND ?;"""
+
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            sql_query,
+            (
+                min_date,
+                max_date,
+            ),
+        )
+        rows = cursor.fetchall()
+        column_names = [x[0] for x in cursor.description]
+        cursor.close()
+    if rows:
+        df = pd.DataFrame(rows, columns=column_names)
+        return df
+    else:
+        return pd.DataFrame()
+
+
+def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
+    """Load a single briefing JSON file into the database.
+
+    Args:
+        file_path (Path): Path to the briefing JSON file.
+        conn (sqlite3.Connection): Database connection object.
+
+    Returns:
+        bool: True if loading succeeded, False otherwise.
+    """
+    try:
+        briefing = extract_briefing(file_path)
+        with conn:
+            briefing_id = insert_into_briefing(conn, briefing)
+            if briefing.sections:
+                insert_into_section(conn, briefing_id, briefing.sections)
+        logger.info(f"Loaded briefing from {file_path}")
+        return True
+    except Exception as exc:
+        logger.error(f"Error loading {file_path}: {exc}")
+        return False
+
+
+def load_briefings_between_dates(
+    start_date: date,
+    end_date: date,
+    overwrite: bool = False,
+    dry_run: bool = False,
+    conn: sqlite3.Connection | None = None,
+) -> bool:
+    """Load briefings from JSON files into database for a date range.
+
+    Args:
+        start_date (date): The date to start loading from.
+        end_date (date): The date to end loading at.
+        overwrite (bool): Whether to overwrite existing briefings. Defaults to
+            False.
+        dry_run (bool): If True, preview what would be loaded without actually
+            loading. Defaults to False.
+        conn (sqlite3.Connection | None): Existing connection to reuse. If None,
+            a new connection is opened and closed automatically.
+
+    Returns:
+        bool: True if every loaded briefing succeeded (or nothing needed loading),
+            False if at least one briefing failed to load.
+    """
+    requested_dates = list(_dates_between(start_date, end_date))
+
+    if dry_run:
+        _log_dry_run(requested_dates)
+        return True
+
+    if conn is None:
+        conn = get_db_connection()
+
+    try:
+        dates_to_load = _resolve_dates_to_load(
+            conn=conn,
+            requested_dates=requested_dates,
+            start_date=start_date,
+            end_date=end_date,
+            overwrite=overwrite,
+        )
+        logger.info(f"{len(requested_dates)} dates requested. {len(dates_to_load)} to load.")
+
+        if not dates_to_load:
+            logger.info("All requested briefings already in database.")
+            return True
+
+        failed_dates = _load_dates(conn=conn, dates_to_load=dates_to_load)
+    finally:
+        # conn.close()
+        pass
+
+    if failed_dates:
+        logger.info(
+            f"Load complete with {len(failed_dates)} failure(s): {', '.join(failed_dates)}"
+        )
+        return False
+
+    logger.info("Load complete.")
+    return True
+
+
+def _log_dry_run(requested_dates: list[date]) -> None:
+    """Log a preview of what load_between_dates would do, without loading anything."""
+    logger.info("DRY RUN - No changes will be made:")
+    for briefing_date in requested_dates:
+        date_string = briefing_date.strftime("%Y-%m-%d")
+        file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+        if not file_path.exists():
+            logger.info(f"  - No JSON file for {date_string}, would skip")
+        else:
+            logger.info(f"  [{date_string}] Would load from {file_path}")
+    logger.info(f"Total: {len(requested_dates)} dates requested.")
+    logger.info("Dry run complete.")
+
+
+def _resolve_dates_to_load(
+    conn: sqlite3.Connection,
+    requested_dates: list[date],
+    start_date: date,
+    end_date: date,
+    overwrite: bool,
+) -> list[date]:
+    """Filter requested_dates down to the ones that actually need loading.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        requested_dates (list[date]): All dates in the requested range.
+        start_date (date): Start of the range (for existing-briefing lookup).
+        end_date (date): End of the range (for existing-briefing lookup).
+        overwrite (bool): If True, reload every requested date regardless of
+            what's already in the database.
+
+    Returns:
+        list[date]: Dates that still need to be loaded.
+    """
+    if overwrite:
+        return requested_dates
+    existing_dates = _get_existing_briefing_dates(conn, start_date, end_date)
+    return [d for d in requested_dates if d not in existing_dates]
+
+
+def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str]:
+    """Load each date's briefing JSON into the database.
+
+    Args:
+        conn (sqlite3.Connection): Open database connection.
+        dates_to_load (list[date]): Dates to attempt loading.
+
+    Returns:
+        list[str]: Date strings (YYYY-MM-DD) that failed to load.
+    """
+    failed_dates: list[str] = []
+
+    for i, briefing_date in enumerate(dates_to_load):
+        date_string = briefing_date.strftime("%Y-%m-%d")
+        file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+
+        if not file_path.exists():
+            logger.info(f"  - No JSON file for {date_string}, skipping")
+            continue
+
+        logger.info(f"  [{i + 1}/{len(dates_to_load)}] {date_string} Loading...")
+        success = load_briefing_to_db(file_path, conn)
+        if not success:
+            failed_dates.append(date_string)
+
+    return failed_dates
+
+
+def query_by_date(query_date: date, conn: sqlite3.Connection | None = None) -> None:
+    """Query and display a briefing by date.
+
+    Args:
+        query_date (date): Date of the briefing to query.
+    """
+    conn = conn or get_db_connection()
+    with conn:
+        briefing_id = get_briefing_id_from_date(query_date.strftime("%Y-%m-%d"))
+        briefing = get_briefing_by_id(conn, briefing_id)
+
+    if briefing:
+        logger.info(f"Briefing found for {query_date}:")
+        logger.info(f"  URL: {briefing.url}")
+        logger.info(f"  Status: {briefing.status}")
+        logger.info(f"  Speaker: {briefing.speaker_name} ({briefing.speaker_role})")
+        logger.info(f"  Sections: {len(briefing.sections)}")
+    else:
+        logger.info(f"No briefing found for {query_date}")
+
+
+def query_by_status(status: FetchStatus, conn: sqlite3.Connection | None = None) -> None:
+    """Query and display briefings by status.
+
+    Args:
+        status (str): Status to filter briefings by, or "all" for all briefings.
+    """
+    conn = conn or get_db_connection()
+    with conn:
+        cursor = conn.cursor()
+        if status == "all":
+            cursor.execute("SELECT briefing_date, url, status FROM briefing")
+        else:
+            cursor.execute(
+                "SELECT briefing_date, url, status FROM briefing WHERE status = ?",
+                (status,),
+            )
+        rows = cursor.fetchall()
+
+    logger.info(f"Found {len(rows)} briefings with status '{status}':")
+    for row in rows:
+        logger.info(f"  {row['briefing_date']}: {row['url']}")
+
+
+def _get_existing_briefing_dates(
+    conn: sqlite3.Connection, start_date: date, end_date: date
+) -> set[date]:
+    """Fetch the set of briefing dates already in the database within a range.
+
+    Args:
+        conn (sqlite3.Connection): Database connection object.
+        start_date (date): Start of the range (inclusive).
+        end_date (date): End of the range (inclusive).
+
+    Returns:
+        set[date]: Dates that already have a briefing row in the database.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT briefing_date FROM briefing WHERE briefing_date BETWEEN ? AND ?",
+        (start_date.isoformat(), end_date.isoformat()),
+    )
+    return {date.fromisoformat(row["briefing_date"]) for row in cursor.fetchall()}
+
+
 # --- streamlit app
 
 
 def get_min_max_dates(
     conn: sqlite3.Connection, status: FetchStatus = "available"
-) -> tuple[str, str] | tuple[None, None]:
+) -> tuple[str | None, str | None] | tuple[None, None]:
     """Returns minimum and maximum dates present in the database with briefings.
 
     Args:
@@ -632,9 +961,15 @@ def get_min_max_dates(
         cursor.close()
         if row:
             min_briefing_id, max_briefing_id = row[0]
-            return datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime(
-                "%Y-%m-%d"
-            ), datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+            return (
+                datetime.strptime(str(min_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+                if min_briefing_id
+                else None
+            ), (
+                datetime.strptime(str(max_briefing_id), "%Y%m%d").strftime("%Y-%m-%d")
+                if max_briefing_id
+                else None
+            )
         else:
             return None, None
 
@@ -1037,3 +1372,35 @@ if __name__ == "__main__":
     # print("Tables:", verify_sentiment_tables(conn))
 
     conn.close()
+
+
+def show_stats(conn: sqlite3.Connection | None = None) -> None:
+    """Display database statistics.
+
+    Prints total briefings count, date range, and count by status.
+    """
+    if conn is None:
+        conn = get_db_connection()
+    with conn:
+        cursor = conn.cursor()
+
+        # Total count
+        cursor.execute("SELECT COUNT(*) as count FROM briefing")
+        total = cursor.fetchone()["count"]
+
+        # Count by status
+        cursor.execute("SELECT status, COUNT(*) as count FROM briefing GROUP BY status")
+        status_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
+
+        # Date range
+        cursor.execute(
+            "SELECT MIN(briefing_date) as min_date, MAX(briefing_date) as max_date FROM briefing"
+        )
+        date_range = cursor.fetchone()
+
+    logger.info("Database Statistics:")
+    logger.info(f"  Total briefings: {total:,}")
+    logger.info(f"  Date range: {date_range['min_date']} to {date_range['max_date']}")
+    logger.info("  By status:")
+    for status, count in status_counts.items():
+        logger.info(f"    {status}: {count:,}")

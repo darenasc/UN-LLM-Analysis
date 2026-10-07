@@ -43,6 +43,15 @@ CREATE TABLE IF NOT EXISTS sdg (
 );
 
 
+CREATE TABLE IF NOT EXISTS issue (
+    briefing_id INTEGER NOT NULL,
+    section_id INTEGER NOT NULL,
+    issue TEXT NOT NULL,
+    model TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+
 CREATE TABLE IF NOT EXISTS analysis_run (
     analysis_id INTEGER PRIMARY KEY AUTOINCREMENT,
     analysis_name TEXT NOT NULL,
