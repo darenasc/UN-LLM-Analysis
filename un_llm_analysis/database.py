@@ -638,6 +638,32 @@ def get_sdgs_between_dates(
         return pd.DataFrame()
 
 
+def get_min_max_dates_with_sdg(conn: sqlite3.Connection) -> tuple[str, str]:
+    """Return min and max dates of briefing IDs with SDG mentions.
+    ('YYYY-MM-DD', 'YYYY-MM-DD')
+
+    Args:
+        conn (sqlite3.Connection): Connection to a database.
+
+    Returns:
+        tuple[str, str]: Min and max dates of briefings with SDG mentions in
+            the database.
+    """
+    query = """select min(briefing_id), max(briefing_id) from sdg;"""
+    min_sdg_date = ""
+    max_sdg_date = ""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        cursor.close()
+
+    min_sdg_date, max_sdg_date = datetime.strptime(str(rows[0][0]), "%Y%m%d").strftime(
+        "%Y-%m-%d"
+    ), datetime.strptime(str(rows[0][1]), "%Y%m%d").strftime("%Y-%m-%d")
+    return min_sdg_date, max_sdg_date
+
+
 # --- issue -------------------------------------------------------------------
 
 
