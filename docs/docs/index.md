@@ -56,7 +56,7 @@ Scraped raw data location:
 Command line interface to initialise, load and query the database.
 
 ```bash
-briefings init
+briefings init-db
 briefings load 2026-08-12 2026-08-12
 briefings load --since 2026-08-12 --dry-run
 briefings query --date 2026-08-12
