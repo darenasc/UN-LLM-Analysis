@@ -16,6 +16,7 @@ import ast
 from datetime import date, datetime
 from pathlib import Path
 import sqlite3
+from typing import Any
 
 from loguru import logger
 import pandas as pd
@@ -662,6 +663,32 @@ def get_min_max_dates_with_sdg(conn: sqlite3.Connection) -> tuple[str, str]:
         "%Y-%m-%d"
     ), datetime.strptime(str(rows[0][1]), "%Y%m%d").strftime("%Y-%m-%d")
     return min_sdg_date, max_sdg_date
+
+
+def get_sdg_by_section_id(
+    conn: sqlite3.Connection, section_id: int, model: str = "llama3.2"
+) -> None | list[str]:
+    """Return a list of SDGs given a section_id.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Section id in the database.
+        model (str): Model used to extract SDGs from section.
+
+    Returns:
+        None | list[str]: List with SDGs or None.
+    """
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """select sdg from sdg where section_id = ? and model = ?;""", (section_id, model)
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+    if rows is None:
+        return None
+    else:
+        return [x[0] for x in rows]
 
 
 # --- issue -------------------------------------------------------------------

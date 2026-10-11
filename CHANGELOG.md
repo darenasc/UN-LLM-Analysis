@@ -12,6 +12,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - #50 Proportionality of issues/topics
 - #47 Country mention heatmap
 
+## [1.0.1]
+
+### Added
+
+- SDG mentions page to the Streamlit app `02_SDG_Mentions.py`
+- 17 SDG icons to the project in `app/static/sdg/`
+
+### Updated
+
+- `SDG_mentions_in_briefings.ipynb` notebook using the database module
+
+
 ## [1.0.0]
 
 ### Features

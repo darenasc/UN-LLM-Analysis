@@ -16,19 +16,21 @@ st.logo(
     size="large",
 )
 
-st.title("UN Daily Briefings")
-st.subheader("SDG mentions in Briefings")
+# st.title("UN Daily Briefings")
+st.title("SDG mentions in Briefings")
+# st.subheader("SDG mentions in Briefings")
 
 conn = get_db_connection()
 min_date, max_date = get_min_max_dates_with_sdg(conn=conn)
 
-st.sidebar.caption(f"SDG data between: `{min_date}` and `{max_date}`")
+st.sidebar.caption(f"Suggested SDG date range between: `{min_date}` and `{max_date}`")
 start_date = st.sidebar.date_input("Start date", min_date)
 end_date = st.sidebar.date_input("End date", max_date)
 
 
 @st.cache_data
 def get_models():
+    """Returns a list of models used to generate SDG mentions."""
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("select distinct model from sdg;")
@@ -38,15 +40,18 @@ def get_models():
     return [x[0] for x in rows]
 
 
-models = get_models()
-# st.write(models)
-model_choice = st.sidebar.selectbox(
-    "Model",
-    models,
-)
+def create_plot(model: str, start_date: str, end_date: str):
+    """Returns a figure with an horizontal bar chart with the SDG counts for a
+    given date range.
 
+    Args:
+        model (str): Model used to extract SDG mentions.
+        start_date (str): Start date with SDGs.
+        end_date (str): End date with SDGs.
 
-def create_plot(model: str, start_date, end_date):
+    Returns:
+        Figure: Plotly figure.
+    """
     conn = get_db_connection()
     df = get_sdgs_between_dates(conn=conn, start_date=start_date, end_date=end_date)
 
@@ -84,6 +89,13 @@ def create_plot(model: str, start_date, end_date):
     )
     return fig
 
+
+models = get_models()
+# st.write(models)
+model_choice = st.sidebar.selectbox(
+    "Model",
+    models,
+)
 
 fig = create_plot(
     model=str(model_choice),

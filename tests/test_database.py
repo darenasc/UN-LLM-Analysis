@@ -24,6 +24,7 @@ from un_llm_analysis.database import (
     get_issues_between_dates,
     get_min_max_dates,
     get_min_max_dates_with_sdg,
+    get_sdg_by_section_id,
     get_sdgs_between_dates,
     get_section_by_section_id,
     get_sections_by_briefing_id,
@@ -482,6 +483,27 @@ def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, 
     min_sdg_date, max_sdg_date = get_min_max_dates_with_sdg(conn=conn)
     assert min_sdg_date == "2026-08-01"
     assert max_sdg_date == "2026-08-01"
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,sdgs,model,created_at, expected",
+    [
+        (20260801, 2026080101, "['SDG1', 'SDG2']", "llama3.2", "2026-08-01", ["SDG1", "SDG2"]),
+        (20260801, 2026080102, "['SDG3', 'SDG4']", "llama3.2", "2026-08-01", ["SDG3", "SDG4"]),
+    ],
+)
+def test_get_sdg_by_section_id(conn, briefing_id, section_id, sdgs, model, created_at, expected):
+    """Test retrieving SDG list from sdg table."""
+    insert_into_sdg(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        sdgs=sdgs,
+        model=model,
+        created_at=created_at,
+    )
+    result = get_sdg_by_section_id(conn=conn, section_id=section_id, model=model)
+    assert result == expected
 
 
 @pytest.mark.parametrize(
