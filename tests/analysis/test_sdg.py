@@ -61,6 +61,11 @@ def test_extract_sdg_mentions_from_sections(
     """
     insert_into_briefing(conn=conn, briefing=briefing)
 
+    mock_check_ollama_model_exists = mocker.patch(
+        "un_llm_analysis.analysis.sdg._check_ollama_model_exists"
+    )
+    mock_check_ollama_model_exists.return_value = True
+
     mock_get_briefings_between_dates = mocker.patch(
         "un_llm_analysis.analysis.sdg.get_briefings_between_dates"
     )
