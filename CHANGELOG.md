@@ -12,6 +12,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - #50 Proportionality of issues/topics
 - #47 Country mention heatmap
 
+## [1.0.1]
+
+### Added
+
+- New module `analysis/` to keep the processing steps with LLM
+- New submodule `analysis/sdg.py` to extract SDG mentions from sections
+- Add a `tests/conftest.py` file for fixtures used by multiple modules
+- Add a `prompts.py` module to save the multiple prompts used in the project
+- SDG mentions page to the Streamlit app `02_SDG_Mentions.py`
+- 17 SDG icons to the project in `app/static/sdg/`
+- Add `pytest-mock` dev dependency for mocking
+
+### Updated
+
+- `SDG_mentions_in_briefings.ipynb` notebook using the database module
+
 ## [1.0.0]
 
 ### Features
