@@ -1,12 +1,13 @@
-from datetime import date, datetime
+from datetime import datetime
 
-from logos import CORRELAID_LOGO
-import plotly.express as px
+from logos import CORRELAID_LOGO  # type: ignore
+import plotly.express as px  # type: ignore
 import streamlit as st
 
 from un_llm_analysis.database import (
     get_db_connection,
     get_min_max_dates_with_sdg,
+    get_sdg_models,
     get_sdgs_between_dates,
 )
 
@@ -16,28 +17,18 @@ st.logo(
     size="large",
 )
 
-# st.title("UN Daily Briefings")
 st.title("SDG mentions in Briefings")
-# st.subheader("SDG mentions in Briefings")
 
 conn = get_db_connection()
 min_date, max_date = get_min_max_dates_with_sdg(conn=conn)
+if min_date == "" and max_date == "":
+    st.warning(
+        "No SDG data. You can populate the sdg table using the code in `notebooks/SDG_mentions_in_briefings.ipynb`."
+    )
 
 st.sidebar.caption(f"Suggested SDG date range between: `{min_date}` and `{max_date}`")
-start_date = st.sidebar.date_input("Start date", min_date)
-end_date = st.sidebar.date_input("End date", max_date)
-
-
-@st.cache_data
-def get_models():
-    """Returns a list of models used to generate SDG mentions."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("select distinct model from sdg;")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return [x[0] for x in rows]
+start_date = st.sidebar.date_input("Start date", min_date or datetime.now())
+end_date = st.sidebar.date_input("End date", max_date or datetime.now())
 
 
 def create_plot(model: str, start_date: str, end_date: str):
@@ -90,8 +81,7 @@ def create_plot(model: str, start_date: str, end_date: str):
     return fig
 
 
-models = get_models()
-# st.write(models)
+models = get_sdg_models(conn=conn)
 model_choice = st.sidebar.selectbox(
     "Model",
     models,

@@ -534,7 +534,7 @@ def insert_into_sdg(
     conn: sqlite3.Connection,
     briefing_id: int,
     section_id: int,
-    sdgs: str,
+    sdgs: list,
     model: str,
     created_at: str,
     verbose: bool = True,
@@ -550,9 +550,6 @@ def insert_into_sdg(
         created_at (str): Date of the processing.
         verbose (bool, optional): Show logging of the process. Defaults to True.
     """
-    parsed_sdgs = ast.literal_eval(sdgs)
-    if parsed_sdgs is None:
-        return
     sql_insert = """INSERT INTO sdg
                     (briefing_id, section_id, sdg, model, created_at)
                     VALUES(?, ?, ?, ?, ?);"""
@@ -560,7 +557,8 @@ def insert_into_sdg(
         delete_from_sdg(conn=conn, section_id=section_id, model=model, verbose=verbose)
 
         cursor = conn.cursor()
-        for sdg in parsed_sdgs:
+        for sdg in sdgs:
+            # for sdg in parsed_sdgs:
             cursor.execute(sql_insert, (briefing_id, section_id, sdg, model, created_at))
         conn.commit()
 
@@ -659,9 +657,10 @@ def get_min_max_dates_with_sdg(conn: sqlite3.Connection) -> tuple[str, str]:
         rows = cursor.fetchall()
         cursor.close()
 
-    min_sdg_date, max_sdg_date = datetime.strptime(str(rows[0][0]), "%Y%m%d").strftime(
-        "%Y-%m-%d"
-    ), datetime.strptime(str(rows[0][1]), "%Y%m%d").strftime("%Y-%m-%d")
+    if rows[0][0]:
+        min_sdg_date, max_sdg_date = datetime.strptime(str(rows[0][0]), "%Y%m%d").strftime(
+            "%Y-%m-%d"
+        ), datetime.strptime(str(rows[0][1]), "%Y%m%d").strftime("%Y-%m-%d")
     return min_sdg_date, max_sdg_date
 
 
@@ -689,6 +688,20 @@ def get_sdg_by_section_id(
         return None
     else:
         return [x[0] for x in rows]
+
+
+def get_sdg_models(conn: sqlite3.Connection | None = None):
+    """Returns a list of models used to generate SDG mentions."""
+    conn = conn or get_db_connection()
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute("select distinct model from sdg;")
+        rows = cursor.fetchall()
+        cursor.close()
+    if rows:
+        return [x[0] for x in rows]
+    else:
+        return ""
 
 
 # --- issue -------------------------------------------------------------------
