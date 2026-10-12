@@ -43,7 +43,6 @@ from un_llm_analysis.database import (
 from un_llm_analysis.extractor import (
     ExtractedBriefing,
     ExtractedSection,
-    extract_briefing,
 )
 
 
@@ -76,21 +75,6 @@ def test_get_db_connection(tmp_path):
     conn_test.close()
 
 
-@pytest.fixture(scope="function")
-def conn():
-    """Fixture serving an in-memory database connection."""
-    conn_fixture = get_db_connection(":memory:")
-    conn_fixture.execute("PRAGMA foreign_keys = ON")
-    conn_fixture.row_factory = sqlite3.Row
-
-    sql_schema = Path(SCHEMA_DB).read_text(encoding="utf-8")
-    conn_fixture.executescript(sql_schema)
-
-    yield conn_fixture
-
-    conn_fixture.close()
-
-
 @pytest.mark.parametrize(
     "date,expected",
     [
@@ -108,14 +92,6 @@ def test__get_briefing_id_from_date(date, expected):
 
     # THEN eval the transformation into integer YYYYMMDD
     assert briefing_id == expected
-
-
-@pytest.fixture()
-def briefing():
-    """Fixture with an ExtractedBriefing."""
-    return extract_briefing(
-        file_path=Path("tests/fixtures/briefings/2026/2026-08/2026-08-25.json")
-    )
 
 
 def test_insert_into_briefing(briefing, conn):
