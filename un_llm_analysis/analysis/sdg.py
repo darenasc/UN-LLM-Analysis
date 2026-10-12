@@ -20,7 +20,7 @@ from un_llm_analysis.database import (
 from un_llm_analysis.prompts import SDG_MENTION_PROMPT
 from un_llm_analysis.utils import _check_ollama_model_exists
 
-sdgs = {
+SDGS = {
     "SDG1": "End poverty in all its forms everywhere",
     "SDG2": "End hunger, achieve food security and improved nutrition and promote sustainable agriculture",
     "SDG3": "Ensure healthy lives and promote well-being for all at all ages",
@@ -41,7 +41,7 @@ sdgs = {
 }
 
 
-def get_sdg_text() -> str:
+def get_sdg_text(sdgs: dict = SDGS) -> str:
     """Generate text with the SDG goals to pass to the prompt.
 
     Returns:
@@ -132,10 +132,7 @@ def extract_sdg_mentions_from_sections(
                         conn=conn,
                         briefing_id=briefing_id,
                         section_id=section_id,
-                        # sdgs=result["response"],
                         sdgs=sdgs,
                         model=model,
                         created_at=result["created_at"],
                     )
-
-        conn.close()
