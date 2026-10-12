@@ -4,6 +4,7 @@ from logos import CORRELAID_LOGO  # type: ignore
 import plotly.express as px  # type: ignore
 import streamlit as st
 
+from un_llm_analysis.analysis.sdg import SDGS
 from un_llm_analysis.database import (
     get_db_connection,
     get_min_max_dates_with_sdg,
@@ -81,6 +82,21 @@ def create_plot(model: str, start_date: str, end_date: str):
     return fig
 
 
+def formulate_sdg_text(sdgs: dict = SDGS) -> str:
+    """Formulates a text with all SDG descriptions.
+
+    Returns:
+        str: Text with all SDG descriptions.
+    """
+    sdg_text = "The descriptions of the Sustainable Development Goals (SDG)\n\n"
+    for sdg, description in sdgs.items():
+        sdg_text += f"* **{sdg}**: {description}\n"
+
+    sdg_text += "\n(Source: https://sdgs.un.org/goals )"
+
+    return sdg_text.strip()
+
+
 models = get_sdg_models(conn=conn)
 model_choice = st.sidebar.selectbox(
     "Model",
@@ -98,3 +114,5 @@ else:
     st.warning(
         f"No SDG data between `{start_date.strftime("%Y-%m-%d")}` and `{end_date.strftime("%Y-%m-%d")}`"
     )
+
+st.markdown(formulate_sdg_text())

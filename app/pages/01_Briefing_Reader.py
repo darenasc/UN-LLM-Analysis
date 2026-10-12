@@ -23,6 +23,11 @@ selected_date = st.sidebar.date_input(
 )
 
 briefing = database.get_briefing_by_date(conn=conn, date=str(selected_date))
+issues = database.get_issues_between_dates(
+    conn=conn, start_date=str(min_date), end_date=str(max_date)
+)
+
+
 st.header(f"Noon briefing of {selected_date.strftime('%A, %d %B %Y')}")
 
 if briefing.sections:
@@ -31,24 +36,43 @@ if briefing.sections:
 else:
     st.write("Noon briefing not available.")
 
+briefing_id = database.get_briefing_id_from_date(briefing.briefing_date)
+
+badge_color = {
+    "sdg": "orange",
+    "issue": "blue",
+}
+
 for i, section in enumerate(briefing.sections, start=1):
     # Trusting that enumerate can be used to determine the section_id
+    section_id = briefing_id * 100 + i
+
     with st.expander(f"**{section.title}**"):
         st.markdown(section.text.replace("\n", "\n\n"))
 
         sdgs = database.get_sdg_by_section_id(
             conn=conn,
-            section_id=database.get_briefing_id_from_date(briefing.briefing_date) * 100 + i,
+            section_id=section_id,
         )
         if sdgs:
             sdg_icons = []
             sdg_names = ""
             for sdg in sdgs:
-                sdg_names += f":orange-badge[{sdg}] "
+                sdg_names += f":{badge_color["sdg"]}-badge[{sdg}] "
 
                 # SDG icons obtained from https://design-system.fao.org/styles/sdg-icons/
                 sdg_icons.append(
                     APP_DIR / "static" / "sdg" / f'sdg{sdg.replace("SDG", "").zfill(2)}-en.svg'
                 )
             # st.markdown(sdg_names) # display text badges
-            st.image(sdg_icons, width=60)  # display small icons
+            with st.container(horizontal=True, gap="xxsmall"):
+                for icon in sdg_icons:
+                    st.image(icon, width=60, link="/SDG_Mentions")  # display small icons
+
+        relevant_issues = issues.loc[issues["section_id"] == section_id, "issue"].tolist()
+        if relevant_issues:
+            issue_badges = " ".join(
+                f"[:{badge_color["issue"]}-badge[{issue}]](/Issue_Proportion)"
+                for issue in relevant_issues
+            )
+            st.markdown(issue_badges)
