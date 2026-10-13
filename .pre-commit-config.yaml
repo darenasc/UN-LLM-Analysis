@@ -6,20 +6,23 @@ repos:
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
+        exclude: ^un_llm_analysis/sentiment_tone_analysis\.py$
       - id: trailing-whitespace
 
   - repo: https://github.com/PyCQA/isort
     rev: 8.0.1
     hooks:
       - id: isort
+        exclude: ^un_llm_analysis/sentiment_tone_analysis\.py$
 
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 26.5.1
     hooks:
       - id: black
+        exclude: ^un_llm_analysis/sentiment_tone_analysis\.py$
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.3
     hooks:
       - id: codespell
-        args: ["--skip=notebooks/josmy/UN_Sentiment_Tone_Visualization_Complete.ipynb"]
+        args: ["--skip=notebooks/josmy/sentiment_tone_visualization.ipynb"]
