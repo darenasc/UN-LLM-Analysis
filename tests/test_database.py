@@ -23,6 +23,9 @@ from un_llm_analysis.database import (
     get_db_connection,
     get_issues_between_dates,
     get_min_max_dates,
+    get_min_max_dates_with_sdg,
+    get_sdg_by_section_id,
+    get_sdg_models,
     get_sdgs_between_dates,
     get_section_by_section_id,
     get_sections_by_briefing_id,
@@ -40,7 +43,6 @@ from un_llm_analysis.database import (
 from un_llm_analysis.extractor import (
     ExtractedBriefing,
     ExtractedSection,
-    extract_briefing,
 )
 
 
@@ -73,21 +75,6 @@ def test_get_db_connection(tmp_path):
     conn_test.close()
 
 
-@pytest.fixture(scope="function")
-def conn():
-    """Fixture serving an in-memory database connection."""
-    conn_fixture = get_db_connection(":memory:")
-    conn_fixture.execute("PRAGMA foreign_keys = ON")
-    conn_fixture.row_factory = sqlite3.Row
-
-    sql_schema = Path(SCHEMA_DB).read_text(encoding="utf-8")
-    conn_fixture.executescript(sql_schema)
-
-    yield conn_fixture
-
-    conn_fixture.close()
-
-
 @pytest.mark.parametrize(
     "date,expected",
     [
@@ -105,14 +92,6 @@ def test__get_briefing_id_from_date(date, expected):
 
     # THEN eval the transformation into integer YYYYMMDD
     assert briefing_id == expected
-
-
-@pytest.fixture()
-def briefing():
-    """Fixture with an ExtractedBriefing."""
-    return extract_briefing(
-        file_path=Path("tests/fixtures/briefings/2026/2026-08/2026-08-25.json")
-    )
 
 
 def test_insert_into_briefing(briefing, conn):
@@ -459,6 +438,73 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
     )
     result_df = get_sdgs_between_dates(conn=conn, start_date=created_at, end_date=created_at)
     assert result_df.shape[0] > 0
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,sdgs,model,created_at",
+    [
+        (20260801, 2026080101, "['SDG1', 'SDG2']", "llama3.2", "2026-08-01"),
+        (20260801, 2026080102, "['SDG3', 'SDG4']", "llama3.2", "2026-08-01"),
+    ],
+)
+def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+    """Test retrieving min and max dates with SDG mentions."""
+    insert_into_sdg(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        sdgs=sdgs,
+        model=model,
+        created_at=created_at,
+    )
+    min_sdg_date, max_sdg_date = get_min_max_dates_with_sdg(conn=conn)
+    assert min_sdg_date == "2026-08-01"
+    assert max_sdg_date == "2026-08-01"
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,sdgs,model,created_at, expected",
+    [
+        (20260801, 2026080101, ["SDG1", "SDG2"], "llama3.2", "2026-08-01", ["SDG1", "SDG2"]),
+        (20260801, 2026080102, ["SDG3", "SDG4"], "llama3.2", "2026-08-01", ["SDG3", "SDG4"]),
+        # (20260801, 2026080101, "['SDG1', 'SDG2']", "llama3.2", "2026-08-01", ["SDG1", "SDG2"]),
+        # (20260801, 2026080102, "['SDG3', 'SDG4']", "llama3.2", "2026-08-01", ["SDG3", "SDG4"]),
+    ],
+)
+def test_get_sdg_by_section_id(conn, briefing_id, section_id, sdgs, model, created_at, expected):
+    """Test retrieving SDG list from sdg table."""
+    insert_into_sdg(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        sdgs=sdgs,
+        model=model,
+        created_at=created_at,
+    )
+    result = get_sdg_by_section_id(conn=conn, section_id=section_id, model=model)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,sdgs,model,created_at,expected",
+    [
+        (20260801, 2026080101, ["SDG1", "SDG2"], "llama3.2", "2026-08-01", "llama3.2"),
+        (20260801, 2026080102, ["SDG3", "SDG4"], "mistral", "2026-08-01", "mistral"),
+    ],
+)
+def test_get_sdg_models(conn, briefing_id, section_id, sdgs, model, created_at, expected):
+    """Test retrieving a list of LLM models from the sdg table."""
+    insert_into_sdg(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        sdgs=sdgs,
+        model=model,
+        created_at=created_at,
+    )
+    result = get_sdg_models(conn=conn)
+    assert isinstance(result, list)
+    assert expected in result
 
 
 @pytest.mark.parametrize(

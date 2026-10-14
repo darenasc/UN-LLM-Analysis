@@ -364,9 +364,9 @@ def test_build_parser():
         == "Download, check and (database) load and query UN noon briefing data."
     )
 
-    # Test init command
-    args = parser.parse_args(["init"])
-    assert args.command == "init"
+    # Test init-db command
+    args = parser.parse_args(["init-db"])
+    assert args.command == "init-db"
 
     # Test load command
     args = parser.parse_args(["load", "2023-01-01"])

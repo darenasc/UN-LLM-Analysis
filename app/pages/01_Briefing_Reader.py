@@ -2,6 +2,7 @@ from logos import CORRELAID_LOGO
 import streamlit as st
 
 from un_llm_analysis import database
+from un_llm_analysis.config import APP_DIR
 
 st.logo(
     CORRELAID_LOGO,
@@ -30,6 +31,24 @@ if briefing.sections:
 else:
     st.write("Noon briefing not available.")
 
-for section in briefing.sections:
+for i, section in enumerate(briefing.sections, start=1):
+    # Trusting that enumerate can be used to determine the section_id
     with st.expander(f"**{section.title}**"):
         st.markdown(section.text.replace("\n", "\n\n"))
+
+        sdgs = database.get_sdg_by_section_id(
+            conn=conn,
+            section_id=database.get_briefing_id_from_date(briefing.briefing_date) * 100 + i,
+        )
+        if sdgs:
+            sdg_icons = []
+            sdg_names = ""
+            for sdg in sdgs:
+                sdg_names += f":orange-badge[{sdg}] "
+
+                # SDG icons obtained from https://design-system.fao.org/styles/sdg-icons/
+                sdg_icons.append(
+                    APP_DIR / "static" / "sdg" / f'sdg{sdg.replace("SDG", "").zfill(2)}-en.svg'
+                )
+            # st.markdown(sdg_names) # display text badges
+            st.image(sdg_icons, width=60)  # display small icons
