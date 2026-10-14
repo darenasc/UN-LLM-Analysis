@@ -311,6 +311,9 @@ def get_briefings_between_dates(
                 full_text=row["full_text"],
             )
             briefings.append(briefing)
+        logger.info(
+            f"{len(briefings):,} briefings obtained between '{start_date}' and '{end_date}'"
+        )
         return briefings
     else:
         return None

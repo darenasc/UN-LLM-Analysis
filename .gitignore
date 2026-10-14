@@ -216,3 +216,4 @@ mlflow.db
 
 # Database
 app/briefings.db
+!app/static/wikipedia_country_data.csv
