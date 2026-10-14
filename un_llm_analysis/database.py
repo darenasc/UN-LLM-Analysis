@@ -2,6 +2,7 @@ import ast
 from datetime import date, datetime
 from pathlib import Path
 import sqlite3
+from typing import Any
 
 from loguru import logger
 import pandas as pd
@@ -534,7 +535,7 @@ def insert_into_sdg(
     conn: sqlite3.Connection,
     briefing_id: int,
     section_id: int,
-    sdgs: str,
+    sdgs: list,
     model: str,
     created_at: str,
     verbose: bool = True,
@@ -550,9 +551,6 @@ def insert_into_sdg(
         created_at (str): Date of the processing.
         verbose (bool, optional): Show logging of the process. Defaults to True.
     """
-    parsed_sdgs = ast.literal_eval(sdgs)
-    if parsed_sdgs is None:
-        return
     sql_insert = """INSERT INTO sdg
                     (briefing_id, section_id, sdg, model, created_at)
                     VALUES(?, ?, ?, ?, ?);"""
@@ -560,7 +558,8 @@ def insert_into_sdg(
         delete_from_sdg(conn=conn, section_id=section_id, model=model, verbose=verbose)
 
         cursor = conn.cursor()
-        for sdg in parsed_sdgs:
+        for sdg in sdgs:
+            # for sdg in parsed_sdgs:
             cursor.execute(sql_insert, (briefing_id, section_id, sdg, model, created_at))
         conn.commit()
 
@@ -638,7 +637,74 @@ def get_sdgs_between_dates(
         return pd.DataFrame()
 
 
-# --- issue ---------------------------------------------
+def get_min_max_dates_with_sdg(conn: sqlite3.Connection) -> tuple[str, str]:
+    """Return min and max dates of briefing IDs with SDG mentions.
+    ('YYYY-MM-DD', 'YYYY-MM-DD')
+
+    Args:
+        conn (sqlite3.Connection): Connection to a database.
+
+    Returns:
+        tuple[str, str]: Min and max dates of briefings with SDG mentions in
+            the database.
+    """
+    query = """select min(briefing_id), max(briefing_id) from sdg;"""
+    min_sdg_date = ""
+    max_sdg_date = ""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        cursor.close()
+
+    if rows[0][0]:
+        min_sdg_date, max_sdg_date = datetime.strptime(str(rows[0][0]), "%Y%m%d").strftime(
+            "%Y-%m-%d"
+        ), datetime.strptime(str(rows[0][1]), "%Y%m%d").strftime("%Y-%m-%d")
+    return min_sdg_date, max_sdg_date
+
+
+def get_sdg_by_section_id(
+    conn: sqlite3.Connection, section_id: int, model: str = "llama3.2"
+) -> None | list[str]:
+    """Return a list of SDGs given a section_id.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Section id in the database.
+        model (str): Model used to extract SDGs from section.
+
+    Returns:
+        None | list[str]: List with SDGs or None.
+    """
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """select sdg from sdg where section_id = ? and model = ?;""", (section_id, model)
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+    if rows is None:
+        return None
+    else:
+        return [x[0] for x in rows]
+
+
+def get_sdg_models(conn: sqlite3.Connection | None = None):
+    """Returns a list of models used to generate SDG mentions."""
+    conn = conn or get_db_connection()
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute("select distinct model from sdg;")
+        rows = cursor.fetchall()
+        cursor.close()
+    if rows:
+        return [x[0] for x in rows]
+    else:
+        return ""
+
+
+# --- issue -------------------------------------------------------------------
 
 
 def insert_into_issue(

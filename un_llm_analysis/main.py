@@ -46,7 +46,7 @@ def _build_parser() -> argparse.ArgumentParser:
   %(prog)s update 2026-08-01 2026-08-12
   %(prog)s update --since 2026-08-01
   %(prog)s check 2026-08-12
-  %(prog)s init
+  %(prog)s init-db
   %(prog)s load 2026-08-01 2026-08-12
   %(prog)s load --since 2026-08-01
   %(prog)s query --date 2026-08-01
@@ -119,9 +119,9 @@ Scraped raw data location:
         "date", type=_parse_date, metavar="DATE", help="Date to check in YYYY-MM-DD format."
     )
 
-    # init command
+    # init-db command
     init_parser = subparsers.add_parser(
-        "init",
+        "init-db",
         help="Initialize the database from schema.",
         description="Create the database file and tables from the SQL schema.",
     )
@@ -307,7 +307,7 @@ def main() -> None:
         scrape_between_dates(start_date, end_date, overwrite=overwrite)
         logger.info("Update complete.")
 
-    elif args.command == "init":
+    elif args.command == "init-db":
         logger.info("Initializing database...")
         create_database()
         logger.info("Database initialized.")
