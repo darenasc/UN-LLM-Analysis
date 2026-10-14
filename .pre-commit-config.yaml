@@ -23,4 +23,9 @@ repos:
     hooks:
       - id: codespell
         name: "codespell (To apply suggested fixes, run: pipenv run codespell -w .)"
-        args: ["-C", "0", "--skip=app/static/wikipedia_country_data.csv"]
+        args:
+          [
+            "-C",
+            "0",
+            "--skip=app/static/wikipedia_country_data.csv,app/static/flags/*",
+          ]
