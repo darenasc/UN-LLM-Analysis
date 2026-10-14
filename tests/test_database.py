@@ -7,6 +7,8 @@ import pytest
 from un_llm_analysis import database as db_module
 from un_llm_analysis.config import SCHEMA_DB
 from un_llm_analysis.database import (
+    Briefing,
+    Section,
     create_database,
     delete_briefing,
     delete_from_issue,
@@ -27,7 +29,7 @@ from un_llm_analysis.database import (
     get_sdg_by_section_id,
     get_sdg_models,
     get_sdgs_between_dates,
-    get_section_by_section_id,
+    get_section_by_id,
     get_sections_by_briefing_id,
     insert_into_briefing,
     insert_into_issue,
@@ -122,16 +124,21 @@ def test_get_sections_by_briefing_id(briefing, conn):
     # GIVEN a database connection with data
     briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
     briefing_id_section = insert_into_section(
-        conn=conn, briefing_id=briefing_id, sections=briefing.sections, insert_all=True
+        conn=conn, briefing_id=briefing_id, sections=briefing.sections
     )
 
     # WHEN requesting the sections given a briefing_id
     sections = get_sections_by_briefing_id(conn=conn, briefing_id=briefing_id_section)
 
-    # THEN the sections are a tuple of ExtractedSection
+    # THEN the sections are a tuple of Section
     assert isinstance(sections, tuple)
-    assert isinstance(sections[0], ExtractedSection)
-    assert sections == briefing.sections
+    assert all(isinstance(section, Section) for section in sections)
+    assert (
+        tuple(ExtractedSection(title=section.title, text=section.text) for section in sections)
+        == briefing.sections
+    )
+
+    assert all(section.briefing_id == briefing_id for section in sections)
 
 
 def test_get_briefing_by_id(briefing, conn):
@@ -243,24 +250,10 @@ def test_insert_into_section_all(briefing, conn):
 
     # WHEN inserting data into section
     briefing_id_section = insert_into_section(
-        conn=conn, briefing_id=briefing_id, sections=briefing.sections, insert_all=True
+        conn=conn, briefing_id=briefing_id, sections=briefing.sections
     )
 
     # THEN
-    assert briefing_id == briefing_id_section
-
-
-def test_insert_into_section_record(briefing, conn):
-    """Test inserting a record by record."""
-    # GIVEN a database connection with data
-    briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
-
-    # WHEN insert a section into the section table
-    briefing_id_section = insert_into_section(
-        conn=conn, briefing_id=briefing_id, sections=briefing.sections, insert_all=False
-    )
-
-    # THEN the IDs of the briefing and section must be equal
     assert briefing_id == briefing_id_section
 
 
@@ -290,12 +283,12 @@ def test_insert_section(section_index, expected, briefing, conn):
     assert result_section_id == expected
 
 
-def test_get_section_by_section_id(briefing, conn):
+def test_get_section_by_id(briefing, conn):
     """Test get a section by the section_id"""
     # GIVEN a database connection with data in briefing and section
     briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
     briefing_id_section = insert_into_section(
-        conn=conn, briefing_id=briefing_id, sections=briefing.sections, insert_all=True
+        conn=conn, briefing_id=briefing_id, sections=briefing.sections
     )
     assert briefing_id == briefing_id_section
 
@@ -303,12 +296,19 @@ def test_get_section_by_section_id(briefing, conn):
         section_id = briefing_id * 100 + i
 
         # WHEN request a section from the database
-        result = get_section_by_section_id(conn=conn, section_id=section_id)
+        result = get_section_by_id(conn=conn, section_id=section_id)
 
-        # THEN the results are ExtractedSection
-        assert isinstance(result, ExtractedSection)
-        assert result == section
-        assert result.title == section.title
+        # THEN the result is the expected Section
+        expected = Section(
+            section_id=section_id,
+            title=section.title,
+            text=section.text,
+            briefing_id=briefing_id,
+            section_order=i,
+        )
+
+        assert isinstance(result, Section)
+        assert result == expected
 
 
 @pytest.mark.parametrize(
@@ -349,7 +349,7 @@ def test_delete_sections(briefing, conn):
     # GIVEN a database connection with data
     briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
     briefing_id_section = insert_into_section(
-        conn=conn, briefing_id=briefing_id, sections=briefing.sections, insert_all=False
+        conn=conn, briefing_id=briefing_id, sections=briefing.sections
     )
 
     # WHEN deleting the sections with the same briefing_id

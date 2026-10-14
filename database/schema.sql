@@ -2,6 +2,8 @@
 
 PRAGMA foreign_keys = ON;
 
+BEGIN TRANSACTION;
+
 CREATE TABLE IF NOT EXISTS briefing (
     briefing_id INTEGER PRIMARY KEY,
     briefing_date TEXT NOT NULL UNIQUE,
@@ -81,3 +83,5 @@ CREATE TABLE IF NOT EXISTS sentiment_analysis (
 
     UNIQUE (analysis_id, briefing_id, section_id)
 );
+
+COMMIT;
