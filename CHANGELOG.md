@@ -11,7 +11,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - #52 Sentiment & tone over time
 - #50 Proportionality of issues/topics
 - #47 Country mention heatmap
-
+## [1.2.0]
+### Added
+- Sentiment distribution  visualisation to show the number of sections classified as positive, neutral, or negative.
+- Tone distribution visualisation to show the frequency of different communication tones in UN briefings.
+- Sentiment and tone relationship visualisation to explore how sentiment categories relate to communication tones..
+- The sentiment graph shows whether positive, neutral, or negative classifications increase or decrease over time.
+- The tone graph shows how the frequency of communication tones changes each month.
+- A value of zero means no successful classifications for that category were recorded in that month.
 ## [1.0.1]
 
 ### Added
@@ -28,13 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `SDG_mentions_in_briefings.ipynb` notebook using the database module
 
-## [1.0.0]
-- Sentiment distribution  visualisation to show the number of sections classified as positive, neutral, or negative.
-- Tone distribution visualisation to show the frequency of different communication tones in UN briefings.
-- Sentiment and tone relationship visualisation to explore how sentiment categories relate to communication tones..
-- The sentiment graph shows whether positive, neutral, or negative classifications increase or decrease over time.
-- The tone graph shows how the frequency of communication tones changes each month.
-- A value of zero means no successful classifications for that category were recorded in that month.
+
 ### Features
 
 - Initial release of `un_llm_analysis`

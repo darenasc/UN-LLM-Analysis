@@ -25,4 +25,4 @@ repos:
     rev: v2.4.3
     hooks:
       - id: codespell
-        args: ["--skip=notebooks/josmy/sentiment_tone_visualization.ipynb"]
+        args: ["-C", "0", "--skip=notebooks/sentiment_tone_visualization.ipynb"]

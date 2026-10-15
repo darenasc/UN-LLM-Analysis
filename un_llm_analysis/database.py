@@ -1,3 +1,15 @@
+"""UN database module for persisting and querying UN briefing data.
+Provides access to five tables:
+Tables:
+    - `briefing`
+    - `section`
+    - `sdg`
+    - `analysis_run`
+    - `sentiment_analysis`
+Supports inserting, updating, and deleting briefings, sections, SDG mappings,
+analysis runs, and sentiment results via SQL or Python interfaces.
+"""
+
 import ast
 from datetime import date, datetime
 from pathlib import Path
@@ -27,7 +39,7 @@ def create_database(db_path: str | Path = BRIEFINGS_DB_PATH, schema_path: str | 
     with open(schema_path, "r", encoding="utf-8") as f:
         sql_schema = f.read()
 
-    with get_db_connection(str(db_path)) as conn:
+    with get_db_connection(db_path) as conn:
         conn.executescript(sql_schema)
 
         logger.info(f'Database created in "{db_path}"')
@@ -356,7 +368,7 @@ def insert_into_section(
     Args:
         briefing_id (int): ID of the parent briefing.
         sections (tuple[ExtractedSection, ...]): Sections from the briefing.
-        db_path (str | Path): Path to find the database.
+        conn (sqlite3.Connection): Open database connection.
         insert_all (bool): Whether or not to insert all the sections at once or
             one by one. Default to True.
     """
@@ -429,29 +441,6 @@ def insert_section(
     cursor.close()
 
     return section_id
-
-
-def get_section(conn: sqlite3.Connection, section_id: int) -> ExtractedSection | None:
-    """Retrieve section by ID.
-
-    Args:
-        conn (sqlite3.Connection): Open database connection.
-        section_id (int): Primary key of the section.
-
-    Returns:
-        sqlite3.Row | None: The matching row, or None if not found.
-    """
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-            SELECT section_id, title, "text"
-            FROM section
-            WHERE section_id = ?
-            """,
-        (section_id,),
-    )
-    rows = cursor.fetchone()
-    return ExtractedSection(rows["title"], rows["text"]) if rows else None
 
 
 def get_section_by_section_id(
