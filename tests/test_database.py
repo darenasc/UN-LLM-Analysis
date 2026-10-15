@@ -38,8 +38,8 @@ from un_llm_analysis.database import (
     insert_section,
     load_briefing_to_db,
     load_briefings_between_dates,
-    query_by_date,
-    query_by_status,
+    query_briefing_by_date,
+    query_briefing_by_status,
     show_stats,
 )
 from un_llm_analysis.extractor import (
@@ -702,10 +702,10 @@ def test_load_briefings_between_dates(start_date, end_date, expected, monkeypatc
         (date(2026, 8, 25), "Briefing found for 2026-08-25"),
     ],
 )
-def test_query_by_date(input_date, expected, conn, briefing, caplog):
-    """Test query_by_date runs without error when no briefing exists."""
+def test_query_briefing_by_date(input_date, expected, conn, briefing, caplog):
+    """Test query_briefing_by_date runs without error when no briefing exists."""
     insert_into_briefing(conn=conn, briefing=briefing)
-    query_by_date(conn=conn, query_date=input_date)
+    query_briefing_by_date(conn=conn, query_date=input_date)
     assert expected in caplog.text
 
 
@@ -718,17 +718,17 @@ def test_query_by_date(input_date, expected, conn, briefing, caplog):
         ("failed", "Found 0 briefings with status 'failed'"),
     ],
 )
-def test_query_by_status_specific(status, expected, conn, briefing, caplog):
-    """Test query_by_status filters correctly by a specific status."""
+def test_query_briefing_by_status_specific(status, expected, conn, briefing, caplog):
+    """Test query_briefing_by_status filters correctly by a specific status."""
     insert_into_briefing(conn=conn, briefing=briefing)
-    query_by_status(conn=conn, status=status)
+    query_briefing_by_status(conn=conn, status=status)
     assert expected in caplog.text
 
 
-def test_query_by_status_all(conn, briefing, caplog):
-    """Test query_by_status returns all briefings when status='all'."""
+def test_query_briefing_by_status_all(conn, briefing, caplog):
+    """Test query_briefing_by_status returns all briefings when status='all'."""
     _ = insert_into_briefing(conn=conn, briefing=briefing)
-    query_by_status(conn=conn, status="all")  # type: ignore
+    query_briefing_by_status(conn=conn, status="all")  # type: ignore
     assert "Found 1 briefings with status 'all'" in caplog.text
     assert "2026-08-25" in caplog.text
 

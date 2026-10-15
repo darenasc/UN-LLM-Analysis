@@ -915,7 +915,7 @@ def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str
     return failed_dates
 
 
-def query_by_date(query_date: date, conn: sqlite3.Connection) -> None:
+def query_briefing_by_date(query_date: date, conn: sqlite3.Connection) -> None:
     """Query and display a briefing by date.
 
     Args:
@@ -935,7 +935,9 @@ def query_by_date(query_date: date, conn: sqlite3.Connection) -> None:
         logger.info(f"No briefing found for {query_date}")
 
 
-def query_by_status(status: FetchStatus | Literal["all"], conn: sqlite3.Connection) -> None:
+def query_briefing_by_status(
+    status: FetchStatus | Literal["all"], conn: sqlite3.Connection
+) -> None:
     """Query and display briefings by status.
 
     Args:

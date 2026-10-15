@@ -24,8 +24,8 @@ from un_llm_analysis.database import (
     create_database,
     get_db_connection,
     load_briefings_between_dates,
-    query_by_date,
-    query_by_status,
+    query_briefing_by_date,
+    query_briefing_by_status,
     show_stats,
 )
 from un_llm_analysis.scraper import (
@@ -326,9 +326,9 @@ def main() -> None:
 
     elif args.command == "query":
         if args.date:
-            query_by_date(args.date, conn=get_db_connection())
+            query_briefing_by_date(args.date, conn=get_db_connection())
         else:
-            query_by_status(args.status, conn=get_db_connection())
+            query_briefing_by_status(args.status, conn=get_db_connection())
 
     elif args.command == "stats":
         show_stats(conn=get_db_connection())
