@@ -1214,6 +1214,103 @@ def get_countries_by_section_id(
         return [x[0] for x in rows]
 
 
+def check_country_section_exists(
+    conn: sqlite3.Connection, section_id: int, iso_2: str, model: str
+) -> bool:
+    query_select = """SELECT briefing_id, section_id, country, iso_2, iso_3, model
+                    FROM country
+                    WHERE section_id = ?
+                        AND iso_2 = ?
+                        AND model = ?;"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query_select, (section_id, iso_2, model))
+        rows = cursor.fetchall()
+        cursor.close()
+
+    if rows:
+        return True
+    else:
+        return False
+
+
+def _check_country_section_exists(conn: sqlite3.Connection, section_id: int, model: str) -> bool:
+    query_select = """SELECT briefing_id, section_id, country, iso_2, iso_3, model
+                    FROM country
+                    WHERE section_id = ?
+                        AND model = ?;"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query_select, (section_id, model))
+        rows = cursor.fetchall()
+        cursor.close()
+
+    if rows:
+        return True
+    else:
+        return False
+
+
+def check_country_briefing_exists(conn: sqlite3.Connection, briefing_id: int, model: str) -> bool:
+    query_select = """SELECT briefing_id, section_id, country, iso_2, iso_3, model
+                    FROM country
+                    WHERE briefing_id = ?
+                        AND model = ?;"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query_select, (briefing_id, model))
+        rows = cursor.fetchall()
+        cursor.close()
+
+    if rows:
+        return True
+    else:
+        return False
+
+
+def get_country_mentions(conn: sqlite3.Connection, section_id: int, model: str):
+    query_select = """SELECT briefing_id, section_id, country, iso_2, iso_3, model
+                    FROM country
+                    WHERE section_id = ?
+                        AND model = ?;"""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query_select, (section_id, model))
+        rows = cursor.fetchall()
+        cursor.close()
+
+    if rows:
+        return rows
+    else:
+        return None
+
+
+def insert_into_country(
+    conn: sqlite3.Connection,
+    briefing_id: int,
+    section_id: int,
+    country: str,
+    iso_2: str,
+    iso_3: str,
+    model: str,
+    created_at,
+    overwtite: bool = False,
+):
+    query_insert = """INSERT INTO country
+                (briefing_id, section_id, country, iso_2, iso_3, model, created_at)
+                VALUES(?, ?, ?, ?, ?, ?, ?);"""
+    query_delete = """DELETE FROM country WHERE section_id = ? AND iso_2 = ? AND model = ?"""
+
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query_delete, (section_id, iso_2, model))
+
+        cursor.execute(
+            query_insert, (briefing_id, section_id, country, iso_2, iso_3, model, created_at)
+        )
+        cursor.close()
+
+
 def show_stats(conn: sqlite3.Connection | None = None) -> None:
     """Display database statistics.
 
