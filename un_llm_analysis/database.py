@@ -1187,6 +1187,33 @@ def get_country_models(conn: sqlite3.Connection | None = None):
         return ""
 
 
+def get_countries_by_section_id(
+    conn: sqlite3.Connection, section_id: int, model: str = "qwen3.5:4b"
+) -> None | list[str]:
+    """Return a list of countries given a section_id.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Section id in the database.
+        model (str): Model used to extract SDGs from section.
+
+    Returns:
+        None | list[str]: List with countries or None.
+    """
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """select iso_2 from country where section_id = ? and model = ?;""",
+            (section_id, model),
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+    if rows is None:
+        return None
+    else:
+        return [x[0] for x in rows]
+
+
 def show_stats(conn: sqlite3.Connection | None = None) -> None:
     """Display database statistics.
 

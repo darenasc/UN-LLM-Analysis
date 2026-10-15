@@ -52,3 +52,14 @@ for i, section in enumerate(briefing.sections, start=1):
                 )
             # st.markdown(sdg_names) # display text badges
             st.image(sdg_icons, width=60)  # display small icons
+
+        countries = database.get_countries_by_section_id(
+            conn=conn,
+            section_id=database.get_briefing_id_from_date(briefing.briefing_date) * 100 + i,
+        )
+        if countries:
+            with st.container(horizontal=True, gap="xxsmall"):
+                for country_code in countries:
+                    st.image(
+                        APP_DIR / "static" / "flags" / f"{country_code.lower()}.svg", width=60
+                    )
