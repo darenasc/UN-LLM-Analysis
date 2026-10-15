@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - #50 Proportionality of issues/topics
 - #47 Country mention heatmap
 
+## [2.0.1]
+
+### Added
+
+- New function `get_sections_between_dates`
+
 ## [2.0.0]
 
 ### Added
