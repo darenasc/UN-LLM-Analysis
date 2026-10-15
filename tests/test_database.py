@@ -30,6 +30,7 @@ from un_llm_analysis.database import (
     get_sdg_models,
     get_sdgs_between_dates,
     get_section_by_id,
+    get_sections_between_dates,
     get_sections_by_briefing_id,
     insert_into_briefing,
     insert_into_issue,
@@ -309,6 +310,22 @@ def test_get_section_by_id(briefing, conn):
 
         assert isinstance(result, Section)
         assert result == expected
+
+
+def test_get_sections_between_dates(conn, briefing):
+    """Test retrieving sections between dates."""
+    # GIVEN a database with data
+    briefing_id = insert_into_briefing(conn=conn, briefing=briefing)
+    _ = insert_into_section(conn, briefing_id, briefing.sections)
+
+    # WHEN get_sections_between_dates is run
+    result = get_sections_between_dates(
+        conn=conn, start_date=briefing.briefing_date, end_date=briefing.briefing_date
+    )
+
+    # THEN the result contains the same number of Section's
+    assert len(result) == len(briefing.sections)
+    assert all(isinstance(x, Section) for x in result)
 
 
 @pytest.mark.parametrize(

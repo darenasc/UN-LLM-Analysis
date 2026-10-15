@@ -304,21 +304,13 @@ def get_briefings_between_dates(
         bounds,
     ).fetchall()
 
-    section_rows = conn.execute(
-        f"""
-        SELECT {_SECTION_COLUMNS} FROM section
-        WHERE briefing_id BETWEEN ? AND ?
-        ORDER BY section_id
-        """,
-        bounds,
-    ).fetchall()
+    sections = get_sections_between_dates(conn=conn, start_date=start_date, end_date=end_date)
 
     sections_by_briefing: dict[int, list[Section]] = {
         row["briefing_id"]: [] for row in briefing_rows
     }
 
-    for row in section_rows:
-        section = _row_to_section(row)
+    for section in sections:
         sections_by_briefing[section.briefing_id].append(section)
 
     return [
@@ -462,6 +454,35 @@ def get_section_by_id(conn: sqlite3.Connection, section_id: int) -> Section | No
     ).fetchone()
 
     return _row_to_section(row) if row else None
+
+
+def get_sections_between_dates(
+    conn: sqlite3.Connection,
+    start_date: str,
+    end_date: str,
+) -> list[Section]:
+    """Retrieve sections between two dates.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date with format 'YYYY-MM-DD'.
+        end_date (str): End date with format 'YYYY-MM-DD'.
+
+    Returns:
+        list[Section]: Matching sections, or an empty list if none are found.
+    """
+    bounds = get_min_max_briefing_ids_from_dates(start_date, end_date)
+
+    rows = conn.execute(
+        f"""
+        SELECT {_SECTION_COLUMNS} FROM section
+        WHERE briefing_id BETWEEN ? AND ?
+        ORDER BY section_id;
+        """,
+        bounds,
+    ).fetchall()
+
+    return [_row_to_section(row) for row in rows]
 
 
 def delete_section(conn: sqlite3.Connection, section_id: int) -> bool:
