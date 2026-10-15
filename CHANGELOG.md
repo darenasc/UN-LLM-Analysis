@@ -12,6 +12,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - #50 Proportionality of issues/topics
 - #47 Country mention heatmap
 
+## [2.0.0]
+
+### Added
+
+- Introduce `Section` and `Briefing` dataclasses extending `ExtractedSection` and `ExtractedBriefing` to expose all database fields, including IDs.
+- Add generalized `get_min_max_dates_with_table` and `get_models` functions, retaining the previous table-specific functions as wrappers.
+
+### Changed
+
+- **Breaking:** Require an explicit database connection for functions accepting `conn`.
+- **Breaking:** Rename `query_by_date` to `query_briefing_by_date`, `query_by_status` to `query_briefing_by_status`, and `get_section_by_section_id` to `get_section_by_id`.
+- Limit transaction management to `create_database`, `load_briefing_to_db`, `insert_into_sdg`, and `insert_into_issue`.
+- Simplify database queries by replacing most explicit cursor calls with `conn.execute()`.
+
+### Removed
+
+- **Breaking:** Remove the `insert_all` parameter from `insert_into_briefing`.
+
 ## [1.0.1]
 
 ### Added
