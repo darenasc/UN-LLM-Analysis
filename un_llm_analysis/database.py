@@ -20,6 +20,7 @@ from typing import Any
 
 from loguru import logger
 import pandas as pd
+import pendulum
 
 from un_llm_analysis.config import BRIEFINGS_DB_PATH, BRIEFINGS_DIR, SCHEMA_DB
 from un_llm_analysis.extractor import (
@@ -1100,6 +1101,90 @@ def get_dates_with_briefings(
 
     briefing_dates = [datetime.strptime(str(x[0]), "%Y%m%d").strftime("%Y-%m-%d") for x in rows]
     return briefing_dates
+
+
+# --- country mentions
+
+
+def get_country_mentions_by_date(
+    conn: sqlite3.Connection, model: str, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """Return country mentions in the sections filtering by date.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        model (str): Model used.
+        start_date (str): Start date in format 'YYYY-MM-DD'.
+        end_date (str): End date in format 'YYYY-MM-DD'.
+
+    Returns:
+        pd.DataFrame: Data with country mentions.
+    """
+    start_briefing_id = pendulum.from_format(start_date, "YYYY-MM-DD").format("YYYYMMDD")
+    end_briefing_id = pendulum.from_format(end_date, "YYYY-MM-DD").format("YYYYMMDD")
+
+    query = f"""select briefing_id, section_id, country, iso_2, iso_3, model
+                from country where model = '{model}'
+                and briefing_id between {start_briefing_id} and {end_briefing_id};"""
+
+    df_country = pd.read_sql(query, conn)
+
+    df_country["date"] = df_country["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").format("YYYY-MM-DD")
+    )
+    df_country["week"] = df_country["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of("week").format("YYYY-MM-DD")
+    )
+    df_country["month"] = df_country["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of("month").format("YYYY-MM-DD")
+    )
+    df_country["year"] = df_country["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of("year").format("YYYY-MM-DD")
+    )
+    return df_country
+
+
+def get_min_max_dates_with_country(conn: sqlite3.Connection) -> tuple[str, str]:
+    """Return min and max dates of briefing IDs with country mentions.
+    ('YYYY-MM-DD', 'YYYY-MM-DD')
+
+    Args:
+        conn (sqlite3.Connection): Connection to a database.
+
+    Returns:
+        tuple[str, str]: Min and max dates of briefings with country mentions in
+            the database.
+    """
+    # Until merging PR 115
+    query = """select min(briefing_id), max(briefing_id) from country;"""
+    min_sdg_date = ""
+    max_sdg_date = ""
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        cursor.close()
+
+    if rows[0][0]:
+        min_sdg_date, max_sdg_date = datetime.strptime(str(rows[0][0]), "%Y%m%d").strftime(
+            "%Y-%m-%d"
+        ), datetime.strptime(str(rows[0][1]), "%Y%m%d").strftime("%Y-%m-%d")
+    return min_sdg_date, max_sdg_date
+
+
+def get_country_models(conn: sqlite3.Connection | None = None):
+    """Returns a list of models used to generate country mentions."""
+    # Until PR 115 is merged
+    conn = conn or get_db_connection()
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute("select distinct model from country;")
+        rows = cursor.fetchall()
+        cursor.close()
+    if rows:
+        return [x[0] for x in rows]
+    else:
+        return ""
 
 
 def show_stats(conn: sqlite3.Connection | None = None) -> None:

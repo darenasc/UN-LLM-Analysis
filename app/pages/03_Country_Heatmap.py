@@ -1,18 +1,16 @@
-from datetime import datetime
-from pathlib import Path
+from datetime import date
 
-import geopandas as gpd  # type: ignore
 from logos import CORRELAID_LOGO  # type: ignore
-import pandas as pd
-import plotly.express as px  # type: ignore
 import streamlit as st
 from streamlit_folium import st_folium  # type: ignore
 
+from un_llm_analysis.analysis.countries import create_heatmap, get_country_polygons
 from un_llm_analysis.database import (
+    get_briefing_id_from_date,
+    get_country_mentions_by_date,
+    get_country_models,
     get_db_connection,
-    get_min_max_dates_with_sdg,
-    get_sdg_models,
-    get_sdgs_between_dates,
+    get_min_max_dates_with_country,
 )
 
 st.logo(
@@ -21,45 +19,66 @@ st.logo(
     size="large",
 )
 
-st.title("Country Heatmap")
+st.title("Country Mentions")
 
 
-@st.cache_data
-def get_geo_data():
-    file_path = Path(
-        "/Users/darenasc/projects/correlaid/correlaid-mentoring-project/app/static/ne_110m_admin_0_countries.zip"
-    )
-    geo_data = gpd.read_file(file_path)
-    return geo_data
+conn = get_db_connection()
+min_date, max_date = get_min_max_dates_with_country(conn=conn)
+if min_date == "" and max_date == "":
+    st.warning("No country mention data.")
 
+st.sidebar.caption(f"Suggested SDG date range between: `{min_date}` and `{max_date}`")
+start_date = st.sidebar.date_input("Start date", min_date or date.today())
+end_date = st.sidebar.date_input("End date", max_date or date.today())
 
-@st.cache_data
-def get_country_mentions():
-    conn = get_db_connection()
-    query = """select briefing_id, section_id, country, iso_2, iso_3, model from country;"""
-    with conn:
-        cursor = conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        column_names = [x[0] for x in cursor.description]
-        cursor.close()
-
-    df_country = pd.DataFrame(rows, columns=column_names)
-    return df_country
-
-
-geo_data = get_geo_data()
-df_country = get_country_mentions()
-
-gdf_map = geo_data[["ADM0_A3", "geometry"]].merge(
-    df_country[["iso_3"]].value_counts().reset_index(),
-    how="right",
-    left_on="ADM0_A3",
-    right_on="iso_3",
+models = get_country_models(conn=conn)
+model_choice = st.sidebar.selectbox(
+    "Model",
+    models,
 )
 
+heatmap_level = st.sidebar.pills(
+    "Heatmap by", options=["date", "week", "month", "year"], default="month"
+)
 
-m = gdf_map.explore(column="count")
+df_country = get_country_mentions_by_date(
+    conn=conn, model=model_choice, start_date=min_date, end_date=max_date
+)
+countries = sorted(
+    df_country[
+        (df_country["briefing_id"] >= get_briefing_id_from_date(str(start_date)))
+        & (df_country["briefing_id"] <= get_briefing_id_from_date(str(end_date)))
+    ]["country"].unique()
+)
+country_selection = st.sidebar.multiselect(
+    "Countries", countries, default=countries, select_all=True
+)
+
+gdf_map = get_country_polygons(
+    df_country[
+        (df_country["briefing_id"] >= get_briefing_id_from_date(str(start_date)))
+        & (df_country["briefing_id"] <= get_briefing_id_from_date(str(end_date)))
+        & (df_country["country"].isin(country_selection))
+    ]
+)
+
+m = gdf_map.explore(column="Mentions", tooltip=["NAME", "Mentions"])  # type: ignore
 container_map = st.container(border=True)
 with container_map:
     st_folium(m, use_container_width=True, height=350)
+    st.caption(
+        f"Country mentions data between {date.fromisoformat(str(df_country.briefing_id.min())).isoformat()} and {date.fromisoformat(str(df_country.briefing_id.max())).isoformat()}"
+    )
+
+fig_heatmap = create_heatmap(
+    df_country=df_country[
+        (df_country["briefing_id"] >= get_briefing_id_from_date(str(start_date)))
+        & (df_country["briefing_id"] <= get_briefing_id_from_date(str(end_date)))
+        & (df_country["country"].isin(country_selection))
+    ],
+    level=heatmap_level,  # type: ignore
+)
+st.plotly_chart(
+    fig_heatmap,
+    width="content",
+)

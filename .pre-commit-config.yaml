@@ -27,5 +27,5 @@ repos:
           [
             "-C",
             "0",
-            "--skip=app/static/wikipedia_country_data.csv,app/static/flags/*",
+            "--skip=app/static/wikipedia_country_data.csv,app/static/flags/*,notebooks/Country_mentions.ipynb",
           ]
