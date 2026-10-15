@@ -8,9 +8,9 @@ from un_llm_analysis.analysis.countries import create_heatmap, get_country_polyg
 from un_llm_analysis.database import (
     get_briefing_id_from_date,
     get_country_mentions_by_date,
-    get_country_models,
     get_db_connection,
-    get_min_max_dates_with_country,
+    get_min_max_dates_with_table,
+    get_models,
 )
 
 st.logo(
@@ -23,7 +23,7 @@ st.title("Country Mentions")
 
 
 conn = get_db_connection()
-min_date, max_date = get_min_max_dates_with_country(conn=conn)
+min_date, max_date = get_min_max_dates_with_table(conn=conn, table="country")
 if min_date == "" and max_date == "":
     st.warning("No country mention data.")
 
@@ -31,7 +31,7 @@ st.sidebar.caption(f"Suggested SDG date range between: `{min_date}` and `{max_da
 start_date = st.sidebar.date_input("Start date", min_date or date.today())
 end_date = st.sidebar.date_input("End date", max_date or date.today())
 
-models = get_country_models(conn=conn)
+models = get_models(conn=conn, table="country")
 model_choice = st.sidebar.selectbox(
     "Model",
     models,

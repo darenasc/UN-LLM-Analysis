@@ -25,13 +25,14 @@ from un_llm_analysis.database import (
     get_db_connection,
     get_issues_between_dates,
     get_min_max_dates,
-    get_min_max_dates_with_sdg,
+    get_min_max_dates_with_table,
+    get_models,
     get_sdg_by_section_id,
-    get_sdg_models,
     get_sdgs_between_dates,
     get_section_by_id,
     get_sections_by_briefing_id,
     insert_into_briefing,
+    insert_into_country,
     insert_into_issue,
     insert_into_sdg,
     insert_into_section,
@@ -449,6 +450,7 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
 )
 def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
     """Test retrieving min and max dates with SDG mentions."""
+    table = "sdg"
     insert_into_sdg(
         conn=conn,
         briefing_id=briefing_id,
@@ -457,7 +459,34 @@ def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, 
         model=model,
         created_at=created_at,
     )
-    min_sdg_date, max_sdg_date = get_min_max_dates_with_sdg(conn=conn)
+    min_sdg_date, max_sdg_date = get_min_max_dates_with_table(conn=conn, table=table)
+    assert min_sdg_date == "2026-08-01"
+    assert max_sdg_date == "2026-08-01"
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,country,iso_2,iso_3,model,created_at",
+    [
+        (20260801, 2026080101, "Chile", "CL", "CHL", "qwen3.5:4b", "2026-08-01"),
+        (20260801, 2026080102, "Germany", "DE", "DEU", "qwen3.5:4b", "2026-08-01"),
+    ],
+)
+def test_get_min_max_dates_with_country(
+    conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at
+):
+    """Test retrieving min and max dates with country mentions."""
+    table = "country"
+    insert_into_country(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        country=country,
+        iso_2=iso_2,
+        iso_3=iso_3,
+        model=model,
+        created_at=created_at,
+    )
+    min_sdg_date, max_sdg_date = get_min_max_dates_with_table(conn=conn, table=table)
     assert min_sdg_date == "2026-08-01"
     assert max_sdg_date == "2026-08-01"
 
@@ -502,7 +531,7 @@ def test_get_sdg_models(conn, briefing_id, section_id, sdgs, model, created_at, 
         model=model,
         created_at=created_at,
     )
-    result = get_sdg_models(conn=conn)
+    result = get_models(conn=conn, table="sdg")
     assert isinstance(result, list)
     assert expected in result
 

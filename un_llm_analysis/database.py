@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 import sqlite3
-from typing import Literal
+from typing import Literal, get_args
 
 from loguru import logger
 import pandas as pd
@@ -36,7 +36,7 @@ from un_llm_analysis.utils import (
     date_int_to_str,
 )
 
-AnalysisTableName = Literal["sdg", "issue"]
+AnalysisTableName = Literal["sdg", "issue", "country"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -322,6 +322,9 @@ def get_briefings_between_dates(
         section = _row_to_section(row)
         sections_by_briefing[section.briefing_id].append(section)
 
+    logger.info(
+        f"{len(briefing_rows):,} briefings obtained between '{start_date}' and '{end_date}'"
+    )
     return [
         _row_to_briefing(
             row,
@@ -608,7 +611,7 @@ def get_min_max_dates_with_table(
         tuple[str, str]: Dates in YYYY-MM-DD format.
             Returns ("", "") if the table is empty.
     """
-    if table not in ("sdg", "issue"):
+    if table not in get_args(AnalysisTableName):
         raise ValueError(f"Unsupported table: {table}")
 
     query = f"SELECT MIN(briefing_id), MAX(briefing_id) FROM {table}"
@@ -618,11 +621,6 @@ def get_min_max_dates_with_table(
         return "", ""
 
     return date_int_to_str(min_id), date_int_to_str(max_id)
-
-
-def get_min_max_dates_with_sdg(conn: sqlite3.Connection) -> tuple[str, str]:
-    """Wrapper for get_min_max_dates_with_table() using the SDG table."""
-    return get_min_max_dates_with_table(conn, table="sdg")
 
 
 def get_sdg_by_section_id(
@@ -657,7 +655,7 @@ def get_models(conn: sqlite3.Connection, table: AnalysisTableName) -> list[str]:
         table (AnalysisTableName): The analysis table to query.
     """
 
-    if table not in ("sdg", "issue"):
+    if table not in get_args(AnalysisTableName):
         raise ValueError(f"Unsupported table: {table}")
 
     rows = conn.execute(f"SELECT DISTINCT model FROM {table} ORDER BY model").fetchall()
@@ -665,11 +663,6 @@ def get_models(conn: sqlite3.Connection, table: AnalysisTableName) -> list[str]:
     models = [x["model"] for x in rows]
 
     return models
-
-
-def get_sdg_models(conn: sqlite3.Connection) -> list[str]:
-    """Returns a list of models used to generate SDG mentions."""
-    return get_models(conn, table="sdg")
 
 
 # --- issue -------------------------------------------------------------------
@@ -1074,49 +1067,6 @@ def get_country_mentions_by_date(
         lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of("year").format("YYYY-MM-DD")
     )
     return df_country
-
-
-def get_min_max_dates_with_country(conn: sqlite3.Connection) -> tuple[str, str]:
-    """Return min and max dates of briefing IDs with country mentions.
-    ('YYYY-MM-DD', 'YYYY-MM-DD')
-
-    Args:
-        conn (sqlite3.Connection): Connection to a database.
-
-    Returns:
-        tuple[str, str]: Min and max dates of briefings with country mentions in
-            the database.
-    """
-    # Until merging PR 115
-    query = """select min(briefing_id), max(briefing_id) from country;"""
-    min_sdg_date = ""
-    max_sdg_date = ""
-    with conn:
-        cursor = conn.cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        cursor.close()
-
-    if rows[0][0]:
-        min_sdg_date, max_sdg_date = datetime.strptime(str(rows[0][0]), "%Y%m%d").strftime(
-            "%Y-%m-%d"
-        ), datetime.strptime(str(rows[0][1]), "%Y%m%d").strftime("%Y-%m-%d")
-    return min_sdg_date, max_sdg_date
-
-
-def get_country_models(conn: sqlite3.Connection | None = None):
-    """Returns a list of models used to generate country mentions."""
-    # Until PR 115 is merged
-    conn = conn or get_db_connection()
-    with conn:
-        cursor = conn.cursor()
-        cursor.execute("select distinct model from country;")
-        rows = cursor.fetchall()
-        cursor.close()
-    if rows:
-        return [x[0] for x in rows]
-    else:
-        return ""
 
 
 def get_countries_by_section_id(

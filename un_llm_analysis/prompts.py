@@ -35,7 +35,7 @@ Please use the following conventions:
 * Do not include any country that has not been explicitly mentioned by name
 * Do not include any text in parenthesis
 * Do not include the given example
-* Do not include 'null' or None codes
+* Do not include null or None codes
 
 Please respond ONLY with the list of extracted locations, nothing else.
 
