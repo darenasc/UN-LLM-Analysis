@@ -20,7 +20,6 @@ from un_llm_analysis.database import (
     _check_country_section_exists,
     check_country_section_exists,
     get_briefings_between_dates,
-    get_db_connection,
     insert_into_country,
 )
 from un_llm_analysis.prompts import COUNTRY_MENTION_PROMPT, run_model_prompt
@@ -28,7 +27,7 @@ from un_llm_analysis.prompts import COUNTRY_MENTION_PROMPT, run_model_prompt
 HeatmapLevel = Literal["date", "week", "month", "year"]
 
 
-def create_heatmap(df_country: pd.DataFrame, level: HeatmapLevel = "month"):
+def create_heatmap(df_country: pd.DataFrame, level: HeatmapLevel = "month", color_map="viridis"):
     """Return a heatmap figure.
 
     Args:
@@ -50,6 +49,8 @@ def create_heatmap(df_country: pd.DataFrame, level: HeatmapLevel = "month"):
     )
 
     y = sorted(df_country["country"].unique())
+    short_labels = [label[:15] + "..." if len(label) > 15 else label for label in y]
+
     z = (
         df_country[[level, "country"]]
         .value_counts()
@@ -65,22 +66,18 @@ def create_heatmap(df_country: pd.DataFrame, level: HeatmapLevel = "month"):
         aspect="auto",
         labels=dict(x="Date", y="Country", color="Mentions"),
         x=x,
-        y=y,
-        color_continuous_scale="RdBu_r",
+        # y=y,
+        y=short_labels,
+        color_continuous_scale=color_map,
     )
     fig.update_layout(
-        {
-            "yaxis": {
-                "range": [0, len(y)],
-                "tickmode": "array",
-                "tickvals": [*range(len(y))],
-                "ticktext": y,
-            },
-            "height": 1700,
-            # "width": 200 + (len(x) * 50),
-            "template": "plotly_dark",
-        }
+        autosize=False,
+        # width=1700,
+        height=25 * len(y),
+        template="plotly_dark",
     )
+
+    fig.update_layout(yaxis={"dtick": 1})
     return fig
 
 

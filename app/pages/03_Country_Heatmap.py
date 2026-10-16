@@ -1,6 +1,7 @@
 from datetime import date
 
 from logos import CORRELAID_LOGO  # type: ignore
+from matplotlib import colormaps
 import streamlit as st
 from streamlit_folium import st_folium  # type: ignore
 
@@ -53,6 +54,22 @@ countries = sorted(
 country_selection = st.sidebar.multiselect(
     "Countries", countries, default=countries, select_all=True
 )
+color_selection = st.sidebar.selectbox(
+    "Color",
+    [
+        "viridis",
+        "plasma",
+        "inferno",
+        "magma",
+        "cividis",
+        "YlOrBr",
+        "YlOrRd",
+        "YlGnBu",
+        "YlGn",
+        "gray",
+    ],
+    0,
+)
 
 gdf_map = get_country_polygons(
     df_country[
@@ -62,7 +79,7 @@ gdf_map = get_country_polygons(
     ]
 )
 
-m = gdf_map.explore(column="Mentions", tooltip=["NAME", "Mentions"])  # type: ignore
+m = gdf_map.explore(column="Mentions", tooltip=["NAME", "Mentions"], cmap=color_selection)  # type: ignore
 container_map = st.container(border=True)
 with container_map:
     st_folium(m, use_container_width=True, height=350)
@@ -77,7 +94,10 @@ fig_heatmap = create_heatmap(
         & (df_country["country"].isin(country_selection))
     ],
     level=heatmap_level,  # type: ignore
+    color_map=color_selection,
 )
+# figure_container = st.container(width=2000)
+# with figure_container:
 st.plotly_chart(
     fig_heatmap,
     width="content",
