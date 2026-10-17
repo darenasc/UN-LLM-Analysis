@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - #52 Sentiment & tone over time
 - #50 Proportionality of issues/topics
 
-## [2.0.1]
+## [2.0.2]
 
 ### Added
 
@@ -28,6 +28,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - `get_sdg_models` replaced by `get_models`
 - `get_min_max_dates_with_sdg` replaced by `get_min_max_dates_with_table`
+
+## [2.0.1]
+
+### Added
+
+- New function `get_sections_between_dates`
 
 ## [2.0.0]
 
