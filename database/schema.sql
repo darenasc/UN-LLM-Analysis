@@ -54,6 +54,17 @@ CREATE TABLE IF NOT EXISTS issue (
 );
 
 
+CREATE TABLE IF NOT EXISTS country (
+    briefing_id INTEGER NOT NULL,
+    section_id INTEGER NOT NULL,
+    country TEXT NOT NULL,
+    iso_2 TEXT NOT NULL,
+   	iso_3 TEXT NOT NULL,
+    model TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+
 CREATE TABLE IF NOT EXISTS analysis_run (
     analysis_id INTEGER PRIMARY KEY AUTOINCREMENT,
     analysis_name TEXT NOT NULL,
@@ -65,6 +76,7 @@ CREATE TABLE IF NOT EXISTS analysis_run (
     temperature REAL NOT NULL,
     created_at TEXT NOT NULL
 );
+
 
 CREATE TABLE IF NOT EXISTS sentiment_analysis (
     analysis_result_id INTEGER PRIMARY KEY AUTOINCREMENT,
