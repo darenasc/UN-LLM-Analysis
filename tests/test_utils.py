@@ -2,7 +2,11 @@ from datetime import date
 
 import pytest
 
-from un_llm_analysis.utils import _dates_between, _parse_date
+from un_llm_analysis.utils import (
+    _check_ollama_model_exists,
+    _dates_between,
+    _parse_date,
+)
 
 
 def test_dates_between():
@@ -43,3 +47,7 @@ def test_parse_date_invalid_format():
     """Test _parse_date with malformed date string."""
     with pytest.raises(Exception):  # argparse.ArgumentTypeError
         _parse_date("not-a-date")
+
+
+def test__check_ollama_model_exists():
+    pass
