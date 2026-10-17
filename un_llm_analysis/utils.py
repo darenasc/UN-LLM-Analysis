@@ -42,6 +42,18 @@ def _parse_date(value: str) -> date:
         raise argparse.ArgumentTypeError(f"Invalid date: {value}. Expected YYYY-MM-DD.") from exc
 
 
+def date_int_to_str(value: int) -> str:
+    """Convert YYYYMMDD integer to YYYY-MM-DD string.
+
+    Args:
+        value (int): Date as an integer in YYYYMMDD format.
+
+    Returns:
+        str: Date string in YYYY-MM-DD format.
+    """
+    return date.fromisoformat(str(value)).isoformat()
+
+
 def _check_ollama_model_exists(model: str) -> bool:
     """Check if a given model is available via Ollama.
 
