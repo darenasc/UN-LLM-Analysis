@@ -42,17 +42,7 @@ start_date = st.sidebar.date_input("Start date", min_date or datetime.now())
 end_date = st.sidebar.date_input("End date", max_date or datetime.now())
 
 
-def create_plot(model: str, start_date: str, end_date: str):
-    """Returns figures of analysis results for a given date range.
-
-    Args:
-        model (str): Model used to extract relevant ISSUEs.
-        start_date (str): Start date with ISSUEs.
-        end_date (str): End date with ISSUEs.
-
-    Returns:
-        Figure: Plotly figure.
-    """
+def get_data(model: str, issues: list[str], start_date: str, end_date: str):
     # Get the data in the database within the specified date range
     with get_db_connection(BRIEFINGS_DB_PATH) as conn:
         sections = get_sections_between_dates(conn=conn, start_date=start_date, end_date=end_date)
@@ -74,8 +64,25 @@ def create_plot(model: str, start_date: str, end_date: str):
     with get_db_connection() as conn:
         issue_data = get_issues_between_dates(conn=conn, start_date=start_date, end_date=end_date)
 
-    issue_data = issue_data[issue_data["model"] == model]
+    issue_data = issue_data[(issue_data["model"] == model) & (issue_data["issue"].isin(issues))]
     issue_data["date"] = pd.to_datetime(issue_data["briefing_id"].astype(str), format="%Y%m%d")
+
+    return section_data, issue_data
+
+
+def create_plot(
+    section_data: pd.DataFrame, issue_data: pd.DataFrame, start_date: str, end_date: str
+):
+    """Returns figures of analysis results for a given date range.
+
+    Args:
+        model (str): Model used to extract relevant ISSUEs.
+        start_date (str): Start date with ISSUEs.
+        end_date (str): End date with ISSUEs.
+
+    Returns:
+        Figure: Plotly figure.
+    """
 
     issue_stats = calculate_issue_stats(
         section_data=section_data,
@@ -151,11 +158,24 @@ model_choice = st.sidebar.selectbox(
     models,
 )
 
-figs = create_plot(
-    model=str(model_choice),
+all_issues = list(SELECTED_ISSUES.keys())
+
+issue_choice = st.sidebar.multiselect("Issues", all_issues, default=all_issues, select_all=True)
+
+section_data, issue_data = get_data(
+    model=model_choice,
+    issues=issue_choice,
     start_date=start_date.strftime("%Y-%m-%d"),
     end_date=end_date.strftime("%Y-%m-%d"),
 )
+
+figs = create_plot(
+    section_data=section_data,
+    issue_data=issue_data,
+    start_date=start_date.strftime("%Y-%m-%d"),
+    end_date=end_date.strftime("%Y-%m-%d"),
+)
+
 if figs:
     for fig in figs:
         st.plotly_chart(fig)

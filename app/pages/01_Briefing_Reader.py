@@ -30,11 +30,12 @@ issues = database.get_issues_between_dates(
 
 st.header(f"Noon briefing of {selected_date.strftime('%A, %d %B %Y')}")
 
-if briefing.sections:
+if briefing and briefing.sections:
     speaker = ", ".join(x for x in [briefing.speaker_name, briefing.speaker_role] if x)
     st.write(f"By {speaker}" if speaker else "Speaker not specified.")
 else:
     st.write("Noon briefing not available.")
+    st.stop()
 
 briefing_id = database.get_briefing_id_from_date(briefing.briefing_date)
 

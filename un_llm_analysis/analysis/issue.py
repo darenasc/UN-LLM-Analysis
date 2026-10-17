@@ -86,9 +86,9 @@ def calculate_issue_stats(
     )
 
     # Build a complete date x issue grid.
-    issues = [f"ISSUE-{i}" for i in range(1, 25)]
+    issues = list(SELECTED_ISSUES.keys())
 
-    dates = pd.date_range(start_date, end_date, freq="D")
+    dates = pd.to_datetime(section_df["briefing_id"].unique(), format="%Y%m%d").sort_values()
 
     issue_date_grid = pd.MultiIndex.from_product(
         [dates, issues], names=["date", "issue"]
