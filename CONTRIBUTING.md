@@ -158,9 +158,9 @@ pipenv uninstall pandas # to uninstall a library, in this case called pandas
 
 Before start working on the Python code, make sure you create a new branch for your work, that is branched off from the `main` branch. With `git checkout main` you change to the main branch, and then make sure that you have the latest version of the repository with `git pull`.
 
-Then create your own branch to work on the code you want to include to the repository. Branch names are usually short descriptions of the task at hand, for example, an issue number 10 with the task of create a database schema for the project, you can create it as follows `git branch -b 10_database_schema`. With that everyone can know that the task is described in the issue number 10 and to what it refers to.
+Then create your own branch to work on the code you want to include to the repository. Branch names are usually short descriptions of the task at hand, for example, an issue number 10 with the task of create a database schema for the project, you can create it as follows `git switch -c 10_database_schema`. With that everyone can know that the task is described in the issue number 10 and to what it refers to.
 
-With you new branch just created feel free to add, delete, modify the files of the project. There is a good practice of writing [atomic commits](https://medium.com/@sandrodz/a-developers-guide-to-atomic-git-commits-c7b873b39223), meaning, small commits that contains meaningful changes. So when you are working on a task from an issue, you can create multiple commits to complete the work.
+With your new branch just created feel free to add, delete, modify the files of the project. There is a good practice of writing [atomic commits](https://medium.com/@sandrodz/a-developers-guide-to-atomic-git-commits-c7b873b39223), meaning, small commits that contains meaningful changes. So when you are working on a task from an issue, you can create multiple commits to complete the work.
 
 If it's the first time using `git` in the project, you will need to add your name and email for your commits:
 
@@ -172,7 +172,7 @@ git config --local user.email <YOUR@EMAIL>
 ```bash
 git checkout main # to change to the main branch
 git pull # to pull the updates from the remote repository
-git branch -b <name_of_your_new_branch> # to create a feature branch from the updated main branch
+git switch -c <name_of_your_new_branch> # to create a feature branch from the updated main branch
 
 # Now you can add, edit, remove files in the project to complete the task(s) in the issue
 
