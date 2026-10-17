@@ -8,9 +8,12 @@ sort_pipfile = true
 
 [packages]
 beautifulsoup4 = "*"
+folium = ">=0.12"
+geopandas = "*"
 ipywidgets = "*"
 jupyter = "*"
 loguru = "*"
+mapclassify = "*"
 markdown = "*"
 markdownify = "*"
 matplotlib = "*"
@@ -22,12 +25,14 @@ ollama = "*"
 openai = "*"
 pandas = "*"
 pandas-stubs = "*"
+pendulum = "*"
 playwright = "*"
 plotly = "*"
 python-dotenv = "*"
 scikit-learn = "*"
 sqlalchemy = "*"
 streamlit = "*"
+streamlit-folium = "*"
 un_llm_analysis = {editable = true, path = "."}
 wordcloud = "*"
 
@@ -36,6 +41,7 @@ python_version = "3.12"
 
 [dev-packages]
 black = "*"
+curl-cffi = "*"
 ipython = "*"
 isort = "*"
 jupyterlab = "*"

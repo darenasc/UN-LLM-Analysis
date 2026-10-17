@@ -6,8 +6,8 @@ import streamlit as st
 
 from un_llm_analysis.database import (
     get_db_connection,
-    get_min_max_dates_with_sdg,
-    get_sdg_models,
+    get_min_max_dates_with_table,
+    get_models,
     get_sdgs_between_dates,
 )
 
@@ -20,7 +20,7 @@ st.logo(
 st.title("SDG mentions in Briefings")
 
 conn = get_db_connection()
-min_date, max_date = get_min_max_dates_with_sdg(conn=conn)
+min_date, max_date = get_min_max_dates_with_table(conn=conn, table="sdg")
 if min_date == "" and max_date == "":
     st.warning(
         "No SDG data. You can populate the sdg table using the code in `notebooks/SDG_mentions_in_briefings.ipynb`."
@@ -81,10 +81,10 @@ def create_plot(model: str, start_date: str, end_date: str):
     return fig
 
 
-models = get_sdg_models(conn=conn)
+models_sdg = get_models(conn=conn, table="sdg")
 model_choice = st.sidebar.selectbox(
     "Model",
-    models,
+    models_sdg,
 )
 
 fig = create_plot(

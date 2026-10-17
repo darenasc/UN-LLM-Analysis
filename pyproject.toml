@@ -72,3 +72,6 @@ precision = 0
 
 [tool.coverage.html]
 directory = "htmlcov"
+
+[tool.mypy]
+ignore_missing_imports = true

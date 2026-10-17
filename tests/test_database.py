@@ -9,6 +9,8 @@ from un_llm_analysis.config import SCHEMA_DB
 from un_llm_analysis.database import (
     Briefing,
     Section,
+    _check_country_section_exists,
+    check_country_section_model_exists,
     create_database,
     delete_briefing,
     delete_from_issue,
@@ -21,18 +23,21 @@ from un_llm_analysis.database import (
     get_briefing_id_by_url,
     get_briefing_id_from_date,
     get_briefings_between_dates,
+    get_countries_by_section_id,
+    get_country_mentions_by_date,
     get_dates_with_briefings,
     get_db_connection,
     get_issues_between_dates,
     get_min_max_dates,
-    get_min_max_dates_with_sdg,
+    get_min_max_dates_with_table,
+    get_models,
     get_sdg_by_section_id,
-    get_sdg_models,
     get_sdgs_between_dates,
     get_section_by_id,
     get_sections_between_dates,
     get_sections_by_briefing_id,
     insert_into_briefing,
+    insert_into_country,
     insert_into_issue,
     insert_into_sdg,
     insert_into_section,
@@ -466,6 +471,7 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
 )
 def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
     """Test retrieving min and max dates with SDG mentions."""
+    table = "sdg"
     insert_into_sdg(
         conn=conn,
         briefing_id=briefing_id,
@@ -474,7 +480,34 @@ def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, 
         model=model,
         created_at=created_at,
     )
-    min_sdg_date, max_sdg_date = get_min_max_dates_with_sdg(conn=conn)
+    min_sdg_date, max_sdg_date = get_min_max_dates_with_table(conn=conn, table=table)
+    assert min_sdg_date == "2026-08-01"
+    assert max_sdg_date == "2026-08-01"
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,country,iso_2,iso_3,model,created_at",
+    [
+        (20260801, 2026080101, "Chile", "CL", "CHL", "qwen3.5:4b", "2026-08-01"),
+        (20260801, 2026080102, "Germany", "DE", "DEU", "qwen3.5:4b", "2026-08-01"),
+    ],
+)
+def test_get_min_max_dates_with_country(
+    conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at
+):
+    """Test retrieving min and max dates with country mentions."""
+    table = "country"
+    insert_into_country(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        country=country,
+        iso_2=iso_2,
+        iso_3=iso_3,
+        model=model,
+        created_at=created_at,
+    )
+    min_sdg_date, max_sdg_date = get_min_max_dates_with_table(conn=conn, table=table)
     assert min_sdg_date == "2026-08-01"
     assert max_sdg_date == "2026-08-01"
 
@@ -519,7 +552,7 @@ def test_get_sdg_models(conn, briefing_id, section_id, sdgs, model, created_at, 
         model=model,
         created_at=created_at,
     )
-    result = get_sdg_models(conn=conn)
+    result = get_models(conn=conn, table="sdg")
     assert isinstance(result, list)
     assert expected in result
 
@@ -817,3 +850,141 @@ def test_get_min_max_dates(conn, monkeypatch, start_date, end_date, status, expe
     _ = load_briefings_between_dates(start_date, end_date, conn=conn)
     result = get_min_max_dates(conn=conn, status=status)
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,country,iso_2,iso_3,model,created_at",
+    [
+        (20260801, 2026080101, "Chile", "CL", "CHL", "qwen3.5:4b", "2026-08-01"),
+        (20260801, 2026080102, "Germany", "DE", "DEU", "qwen3.5:4b", "2026-08-02"),
+    ],
+)
+def test_get_country_mentions_by_date(
+    conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at
+):
+    """Test retrieving country mentions."""
+    insert_into_country(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        country=country,
+        iso_2=iso_2,
+        iso_3=iso_3,
+        model=model,
+        created_at=created_at,
+    )
+    start_date = "2026-08-01"
+    end_date = "2026-08-02"
+    result = get_country_mentions_by_date(
+        conn=conn, model=model, start_date=start_date, end_date=end_date
+    )
+    assert result.shape[0] == 1
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,country,iso_2,iso_3,model,created_at,expected",
+    [
+        (20260801, 2026080101, "Chile", "CL", "CHL", "qwen3.5:4b", "2026-08-01", ["CL"]),
+        (20260801, 2026080102, "Germany", "DE", "DEU", "qwen3.5:4b", "2026-08-02", ["DE"]),
+    ],
+)
+def test_get_countries_by_section_id(
+    conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at, expected
+):
+    """Tests retrieving country lists based on the section_id."""
+    insert_into_country(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        country=country,
+        iso_2=iso_2,
+        iso_3=iso_3,
+        model=model,
+        created_at=created_at,
+    )
+    result = get_countries_by_section_id(conn=conn, section_id=section_id, model=model)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,country,iso_2,iso_3,model,created_at,iso_2_check,expected",
+    [
+        (20260801, 2026080101, "Chile", "CL", "CHL", "qwen3.5:4b", "2026-08-01", "CL", True),
+        (20260801, 2026080101, "Chile", "CL", "CHL", "qwen3.5:4b", "2026-08-01", "BR", False),
+        (20260801, 2026080102, "Germany", "DE", "DEU", "qwen3.5:4b", "2026-08-02", "DE", True),
+    ],
+)
+def test_check_country_section_model_exists(
+    conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at, iso_2_check, expected
+):
+    """Test if a country mentions has been processed for a given section_id and model."""
+    insert_into_country(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        country=country,
+        iso_2=iso_2,
+        iso_3=iso_3,
+        model=model,
+        created_at=created_at,
+    )
+    result = check_country_section_model_exists(
+        conn=conn, section_id=section_id, iso_2=iso_2_check, model=model
+    )
+    assert result is expected
+
+
+@pytest.mark.parametrize(
+    "briefing_id,section_id,country,iso_2,iso_3,model,created_at,model_check,expected",
+    [
+        (
+            20260801,
+            2026080101,
+            "Chile",
+            "CL",
+            "CHL",
+            "qwen3.5:4b",
+            "2026-08-01",
+            "qwen3.5:4b",
+            True,
+        ),
+        (
+            20260801,
+            2026080101,
+            "Chile",
+            "CL",
+            "CHL",
+            "qwen3.5:4b",
+            "2026-08-01",
+            "llama3.2",
+            False,
+        ),
+        (
+            20260801,
+            2026080102,
+            "Germany",
+            "DE",
+            "DEU",
+            "qwen3.5:4b",
+            "2026-08-02",
+            "qwen3.5:4b",
+            True,
+        ),
+    ],
+)
+def test__check_country_section_exists(
+    conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at, model_check, expected
+):
+    """Tests if a model has been used to process a given section."""
+    insert_into_country(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        country=country,
+        iso_2=iso_2,
+        iso_3=iso_3,
+        model=model,
+        created_at=created_at,
+    )
+    result = _check_country_section_exists(conn=conn, section_id=section_id, model=model_check)
+    assert result is expected

@@ -7,6 +7,7 @@ MIN_SCRAPE_DATE = date(2004, 4, 5)
 PROJ_ROOT = Path(__file__).resolve().parents[1]
 
 APP_DIR = PROJ_ROOT / "app"
+FLAGS_DIR = APP_DIR / "static" / "flags"
 DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 BRIEFINGS_DIR = RAW_DATA_DIR / "briefings"
@@ -20,6 +21,7 @@ REPORTS_DIR = PROJ_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
 APP_DIR.mkdir(parents=True, exist_ok=True)
+FLAGS_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
