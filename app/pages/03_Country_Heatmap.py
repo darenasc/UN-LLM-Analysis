@@ -1,7 +1,6 @@
 from datetime import date
 
 from logos import CORRELAID_LOGO  # type: ignore
-from matplotlib import colormaps
 import streamlit as st
 from streamlit_folium import st_folium  # type: ignore
 
@@ -27,6 +26,7 @@ conn = get_db_connection()
 min_date, max_date = get_min_max_dates_with_table(conn=conn, table="country")
 if min_date == "" and max_date == "":
     st.warning("No country mention data.")
+    st.stop()
 
 st.sidebar.caption(f"Suggested SDG date range between: `{min_date}` and `{max_date}`")
 start_date = st.sidebar.date_input("Start date", min_date or date.today())
