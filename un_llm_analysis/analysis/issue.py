@@ -1,6 +1,9 @@
 """Module to extract relevant ISSUEs for the sections of the briefings and insert them into the database."""
 
+from typing import Literal
+
 import pandas as pd
+import pendulum
 import plotly.express as px
 
 SELECTED_ISSUES = {
@@ -30,6 +33,8 @@ SELECTED_ISSUES = {
     "ISSUE-24": "Disarmament, arms control and non-proliferation",
 }
 
+PlotLevel = Literal["day", "week", "month", "year"]
+
 
 def get_issue_text(issues: dict = SELECTED_ISSUES) -> str:
     """Generate text with the selected issues to pass to the prompt.
@@ -47,60 +52,66 @@ def get_issue_text(issues: dict = SELECTED_ISSUES) -> str:
 def calculate_issue_stats(
     section_data: pd.DataFrame,
     issue_data: pd.DataFrame,
-    start_date: str,
-    end_date: str,
+    level: PlotLevel = "month",
 ) -> pd.DataFrame:
-    """Calculate the issue_stats for drawing plots from the section_data and issue_data."""
+    """Calculate issue lengths, frequencies, and proportions by time period."""
     section_df = section_data.copy()
     issue_df = issue_data.copy()
 
-    issue_df["date"] = pd.to_datetime(issue_df["briefing_id"].astype(str), format="%Y%m%d")
+    section_df[level] = section_df["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of(level).format("YYYY-MM-DD")
+    )
+
+    issue_df[level] = issue_df["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of(level).format("YYYY-MM-DD")
+    )
 
     # Store the length of each section
     section_df["section_length"] = section_df["section_text"].str.len()
 
-    # Calculate total length of the sections on each date
+    # Calculate the total section length in each time period.
     total_length = (
-        section_df.groupby("briefing_id")["section_length"].sum().reset_index(name="total_length")
+        section_df.groupby(level)["section_length"].sum().reset_index(name="total_length")
     )
 
-    section_df = section_df.merge(total_length, on="briefing_id", how="left")
-
-    # Merge the issue data with the section data to get the section lengths and total lengths for each issue
+    # Attach section lengths to the issue records.
     issue_sections = issue_df.merge(
-        section_df[["section_id", "section_length", "total_length"]], on="section_id", how="left"
+        section_df[["section_id", "section_length"]],
+        on="section_id",
+        how="left",
     )
 
-    # Calculate the total length of sections for each issue on each date
-    issue_length = (
-        issue_sections.groupby(["date", "issue"])["section_length"]
-        .sum()
-        .reset_index(name="issue_length")
+    # Calculate the section length and frequency for each issue and period.
+    issue_summary = (
+        issue_sections.groupby([level, "issue"])
+        .agg(
+            issue_length=("section_length", "sum"),
+            frequency=("section_id", "nunique"),
+        )
+        .reset_index()
     )
 
-    # Calculate the frequency of sections for each issue on each date
-    frequency = (
-        issue_sections.groupby(["date", "issue"])["section_id"]
-        .nunique()
-        .reset_index(name="frequency")
-    )
-
-    # Build a complete date x issue grid.
+    # Build a grid of observed time periods and selected issues.
     issues = list(SELECTED_ISSUES.keys())
+    periods = sorted(section_df[level].unique())
 
-    dates = pd.to_datetime(section_df["briefing_id"].unique(), format="%Y%m%d").sort_values()
-
-    issue_date_grid = pd.MultiIndex.from_product(
-        [dates, issues], names=["date", "issue"]
+    issue_period_grid = pd.MultiIndex.from_product(
+        [periods, issues],
+        names=[level, "issue"],
     ).to_frame(index=False)
 
-    # Merge the issue date grid with the issue length and frequency data to get a complete dataset for analysis
-    issue_stats = issue_date_grid.merge(
-        issue_sections[["date", "total_length"]].drop_duplicates(), on="date", how="left"
+    # Attach period totals and issue statistics to the grid.
+    issue_stats = issue_period_grid.merge(
+        total_length,
+        on=level,
+        how="left",
     )
 
-    issue_stats = issue_stats.merge(issue_length, on=["date", "issue"], how="left")
-    issue_stats = issue_stats.merge(frequency, on=["date", "issue"], how="left")
+    issue_stats = issue_stats.merge(
+        issue_summary,
+        on=[level, "issue"],
+        how="left",
+    )
 
     issue_stats = issue_stats.fillna(
         {"issue_length": 0, "frequency": 0, "total_length": 0}
@@ -109,6 +120,9 @@ def calculate_issue_stats(
     issue_stats["proportion"] = (issue_stats["issue_length"] / issue_stats["total_length"]).fillna(
         0
     )
+
+    # Convert period labels to datetime after all merges.
+    issue_stats[level] = pd.to_datetime(issue_stats[level], format="%Y-%m-%d")
 
     return issue_stats
 

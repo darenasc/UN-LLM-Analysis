@@ -7,6 +7,7 @@ import streamlit as st
 
 from un_llm_analysis.analysis.issue import (
     SELECTED_ISSUES,
+    PlotLevel,
     calculate_issue_counts,
     calculate_issue_stats,
 )
@@ -71,7 +72,11 @@ def get_data(model: str, issues: list[str], start_date: str, end_date: str):
 
 
 def create_plot(
-    section_data: pd.DataFrame, issue_data: pd.DataFrame, start_date: str, end_date: str
+    section_data: pd.DataFrame,
+    issue_data: pd.DataFrame,
+    start_date: str,
+    end_date: str,
+    level: PlotLevel = "month",
 ):
     """Returns figures of analysis results for a given date range.
 
@@ -87,15 +92,14 @@ def create_plot(
     issue_stats = calculate_issue_stats(
         section_data=section_data,
         issue_data=issue_data,
-        start_date=start_date,
-        end_date=end_date,
+        level=level,
     )
 
     issue_counts = calculate_issue_counts(issue_data)
 
     fig_1 = px.line(
         issue_stats,
-        x="date",
+        x=level,
         y="frequency",
         color="issue",
         markers=False,
@@ -104,7 +108,7 @@ def create_plot(
 
     fig_2 = px.line(
         issue_stats,
-        x="date",
+        x=level,
         y="issue_length",
         color="issue",
         markers=False,
@@ -113,7 +117,7 @@ def create_plot(
 
     fig_3 = px.line(
         issue_stats,
-        x="date",
+        x=level,
         y="proportion",
         color="issue",
         markers=False,
@@ -169,11 +173,16 @@ section_data, issue_data = get_data(
     end_date=end_date.strftime("%Y-%m-%d"),
 )
 
+level_choice = st.sidebar.pills(
+    "Plot by", options=["day", "week", "month", "year"], default="month"
+)
+
 figs = create_plot(
     section_data=section_data,
     issue_data=issue_data,
     start_date=start_date.strftime("%Y-%m-%d"),
     end_date=end_date.strftime("%Y-%m-%d"),
+    level=level_choice,
 )
 
 if figs:
