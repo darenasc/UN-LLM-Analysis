@@ -1103,18 +1103,12 @@ def get_countries_by_section_id(
     Returns:
         None | list[str]: List with countries or None.
     """
-    with conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            """select iso_2 from country where section_id = ? and model = ?;""",
-            (section_id, model),
-        )
-        rows = cursor.fetchall()
-        cursor.close()
-    if rows is None:
-        return None
-    else:
-        return [x[0] for x in rows]
+    rows = conn.execute(
+        """select iso_2 from country where section_id = ? and model = ?;""",
+        (section_id, model),
+    ).fetchall()
+
+    return [x[0] for x in rows]
 
 
 def check_country_section_model_exists(
@@ -1145,7 +1139,7 @@ def _check_country_section_exists(conn: sqlite3.Connection, section_id: int, mod
 
     Args:
         conn (sqlite3.Connection): Database connection.
-        section_id (int): Section id.check_country_section_exists
+        section_id (int): Section id.
         model (str): LLM.
 
     Returns:
