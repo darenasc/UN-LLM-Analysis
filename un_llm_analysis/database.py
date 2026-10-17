@@ -391,7 +391,7 @@ def insert_into_section(
             cursor.close()
     else:
         for i, section in enumerate(sections, start=1):
-            section_exists = get_section(conn=conn, section_id=briefing_id * 100 + i)
+            section_exists = get_section_by_section_id(conn=conn, section_id=briefing_id * 100 + i)
             if section_exists:
                 delete_section(conn=conn, section_id=briefing_id * 100 + i)
             insert_section(conn=conn, briefing_id=briefing_id, section=section, section_order=i)
