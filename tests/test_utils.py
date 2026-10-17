@@ -2,7 +2,11 @@ from datetime import date
 
 import pytest
 
-from un_llm_analysis.utils import _dates_between, _parse_date
+from un_llm_analysis.utils import (
+    _check_ollama_model_exists,
+    _dates_between,
+    _parse_date,
+)
 
 
 def test_dates_between():
@@ -43,3 +47,14 @@ def test_parse_date_invalid_format():
     """Test _parse_date with malformed date string."""
     with pytest.raises(Exception):  # argparse.ArgumentTypeError
         _parse_date("not-a-date")
+
+
+@pytest.mark.parametrize(
+    "model,expected", [("llama3.2", True), ("qwen3.5:4b", True), ("llama3.1", False)]
+)
+def test__check_ollama_model_exists(mocker, model, expected):
+    """Check if a model exists in the Ollama."""
+    mock_ollama_list = mocker.patch("un_llm_analysis.utils.ollama.list")
+    mock_ollama_list.return_value = {"models": [{"model": "llama3.2"}, {"model": "qwen3.5:4b"}]}
+    result = _check_ollama_model_exists(model=model)
+    assert result is expected

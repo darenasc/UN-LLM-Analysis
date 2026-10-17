@@ -17,10 +17,11 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 import sqlite3
-from typing import Literal
+from typing import Literal, get_args
 
 from loguru import logger
 import pandas as pd
+import pendulum
 
 from un_llm_analysis.config import BRIEFINGS_DB_PATH, BRIEFINGS_DIR, SCHEMA_DB
 from un_llm_analysis.extractor import (
@@ -33,6 +34,26 @@ from un_llm_analysis.utils import (
     _dates_between,
 )
 
+AnalysisTableName = Literal["sdg", "issue", "country"]
+
+
+@dataclass(frozen=True, kw_only=True)
+class Section(ExtractedSection):
+    """A stored section, including its actual database identifiers."""
+
+    section_id: int
+    briefing_id: int
+    section_order: int
+
+
+@dataclass(frozen=True, kw_only=True)
+class Briefing(ExtractedBriefing):
+    """A stored briefing with its database metadata and stored sections."""
+
+    briefing_id: int
+    processed_at: str
+    full_text: str
+    sections: tuple[Section, ...]
 
 def create_database(db_path: str | Path = BRIEFINGS_DB_PATH, schema_path: str | Path = SCHEMA_DB):
     """Create the database file and tables if they don't already exist.
@@ -308,6 +329,9 @@ def get_briefings_between_dates(
     for section in sections:
         sections_by_briefing[section.briefing_id].append(section)
 
+    logger.info(
+        f"{len(briefing_rows):,} briefings obtained between '{start_date}' and '{end_date}'"
+    )
     return [
         _row_to_briefing(
             row,
@@ -637,7 +661,7 @@ def get_min_max_dates_with_table(
         tuple[str, str]: Dates in YYYY-MM-DD format.
             Returns ("", "") if the table is empty.
     """
-    if table not in ("sdg", "issue"):
+    if table not in get_args(AnalysisTableName):
         raise ValueError(f"Unsupported table: {table}")
 
     query = f"SELECT MIN(briefing_id), MAX(briefing_id) FROM {table}"
@@ -647,11 +671,6 @@ def get_min_max_dates_with_table(
         return "", ""
 
     return date_int_to_str(min_id), date_int_to_str(max_id)
-
-
-def get_min_max_dates_with_sdg(conn: sqlite3.Connection) -> tuple[str, str]:
-    """Wrapper for get_min_max_dates_with_table() using the SDG table."""
-    return get_min_max_dates_with_table(conn, table="sdg")
 
 
 def get_sdg_by_section_id(
@@ -686,7 +705,7 @@ def get_models(conn: sqlite3.Connection, table: AnalysisTableName) -> list[str]:
         table (AnalysisTableName): The analysis table to query.
     """
 
-    if table not in ("sdg", "issue"):
+    if table not in get_args(AnalysisTableName):
         raise ValueError(f"Unsupported table: {table}")
 
     rows = conn.execute(f"SELECT DISTINCT model FROM {table} ORDER BY model").fetchall()
@@ -694,11 +713,6 @@ def get_models(conn: sqlite3.Connection, table: AnalysisTableName) -> list[str]:
     models = [x["model"] for x in rows]
 
     return models
-
-
-def get_sdg_models(conn: sqlite3.Connection) -> list[str]:
-    """Returns a list of models used to generate SDG mentions."""
-    return get_models(conn, table="sdg")
 
 
 # --- issue -------------------------------------------------------------------
@@ -1449,6 +1463,145 @@ if __name__ == "__main__":
     # print("Tables:", verify_sentiment_tables(conn))
 
     conn.close()
+# --- country mentions
+
+
+def get_country_mentions_by_date(
+    conn: sqlite3.Connection, model: str, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """Return country mentions in the sections filtering by date.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        model (str): Model used.
+        start_date (str): Start date in format 'YYYY-MM-DD'.
+        end_date (str): End date in format 'YYYY-MM-DD'.
+
+    Returns:
+        pd.DataFrame: Data with country mentions.
+    """
+    start_briefing_id = pendulum.from_format(start_date, "YYYY-MM-DD").format("YYYYMMDD")
+    end_briefing_id = pendulum.from_format(end_date, "YYYY-MM-DD").format("YYYYMMDD")
+
+    query = f"""select briefing_id, section_id, country, iso_2, iso_3, model
+                from country where model = '{model}'
+                and briefing_id between {start_briefing_id} and {end_briefing_id};"""
+
+    df_country = pd.read_sql(query, conn)
+
+    df_country["date"] = df_country["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").format("YYYY-MM-DD")
+    )
+    df_country["week"] = df_country["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of("week").format("YYYY-MM-DD")
+    )
+    df_country["month"] = df_country["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of("month").format("YYYY-MM-DD")
+    )
+    df_country["year"] = df_country["briefing_id"].apply(
+        lambda x: pendulum.from_format(str(x), "YYYYMMDD").start_of("year").format("YYYY-MM-DD")
+    )
+    return df_country
+
+
+def get_countries_by_section_id(
+    conn: sqlite3.Connection, section_id: int, model: str = "qwen3.5:4b"
+) -> None | list[str]:
+    """Return a list of countries given a section_id.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Section id in the database.
+        model (str): Model used to extract SDGs from section.
+
+    Returns:
+        None | list[str]: List with countries or None.
+    """
+    rows = conn.execute(
+        """select iso_2 from country where section_id = ? and model = ?;""",
+        (section_id, model),
+    ).fetchall()
+
+    return [x[0] for x in rows]
+
+
+def check_country_section_model_exists(
+    conn: sqlite3.Connection, section_id: int, iso_2: str, model: str
+) -> bool:
+    """Check if there is data for that section_id, model and country.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        section_id (int): Section id.
+        iso_2 (str): ISO code of country.
+        model (str): LLM.
+
+    Returns:
+        bool: Whether or not a record exists for that combination.
+    """
+    query_select = """SELECT briefing_id, section_id, country, iso_2, iso_3, model
+                    FROM country
+                    WHERE section_id = ?
+                        AND iso_2 = ?
+                        AND model = ?;"""
+    rows = conn.execute(query_select, (section_id, iso_2, model)).fetchall()
+    return bool(rows)
+
+
+def _check_country_section_exists(conn: sqlite3.Connection, section_id: int, model: str) -> bool:
+    """Check if a section has been processed already.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        section_id (int): Section id.
+        model (str): LLM.
+
+    Returns:
+        bool: Whether or not a record exists for that section_id and model.
+    """
+    query_select = """SELECT briefing_id, section_id, country, iso_2, iso_3, model
+                    FROM country
+                    WHERE section_id = ?
+                        AND model = ?;"""
+    rows = conn.execute(query_select, (section_id, model)).fetchall()
+    return bool(rows)
+
+
+def insert_into_country(
+    conn: sqlite3.Connection,
+    briefing_id: int,
+    section_id: int,
+    country: str,
+    iso_2: str,
+    iso_3: str,
+    model: str,
+    created_at: datetime,
+):
+    """Insert data into country table.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        briefing_id (int): Briefing id.
+        section_id (int): Section id.
+        country (str): Country name.
+        iso_2 (str): ISO 3166-1 Alpha-2 code.
+        iso_3 (str): ISO 3166-1 Alpha-3 code.
+        model (str): LLM used.
+        created_at (datetime): Creation date.
+    """
+    query_insert = """INSERT INTO country
+                (briefing_id, section_id, country, iso_2, iso_3, model, created_at)
+                VALUES(?, ?, ?, ?, ?, ?, ?);"""
+    query_delete = """DELETE FROM country WHERE section_id = ? AND iso_2 = ? AND model = ?"""
+
+    with conn:
+        cursor = conn.cursor()
+        cursor.execute(query_delete, (section_id, iso_2, model))
+
+        cursor.execute(
+            query_insert, (briefing_id, section_id, country, iso_2, iso_3, model, created_at)
+        )
+        cursor.close()
 
 
 def show_stats(conn: sqlite3.Connection) -> None:

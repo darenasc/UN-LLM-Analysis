@@ -26,3 +26,10 @@ repos:
     hooks:
       - id: codespell
         args: ["-C", "0", "--skip=notebooks/sentiment_tone_visualization.ipynb"]
+        name: "codespell (To apply suggested fixes, run: pipenv run codespell -w .)"
+        args:
+          [
+            "-C",
+            "0",
+            "--skip=app/static/wikipedia_country_data.csv,app/static/flags/*,notebooks/Country_mentions.ipynb",
+          ]

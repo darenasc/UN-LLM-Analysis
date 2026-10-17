@@ -1,6 +1,7 @@
 from pathlib import Path
 import sqlite3
 
+import pandas as pd
 import pytest
 
 from un_llm_analysis.config import SCHEMA_DB
@@ -11,7 +12,6 @@ from un_llm_analysis.extractor import extract_briefing
 @pytest.fixture(scope="function")
 def conn():
     """Fixture serving an in-memory database connection."""
-    # TODO change test_database to use this fixture instead of conn
     conn_fixture = get_db_connection(":memory:")
     conn_fixture.execute("PRAGMA foreign_keys = ON")
     conn_fixture.row_factory = sqlite3.Row
@@ -30,3 +30,10 @@ def briefing():
     return extract_briefing(
         file_path=Path("tests/fixtures/briefings/2026/2026-08/2026-08-25.json")
     )
+
+
+@pytest.fixture()
+def wikipedia_country_data():
+    """Fixture that returns wikipedia data of countries."""
+    df = pd.read_csv("tests/fixtures/app/static/wikipedia_country_data.csv")
+    return df

@@ -10,7 +10,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
 - #50 Proportionality of issues/topics
-- #47 Country mention heatmap
+
+## [2.0.2]
+
+### Added
+
+- Notebook with heatmap and map visualising country mentions in the briefings
+- Map visualisation in the Dashboard page of the Streamlit app
+- New Country mentions page in the Streamlit app
+- New `country` table to the database schema
+- `run_model_prompt` function to the `prompts.py` module
+- Country Wikipedia dataset with codes and unique names
+- Country vector data to them using maps
+- Country flag icons to the briefing reader page
+
+### Removed
+
+- `get_sdg_models` replaced by `get_models`
+- `get_min_max_dates_with_sdg` replaced by `get_min_max_dates_with_table`
 
 ## [2.0.1]
 
