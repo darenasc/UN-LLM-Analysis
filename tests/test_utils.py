@@ -49,5 +49,12 @@ def test_parse_date_invalid_format():
         _parse_date("not-a-date")
 
 
-def test__check_ollama_model_exists():
-    pass
+@pytest.mark.parametrize(
+    "model,expected", [("llama3.2", True), ("qwen3.5:4b", True), ("llama3.1", False)]
+)
+def test__check_ollama_model_exists(mocker, model, expected):
+    """Check if a model exists in the Ollama."""
+    mock_ollama_list = mocker.patch("un_llm_analysis.utils.ollama.list")
+    mock_ollama_list.return_value = {"models": [{"model": "llama3.2"}, {"model": "qwen3.5:4b"}]}
+    result = _check_ollama_model_exists(model=model)
+    assert result is expected

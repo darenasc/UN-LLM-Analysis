@@ -18,7 +18,7 @@ from tqdm import tqdm
 from un_llm_analysis.config import APP_DIR, FLAGS_DIR
 from un_llm_analysis.database import (
     _check_country_section_exists,
-    check_country_section_exists,
+    check_country_section_model_exists,
     get_briefings_between_dates,
     insert_into_country,
 )
@@ -27,7 +27,9 @@ from un_llm_analysis.prompts import COUNTRY_MENTION_PROMPT, run_model_prompt
 HeatmapLevel = Literal["date", "week", "month", "year"]
 
 
-def create_heatmap(df_country: pd.DataFrame, level: HeatmapLevel = "month", color_map="viridis"):
+def create_heatmap(
+    df_country: pd.DataFrame, level: HeatmapLevel = "month", color_map="viridis"
+):  # pragma: no cover
     """Return a heatmap figure.
 
     Args:
@@ -81,7 +83,7 @@ def create_heatmap(df_country: pd.DataFrame, level: HeatmapLevel = "month", colo
     return fig
 
 
-def get_country_polygons(df_country: pd.DataFrame) -> gpd.GeoDataFrame:
+def get_country_polygons(df_country: pd.DataFrame) -> gpd.GeoDataFrame:  # pragma: no cover
     """Return polygons of the countries in the dataframe to plot them in a map.
 
     Args:
@@ -115,13 +117,16 @@ def get_wikipedia_country_data(
     Returns:
         pd.DataFrame: Country list with name, ISO codes and wikipedia link.
     """
+    if not file_path.exists():
+        download_wikipedia_country_data(output_path=file_path)
+
     df = pd.read_csv(file_path)
     return df
 
 
 def download_wikipedia_country_data(
     output_path: Path = APP_DIR / "static" / "wikipedia_country_data.csv", overwrite: bool = False
-) -> Path:
+) -> Path:  # pragma: no cover
     """Download wikipedia table from
     https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
 
@@ -209,7 +214,7 @@ def get_country_data(iso_2: str, df_wikipedia: pd.DataFrame):
         return [None, None, None]
 
 
-def _download_flag(url: str, output_path: Path) -> None:
+def _download_flag(url: str, output_path: Path) -> None:  # pragma: no cover
     """Download SVG file with the flag of a country.
 
     Args:
@@ -224,7 +229,7 @@ def _download_flag(url: str, output_path: Path) -> None:
             f.write(response.text)
 
 
-def download_flags(output_dir: Path = FLAGS_DIR) -> None:
+def download_flags(output_dir: Path = FLAGS_DIR) -> None:  # pragma: no cover
     """Download all the flags from
     https://raw.githubusercontent.com/amckenna41/iso3166-flags/refs/heads/main/iso3166-flags-metadata/iso3166_1_flag_metadata.csv
 
@@ -284,7 +289,7 @@ def process_country_mentions(
 
     if briefings:
         for briefing in briefings:
-            logger.info(f"{briefing.briefing_id} {model}")
+            logger.info(f"{briefing.briefing_date} {model}")
             for _, section in enumerate(briefing.sections, start=1):
                 if not overwrite and _check_country_section_exists(
                     conn=conn, section_id=section.section_id, model=model
@@ -308,7 +313,7 @@ def process_country_mentions(
                                 country
                                 and iso_2
                                 and iso_3
-                                and not check_country_section_exists(
+                                and not check_country_section_model_exists(
                                     conn=conn,
                                     section_id=section.section_id,
                                     iso_2=iso_2,

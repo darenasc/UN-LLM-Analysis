@@ -10,8 +10,7 @@ from un_llm_analysis.database import (
     Briefing,
     Section,
     _check_country_section_exists,
-    check_country_briefing_exists,
-    check_country_section_exists,
+    check_country_section_model_exists,
     create_database,
     delete_briefing,
     delete_from_issue,
@@ -25,7 +24,6 @@ from un_llm_analysis.database import (
     get_briefing_id_from_date,
     get_briefings_between_dates,
     get_countries_by_section_id,
-    get_country_mentions,
     get_country_mentions_by_date,
     get_dates_with_briefings,
     get_db_connection,
@@ -908,17 +906,85 @@ def test_get_countries_by_section_id(
     assert result == expected
 
 
-def test_check_country_section_exists():
-    pass
+@pytest.mark.parametrize(
+    "briefing_id,section_id,country,iso_2,iso_3,model,created_at,iso_2_check,expected",
+    [
+        (20260801, 2026080101, "Chile", "CL", "CHL", "qwen3.5:4b", "2026-08-01", "CL", True),
+        (20260801, 2026080101, "Chile", "CL", "CHL", "qwen3.5:4b", "2026-08-01", "BR", False),
+        (20260801, 2026080102, "Germany", "DE", "DEU", "qwen3.5:4b", "2026-08-02", "DE", True),
+    ],
+)
+def test_check_country_section_model_exists(
+    conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at, iso_2_check, expected
+):
+    """Test if a country mentions has been processed for a given section_id and model."""
+    insert_into_country(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        country=country,
+        iso_2=iso_2,
+        iso_3=iso_3,
+        model=model,
+        created_at=created_at,
+    )
+    result = check_country_section_model_exists(
+        conn=conn, section_id=section_id, iso_2=iso_2_check, model=model
+    )
+    assert result is expected
 
 
-def test__check_country_section_exists():
-    pass
-
-
-def test_check_country_briefing_exists():
-    pass
-
-
-def test_get_country_mentions():
-    pass
+@pytest.mark.parametrize(
+    "briefing_id,section_id,country,iso_2,iso_3,model,created_at,model_check,expected",
+    [
+        (
+            20260801,
+            2026080101,
+            "Chile",
+            "CL",
+            "CHL",
+            "qwen3.5:4b",
+            "2026-08-01",
+            "qwen3.5:4b",
+            True,
+        ),
+        (
+            20260801,
+            2026080101,
+            "Chile",
+            "CL",
+            "CHL",
+            "qwen3.5:4b",
+            "2026-08-01",
+            "llama3.2",
+            False,
+        ),
+        (
+            20260801,
+            2026080102,
+            "Germany",
+            "DE",
+            "DEU",
+            "qwen3.5:4b",
+            "2026-08-02",
+            "qwen3.5:4b",
+            True,
+        ),
+    ],
+)
+def test__check_country_section_exists(
+    conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at, model_check, expected
+):
+    """Tests if a model has been used to process a given section."""
+    insert_into_country(
+        conn=conn,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        country=country,
+        iso_2=iso_2,
+        iso_3=iso_3,
+        model=model,
+        created_at=created_at,
+    )
+    result = _check_country_section_exists(conn=conn, section_id=section_id, model=model_check)
+    assert result is expected

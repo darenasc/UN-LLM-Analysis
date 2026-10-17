@@ -1,3 +1,5 @@
+"""Module to save model prompts and interface to interact with Ollama."""
+
 import ollama
 
 SDG_MENTION_PROMPT = """**Classification Task:**
