@@ -8,8 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- #52 Sentiment & tone over time
 - #50 Proportionality of issues/topics
+
+## [2.1.0]
+
+### Added
+
+- Sentiment distribution visualisation to show the number of sections classified as positive, neutral, or negative.
+- Tone distribution visualisation to show the frequency of different communication tones in UN briefings.
+- Sentiment and tone relationship visualisation to explore how sentiment categories relate to communication tones.
+- The sentiment graph shows whether positive, neutral, or negative classifications increase or decrease over time.
+- The tone graph shows how the frequency of communication tones changes each month.
+- A value of zero means no successful classifications for that category were recorded in that month.
 
 ## [2.0.2]
 
