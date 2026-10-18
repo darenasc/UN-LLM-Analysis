@@ -13,8 +13,6 @@ from un_llm_analysis.analysis.issue import (
 )
 from un_llm_analysis.config import BRIEFINGS_DB_PATH
 from un_llm_analysis.database import (
-    get_briefing_id_from_date,
-    get_briefings_between_dates,
     get_db_connection,
     get_issues_between_dates,
     get_min_max_dates_with_table,
@@ -22,7 +20,6 @@ from un_llm_analysis.database import (
     get_sections_between_dates,
 )
 
-st.set_page_config(layout="wide")
 st.logo(
     CORRELAID_LOGO,
     link="https://mentoring.correlaid.org",
