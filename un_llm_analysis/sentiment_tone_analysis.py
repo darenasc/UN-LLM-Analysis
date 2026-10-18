@@ -39,7 +39,7 @@ from tqdm.auto import tqdm
 
 from un_llm_analysis.database import (
     count_successful_sections,
-    get_analysis_run,
+    # get_analysis_run,
     get_completed_section_ids,
     get_db_connection,
     get_latest_analysis_run,
@@ -65,18 +65,6 @@ from un_llm_analysis.database import (
 #     sentiment_tone_analysis.py
 #
 # ============================================================
-
-from un_llm_analysis.database import (
-    get_db_connection,
-    get_sections_for_sentiment_analysis,
-    insert_into_analysis_run,
-    get_analysis_run,
-    get_completed_section_ids,
-    insert_sentiment_analysis,
-    get_latest_analysis_run,
-    count_successful_sections,
-)
-
 
 
 # ============================================================
@@ -150,6 +138,7 @@ __SECTION_TEXT__
 # 3. GENERAL HELPERS
 # ============================================================
 
+
 def utc_now() -> str:
     """Return the current UTC timestamp."""
     return datetime.now(timezone.utc).isoformat()
@@ -166,6 +155,7 @@ def build_prompt(text: str) -> str:
 # ============================================================
 # 4. MODEL RESPONSE VALIDATION
 # ============================================================
+
 
 def parse_and_validate(raw_response: str) -> dict:
     """
@@ -187,22 +177,16 @@ def parse_and_validate(raw_response: str) -> dict:
     expected_keys = {"sentiment", "tone"}
 
     if set(result.keys()) != expected_keys:
-        raise ValueError(
-            f"Unexpected JSON fields: {list(result.keys())}"
-        )
+        raise ValueError(f"Unexpected JSON fields: {list(result.keys())}")
 
     sentiment = result["sentiment"]
     tone = result["tone"]
 
     if sentiment not in SENTIMENT_CATEGORIES:
-        raise ValueError(
-            f"Invalid sentiment: {sentiment}"
-        )
+        raise ValueError(f"Invalid sentiment: {sentiment}")
 
     if tone not in TONE_CATEGORIES:
-        raise ValueError(
-            f"Invalid tone: {tone}"
-        )
+        raise ValueError(f"Invalid tone: {tone}")
 
     return result
 
@@ -210,6 +194,7 @@ def parse_and_validate(raw_response: str) -> dict:
 # ============================================================
 # 5. SENTIMENT + TONE MODEL LOGIC
 # ============================================================
+
 
 def analyze_section(text: str):
     """
@@ -239,9 +224,7 @@ def analyze_section(text: str):
             keep_alive=KEEP_ALIVE,
         )
 
-        result = parse_and_validate(
-            response["message"]["content"]
-        )
+        result = parse_and_validate(response["message"]["content"])
 
         return (
             result["sentiment"],
@@ -264,6 +247,7 @@ def analyze_section(text: str):
 # 6. PROCESS ONE DATABASE ROW
 # ============================================================
 
+
 def process_row(row, analysis_id: int) -> dict:
     """
     Analyze one section.
@@ -272,9 +256,7 @@ def process_row(row, analysis_id: int) -> dict:
     The result is returned to the main thread.
     """
 
-    sentiment, tone, status, error = analyze_section(
-        row["section_text"]
-    )
+    sentiment, tone, status, error = analyze_section(row["section_text"])
 
     return {
         "analysis_id": analysis_id,
@@ -293,15 +275,14 @@ def process_row(row, analysis_id: int) -> dict:
 # 7. TEST ONE SECTION
 # ============================================================
 
+
 def test_model(df) -> None:
     """
     Test Ollama before processing the complete database.
     """
 
     if df.empty:
-        raise ValueError(
-            "No sections were returned from the database."
-        )
+        raise ValueError("No sections were returned from the database.")
 
     first_row = df.iloc[0]
 
@@ -311,9 +292,7 @@ def test_model(df) -> None:
         first_row["section_id"],
     )
 
-    sentiment, tone, status, error = analyze_section(
-        first_row["section_text"]
-    )
+    sentiment, tone, status, error = analyze_section(first_row["section_text"])
 
     print("Sentiment:", sentiment)
     print("Tone:", tone)
@@ -321,18 +300,15 @@ def test_model(df) -> None:
     print("Error:", error)
 
     if status != "success":
-        raise RuntimeError(
-            f"Ollama test failed: {error}"
-        )
+        raise RuntimeError(f"Ollama test failed: {error}")
 
 
 # ============================================================
 # 8. FULL DATABASE ANALYSIS
 # ============================================================
 
+
 def run_analysis(
-    start_date: str | None = None,
-    end_date: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
     resume_analysis_id: int | None = None,
@@ -371,14 +347,10 @@ def run_analysis(
         )
 
         if df.empty:
-            print(
-                "No sections available for analysis."
-            )
+            print("No sections available for analysis.")
             return
 
-        print(
-            f"Source sections: {len(df)}"
-        )
+        print(f"Source sections: {len(df)}")
 
         # --------------------------------------------------------
         # C. Find existing incomplete run OR create a new run
@@ -406,7 +378,6 @@ def run_analysis(
 
                 # No previous run exists
                 analysis_id = insert_into_analysis_run(
-                analysis_id = insert_into_analysis_run(
                     conn=conn,
                     analysis_name=ANALYSIS_NAME,
                     model_name=MODEL_NAME,
@@ -432,15 +403,9 @@ def run_analysis(
 
                 total_sections = len(df)
 
-                print(
-                    f"Latest analysis_id: "
-                    f"{latest_analysis_id}"
-                )
+                print(f"Latest analysis_id: " f"{latest_analysis_id}")
 
-                print(
-                    f"Successful sections: "
-                    f"{successful_count}/{total_sections}"
-                )
+                print(f"Successful sections: " f"{successful_count}/{total_sections}")
 
                 if successful_count < total_sections:
 
@@ -448,16 +413,12 @@ def run_analysis(
                     # Resume it.
                     analysis_id = latest_analysis_id
 
-                    print(
-                        "Resuming incomplete "
-                        f"analysis_id: {analysis_id}"
-                    )
+                    print("Resuming incomplete " f"analysis_id: {analysis_id}")
 
                 else:
 
                     # Previous run is completely finished.
                     # Start a NEW analysis run.
-                    analysis_id = insert_into_analysis_run(
                     analysis_id = insert_into_analysis_run(
                         conn=conn,
                         analysis_name=ANALYSIS_NAME,
@@ -469,14 +430,12 @@ def run_analysis(
                         temperature=TEMPERATURE,
                     )
 
-                    print(
-                        "Previous analysis is complete."
-                    )
+                    print("Previous analysis is complete.")
 
                     print(
                         "Created new analysis_id:",
                         analysis_id,
-                   )
+                    )
         # ----------------------------------------------------
         # D. Find sections already successfully analysed
         # ----------------------------------------------------
@@ -486,11 +445,7 @@ def run_analysis(
             analysis_id,
         )
 
-        pending_df = df[
-            ~df["section_id"]
-            .astype(int)
-            .isin(completed_ids)
-        ].copy()
+        pending_df = df[~df["section_id"].astype(int).isin(completed_ids)].copy()
 
         print(
             "Already successful:",
@@ -503,34 +458,25 @@ def run_analysis(
         )
 
         if pending_df.empty:
-            print(
-                "All sections already have "
-                "successful sentiment/tone results."
-            )
+            print("All sections already have " "successful sentiment/tone results.")
             return
 
         # ----------------------------------------------------
         # E. Process sections with Ollama
         # ----------------------------------------------------
 
-        rows = pending_df.to_dict(
-            orient="records"
-        )
+        rows = pending_df.to_dict(orient="records")
 
         total = len(rows)
         processed = 0
 
         started = time.time()
 
-        print(
-            f"Starting {total} sections..."
-        )
+        print(f"Starting {total} sections...")
 
         # Ollama calls happen in worker threads.
         # Database writes remain in the main thread.
-        with ThreadPoolExecutor(
-            max_workers=MAX_WORKERS
-        ) as executor:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
 
             for batch_start in range(
                 0,
@@ -538,10 +484,7 @@ def run_analysis(
                 COMMIT_BATCH_SIZE,
             ):
 
-                batch = rows[
-                    batch_start:
-                    batch_start + COMMIT_BATCH_SIZE
-                ]
+                batch = rows[batch_start : batch_start + COMMIT_BATCH_SIZE]
 
                 futures = [
                     executor.submit(
@@ -560,9 +503,7 @@ def run_analysis(
                     desc="Analysing",
                 ):
 
-                    results.append(
-                        future.result()
-                    )
+                    results.append(future.result())
 
                 # --------------------------------------------
                 # F. Store results through database.py
@@ -587,46 +528,22 @@ def run_analysis(
 
                 processed += len(results)
 
-                elapsed = (
-                    time.time() - started
-                )
+                elapsed = time.time() - started
 
-                rate = (
-                    processed / elapsed
-                    if elapsed > 0
-                    else 0
-                )
+                rate = processed / elapsed if elapsed > 0 else 0
 
-                remaining = (
-                    total - processed
-                )
+                remaining = total - processed
 
-                eta = (
-                    remaining / rate
-                    if rate > 0
-                    else 0
-                )
+                eta = remaining / rate if rate > 0 else 0
 
                 print()
-                print(
-                    f"Processed "
-                    f"{processed}/{total}"
-                )
+                print(f"Processed " f"{processed}/{total}")
 
-                print(
-                    f"Rate: "
-                    f"{rate:.2f} sections/sec"
-                )
+                print(f"Rate: " f"{rate:.2f} sections/sec")
 
-                print(
-                    f"Elapsed: "
-                    f"{elapsed / 60:.1f} minutes"
-                )
+                print(f"Elapsed: " f"{elapsed / 60:.1f} minutes")
 
-                print(
-                    f"Estimated remaining: "
-                    f"{eta / 60:.1f} minutes"
-                )
+                print(f"Estimated remaining: " f"{eta / 60:.1f} minutes")
 
         print()
         print("=" * 70)
@@ -637,9 +554,7 @@ def run_analysis(
 
         conn.close()
 
-        print(
-            "Database connection closed."
-        )
+        print("Database connection closed.")
 
 
 # ============================================================
@@ -647,4 +562,3 @@ def run_analysis(
 # ============================================================
 if __name__ == "__main__":
     run_analysis()
-
