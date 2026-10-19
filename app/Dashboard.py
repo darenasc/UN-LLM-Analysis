@@ -6,7 +6,7 @@ import streamlit as st
 from streamlit_folium import st_folium  # type: ignore
 
 from un_llm_analysis import database
-from un_llm_analysis.analysis.countries import get_country_polygons
+from un_llm_analysis.analysis.countries import _get_country_polygons
 from un_llm_analysis.config import APP_DIR, BRIEFINGS_DB_PATH
 
 st.logo(
@@ -54,7 +54,7 @@ if min_date and max_date:
         conn=conn, model="qwen3.5:4b", start_date=min_date, end_date=max_date
     )
     if df_country.shape[0] > 0:
-        gdf_map = get_country_polygons(df_country)
+        gdf_map = _get_country_polygons(df_country)
         m = gdf_map.explore(column="Mentions", tooltip=["NAME", "Mentions"])  # type: ignore
         container_map = st.container(border=True)
         with container_map:

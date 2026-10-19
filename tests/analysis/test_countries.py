@@ -3,10 +3,10 @@ from pathlib import Path
 import pytest
 
 from un_llm_analysis.analysis.countries import (
+    _get_country_data,
+    _get_country_text,
+    _get_wikipedia_country_data,
     _parse_country_response,
-    get_country_data,
-    get_country_text,
-    get_wikipedia_country_data,
     process_country_mentions,
 )
 from un_llm_analysis.database import get_country_mentions_by_date, load_briefing_to_db
@@ -14,7 +14,7 @@ from un_llm_analysis.database import get_country_mentions_by_date, load_briefing
 
 def test_get_wikipedia_country_data():
     """Test retrieving wikipedia data about countryes."""
-    df_result = get_wikipedia_country_data(
+    df_result = _get_wikipedia_country_data(
         file_path=Path("tests/fixtures/app/static/wikipedia_country_data.csv")
     )
     assert df_result.shape == (4, 4)
@@ -22,7 +22,7 @@ def test_get_wikipedia_country_data():
 
 def test_get_country_text():
     """Test generating a list of countries with codes."""
-    result = get_country_text(
+    result = _get_country_text(
         wikipedia_data=Path("tests/fixtures/app/static/wikipedia_country_data.csv")
     )
     assert isinstance(result, str)
@@ -42,7 +42,7 @@ def test_get_country_data(
     iso_2, country_expected, iso_2_expected, iso_3_expected, wikipedia_country_data
 ):
     """Tests retrieving name and codes from the wikipedia country data."""
-    country_result, iso_2_result, iso_3_result = get_country_data(
+    country_result, iso_2_result, iso_3_result = _get_country_data(
         iso_2=iso_2, df_wikipedia=wikipedia_country_data
     )
     assert country_result == country_expected

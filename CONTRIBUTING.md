@@ -4,7 +4,9 @@
 UN LLM Analysis is a CorrelAid mentoring project that explores data analysis and
 natural language processing techniques using United Nations noon briefing data.
 
-The project is developed collaboratively through the CorrelAid mentoring programme. It includes tools for scraping, extracting, storing, and analysing UN noon briefing data.
+The project is developed collaboratively through the CorrelAid mentoring
+programme. It includes tools for scraping, extracting, storing, and analysing
+UN noon briefing data.
 
 First off, thanks for taking the time to contribute! ❤️
 
