@@ -4,7 +4,7 @@ theme:
 site_name: "UN LLM Analysis - Correlaid Mentoring Project"
 site_description: Correlaid mentoring project 2026.
 site_author: Correlaid
-site_url: https://darenasc.github.io/auto-fes/correlaid-mentoring-project
+site_url: https://darenasc.github.io/correlaid-mentoring-project
 repo_url: https://github.com/darenasc/correlaid-mentoring-project/
 
 plugins:
@@ -32,6 +32,14 @@ plugins:
             filters:
               - "!^main$"
               - "!^_[^_]"
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
 extra:
   social:
     - icon: fontawesome/brands/github-alt

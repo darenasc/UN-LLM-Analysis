@@ -1,8 +1,11 @@
 # About the project
 
-The UN LLM Analysis project analyzes language patterns and themes in UN noon briefings using large language models (LLMs).
+UN LLM Analysis is a CorrelAid mentoring project that explores data analysis and
+natural language processing techniques using United Nations noon briefing data.
 
-The aim is to identify trends and insights on global issues, policy developments, and emerging challenges.
+The project was developed collaboratively through the CorrelAid mentoring
+programme. It includes tools for scraping, extracting, storing, and analysing
+UN noon briefing data.
 
 # Requirements:
 
@@ -68,7 +71,7 @@ briefings stats
 
 Extract structured content from a scraped briefing JSON file.
 
-```python
+```py
 from pathlib import Path
 
 from un_llm_analysis.config import RAW_DATA_DIR

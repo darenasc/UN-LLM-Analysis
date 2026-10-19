@@ -83,7 +83,7 @@ def create_heatmap(
     return fig
 
 
-def get_country_polygons(df_country: pd.DataFrame) -> gpd.GeoDataFrame:  # pragma: no cover
+def _get_country_polygons(df_country: pd.DataFrame) -> gpd.GeoDataFrame:  # pragma: no cover
     """Return polygons of the countries in the dataframe to plot them in a map.
 
     Args:
@@ -102,7 +102,7 @@ def get_country_polygons(df_country: pd.DataFrame) -> gpd.GeoDataFrame:  # pragm
     return gdf_map
 
 
-def get_wikipedia_country_data(
+def _get_wikipedia_country_data(
     file_path: Path = APP_DIR / "static" / "wikipedia_country_data.csv",
 ) -> pd.DataFrame:
     """Return DataFrame with wikipedia data of countries including:
@@ -118,13 +118,13 @@ def get_wikipedia_country_data(
         pd.DataFrame: Country list with name, ISO codes and wikipedia link.
     """
     if not file_path.exists():
-        download_wikipedia_country_data(output_path=file_path)
+        _download_wikipedia_country_data(output_path=file_path)
 
     df = pd.read_csv(file_path)
     return df
 
 
-def download_wikipedia_country_data(
+def _download_wikipedia_country_data(
     output_path: Path = APP_DIR / "static" / "wikipedia_country_data.csv", overwrite: bool = False
 ) -> Path:  # pragma: no cover
     """Download wikipedia table from
@@ -171,7 +171,7 @@ def download_wikipedia_country_data(
     return output_path
 
 
-def get_country_text(
+def _get_country_text(
     wikipedia_data: Path = APP_DIR / "static" / "wikipedia_country_data.csv",
 ) -> str:
     """Returns a text with a list of countries to be passed to a prompt that
@@ -185,7 +185,7 @@ def get_country_text(
         str: Text with a list of countries.
     """
     if not wikipedia_data.exists():
-        wikipedia_data = download_wikipedia_country_data()
+        wikipedia_data = _download_wikipedia_country_data()
 
     df_wikipedia = pd.read_csv(wikipedia_data)
 
@@ -196,7 +196,7 @@ def get_country_text(
     return country_text
 
 
-def get_country_data(iso_2: str, df_wikipedia: pd.DataFrame):
+def _get_country_data(iso_2: str, df_wikipedia: pd.DataFrame):
     """Returns ["country", "iso_2", "iso_3"] from the wikipedia data.
 
     Args:
@@ -229,7 +229,7 @@ def _download_flag(url: str, output_path: Path) -> None:  # pragma: no cover
             f.write(response.text)
 
 
-def download_flags(output_dir: Path = FLAGS_DIR) -> None:  # pragma: no cover
+def _download_flags(output_dir: Path = FLAGS_DIR) -> None:  # pragma: no cover
     """Download all the flags from
     https://raw.githubusercontent.com/amckenna41/iso3166-flags/refs/heads/main/iso3166-flags-metadata/iso3166_1_flag_metadata.csv
 
@@ -283,9 +283,9 @@ def process_country_mentions(
         overwrite (bool, optional): Whether or not to overwrite data.
             Defaults to False.
     """
-    df_wikipedia = get_wikipedia_country_data(file_path=wikipedia_path)
+    df_wikipedia = _get_wikipedia_country_data(file_path=wikipedia_path)
     briefings = get_briefings_between_dates(conn=conn, start_date=start_date, end_date=end_date)
-    country_text = get_country_text(wikipedia_data=wikipedia_path)
+    country_text = _get_country_text(wikipedia_data=wikipedia_path)
 
     if briefings:
         for briefing in briefings:
@@ -306,7 +306,7 @@ def process_country_mentions(
                 if result_parsed:
                     for country_result, iso_2_result in result_parsed:
                         if iso_2_result:
-                            country, iso_2, iso_3 = get_country_data(
+                            country, iso_2, iso_3 = _get_country_data(
                                 iso_2=iso_2_result.strip(), df_wikipedia=df_wikipedia
                             )
                             if (

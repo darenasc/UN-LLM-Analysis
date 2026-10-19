@@ -4,7 +4,7 @@ from logos import CORRELAID_LOGO  # type: ignore
 import streamlit as st
 from streamlit_folium import st_folium  # type: ignore
 
-from un_llm_analysis.analysis.countries import create_heatmap, get_country_polygons
+from un_llm_analysis.analysis.countries import _get_country_polygons, create_heatmap
 from un_llm_analysis.database import (
     get_briefing_id_from_date,
     get_country_mentions_by_date,
@@ -71,7 +71,7 @@ color_selection = st.sidebar.selectbox(
     0,
 )
 
-gdf_map = get_country_polygons(
+gdf_map = _get_country_polygons(
     df_country[
         (df_country["briefing_id"] >= get_briefing_id_from_date(str(start_date)))
         & (df_country["briefing_id"] <= get_briefing_id_from_date(str(end_date)))

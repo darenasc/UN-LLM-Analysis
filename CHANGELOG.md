@@ -8,7 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Added
 
-- #50 Proportionality of issues/topics
+## [2.2.0]
+
+### Added
+
+- Issue proportion page with:
+  - Issue selection
+  - day / week / month / year aggregation.
+- Issue proportion notebooks with data generation and data visualisation
+- Issue badges to the Streamlit app
+- Hyperlinks for SDG images and issue badges pointing to the corresponding Streamlit pages
+- Modularize issue calculations and add tests
+- Improve the SDG page with descriptions
 
 ## [2.1.0]
 
