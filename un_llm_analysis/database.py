@@ -36,7 +36,7 @@ from un_llm_analysis.utils import (
     date_int_to_str,
 )
 
-AnalysisTableName = Literal["sdg", "issue", "country"]
+AnalysisTableName = Literal["sdg", "issue", "country", "sentiment_analysis", "analysis_run"]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -1301,6 +1301,52 @@ def get_sentiment_results(
         conn,
         params=(analysis_id,),
     )
+
+
+def get_sentiment_results_between_dates(
+    conn: sqlite3.Connection,
+    start_date: str,
+    end_date: str,
+) -> pd.DataFrame:
+    """Return successful sentiment results and model names for a date range."""
+    query = """
+        SELECT
+            sa.analysis_id,
+            sa.briefing_id,
+            sa.section_id,
+            sa.briefing_date,
+            sa.sentiment,
+            sa.tone,
+            sa.status,
+            ar.model_name
+        FROM sentiment_analysis AS sa
+        JOIN analysis_run AS ar
+            ON sa.analysis_id = ar.analysis_id
+        WHERE sa.briefing_date BETWEEN ? AND ?
+          AND sa.status = 'success'
+    """
+
+    return pd.read_sql_query(
+        query,
+        conn,
+        params=(start_date, end_date),
+    )
+
+
+def get_sentiment_models(
+    conn: sqlite3.Connection,
+) -> list[str]:
+    """Return model names used for sentiment analysis."""
+    query = """
+        SELECT DISTINCT ar.model_name
+        FROM analysis_run AS ar
+        JOIN sentiment_analysis AS sa
+            ON sa.analysis_id = ar.analysis_id
+        WHERE sa.status = 'success'
+        ORDER BY ar.model_name
+    """
+
+    return [row[0] for row in conn.execute(query).fetchall() if row[0] is not None]
 
 
 def get_sentiment_distribution(
