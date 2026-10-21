@@ -139,7 +139,7 @@ def get_briefing_id_from_date(date: str) -> int:
     return briefing_date.year * 10000 + briefing_date.month * 100 + briefing_date.day
 
 
-def get_min_max_briefing_ids_from_dates(start_date: str, end_date: str) -> tuple[int, int]:
+def _get_min_max_briefing_ids_from_dates(start_date: str, end_date: str) -> tuple[int, int]:
     """Get the minimum and maximum briefing IDs for a given date range.
 
     Args:
@@ -295,7 +295,7 @@ def get_briefings_between_dates(
     Returns:
         list[Briefing]: Matching briefings, or an empty list if none are found.
     """
-    bounds = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    bounds = _get_min_max_briefing_ids_from_dates(start_date, end_date)
 
     briefing_rows = conn.execute(
         f"""
@@ -477,7 +477,7 @@ def get_sections_between_dates(
     Returns:
         list[Section]: Matching sections, or an empty list if none are found.
     """
-    bounds = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    bounds = _get_min_max_briefing_ids_from_dates(start_date, end_date)
 
     rows = conn.execute(
         f"""
@@ -609,7 +609,7 @@ def get_sdgs_between_dates(
     Returns:
         pd.DataFrame: Data from the sdg table.
     """
-    min_briefing_id, max_briefing_id = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    min_briefing_id, max_briefing_id = _get_min_max_briefing_ids_from_dates(start_date, end_date)
 
     sql_query = """
         SELECT briefing_id, section_id, sdg, model, created_at
@@ -773,7 +773,7 @@ def get_issues_between_dates(
     Returns:
         pd.DataFrame: Data from the issue table.
     """
-    min_briefing_id, max_briefing_id = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    min_briefing_id, max_briefing_id = _get_min_max_briefing_ids_from_dates(start_date, end_date)
 
     sql_query = """
         SELECT briefing_id, section_id, issue, model, created_at
@@ -1168,7 +1168,7 @@ def get_sections_for_sentiment_analysis(
         pd.DataFrame: Data with non empty sections to apply sentiment analysis
             on them.
     """
-    bounds = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    bounds = _get_min_max_briefing_ids_from_dates(start_date, end_date)
     query = f"""
         SELECT 	s.section_id
                 , s.briefing_id

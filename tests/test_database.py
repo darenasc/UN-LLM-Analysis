@@ -101,10 +101,10 @@ def test_get_db_connection(tmp_path):
         ("1990-12-20", 19901220),  # First website in WWW
     ],
 )
-def test__get_briefing_id_from_date(date, expected):
-    """Test _get_briefing_id_from_date."""
+def test_get_briefing_id_from_date(date, expected):
+    """Test get_briefing_id_from_date."""
     # GIVEN a 'YYYY-MM-DD' date
-    # WHEN calling `_get_briefing_id_from_date`
+    # WHEN calling `get_briefing_id_from_date`
     briefing_id = get_briefing_id_from_date(date=date)
 
     # THEN eval the transformation into integer YYYYMMDD
@@ -478,7 +478,7 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
         (20260801, 2026080102, "['SDG3', 'SDG4']", "llama3.2", "2026-08-01"),
     ],
 )
-def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+def test_get_min_max_dates_with_table_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
     """Test retrieving min and max dates with SDG mentions."""
     table = "sdg"
     insert_into_sdg(
@@ -501,7 +501,7 @@ def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, 
         (20260801, 2026080102, "Germany", "DE", "DEU", "qwen3.5:4b", "2026-08-01"),
     ],
 )
-def test_get_min_max_dates_with_country(
+def test_get_min_max_dates_with_table_country(
     conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at
 ):
     """Test retrieving min and max dates with country mentions."""
@@ -551,7 +551,7 @@ def test_get_sdg_by_section_id(conn, briefing_id, section_id, sdgs, model, creat
         (20260801, 2026080102, ["SDG3", "SDG4"], "mistral", "2026-08-01", "mistral"),
     ],
 )
-def test_get_sdg_models(conn, briefing_id, section_id, sdgs, model, created_at, expected):
+def test_get_models_for_sdg(conn, briefing_id, section_id, sdgs, model, created_at, expected):
     """Test retrieving a list of LLM models from the sdg table."""
     insert_into_sdg(
         conn=conn,
@@ -661,7 +661,7 @@ def test_load_briefing_to_db_invalid_file(conn):
     assert result is False
 
 
-def test_load_between_dates_empty_range(conn):
+def test_load_briefings_between_dates_empty_range(conn):
     """Test load_between_dates with empty date range."""
     # GIVEN a database connection
     # WHEN using provided conn fixture (already has briefing_2026-08-25.json)
@@ -677,7 +677,7 @@ def test_load_between_dates_empty_range(conn):
     assert result is True
 
 
-def test_dry_run_returns_true_and_does_not_load(conn, caplog) -> None:
+def test_load_briefings_between_dates_dry_run(conn, caplog) -> None:
     """Tests dry run using JSON files in `tests/fixtures`"""
     briefings_path = Path("tests/fixtures/briefings")
     _ = load_briefings_between_dates(
@@ -699,7 +699,7 @@ def test_dry_run_returns_true_and_does_not_load(conn, caplog) -> None:
         (date(2026, 8, 25), date(2026, 8, 25), True),
     ],
 )
-def test_all_succeed(start_date, end_date, expected, conn):
+def test_load_briefings_between_dates_success(start_date, end_date, expected, conn):
     """Tests successful load of briefings to the database"""
     briefings_path = Path("tests/fixtures/briefings")
     result = load_briefings_between_dates(
@@ -716,7 +716,9 @@ def test_all_succeed(start_date, end_date, expected, conn):
         (date(2026, 8, 26), date(2026, 8, 26), False),
     ],
 )
-def test_returns_false_on_failure(start_date, end_date, expected, monkeypatch, conn):
+def test_load_briefings_between_dates_returns_false_on_failure(
+    start_date, end_date, expected, monkeypatch, conn
+):
     """Tests unsuccessful load of briefings to the database"""
     monkeypatch.setattr(
         db_module, "_load_dates", lambda *args, **kwargs: [start_date.strftime("%Y-%m-%d")]
@@ -736,7 +738,9 @@ def test_returns_false_on_failure(start_date, end_date, expected, monkeypatch, c
         (date(2026, 8, 26), date(2026, 8, 26), "No JSON file for 2026-08-26, would skip"),
     ],
 )
-def test_missing_json_files_are_skipped_not_failed(start_date, end_date, expected, conn, caplog):
+def test_load_briefings_between_dates_skips_missing_json_files(
+    start_date, end_date, expected, conn, caplog
+):
     """Tests that correctly skips missing files"""
     briefings_path = Path("tests/fixtures/briefings")
     _ = load_briefings_between_dates(
@@ -744,23 +748,6 @@ def test_missing_json_files_are_skipped_not_failed(start_date, end_date, expecte
     )
     assert "DRY RUN - No changes will be made:" in caplog.text
     assert expected in caplog.text
-
-
-@pytest.mark.parametrize(
-    "start_date,end_date,expected",
-    [
-        (date(2026, 6, 12), date(2026, 6, 12), True),
-        (date(2026, 6, 29), date(2026, 6, 29), True),
-        (date(2026, 8, 25), date(2026, 8, 25), True),
-    ],
-)
-def test_load_briefings_between_dates(start_date, end_date, expected, conn):
-    """Tests loading briefings from JSON files to the database"""
-    briefings_path = Path("tests/fixtures/briefings")
-    result = load_briefings_between_dates(
-        start_date, end_date, conn=conn, briefings_dir=briefings_path
-    )
-    assert expected == result
 
 
 @pytest.mark.parametrize(
