@@ -355,6 +355,104 @@ def test_main_update(monkeypatch):
     )
 
 
+def test_main_init_db(monkeypatch, tmp_path):
+    db_path = tmp_path / "test.db"
+    args = Namespace(command="init-db", db_path=db_path)
+
+    fake_parser = Mock()
+    fake_parser.parse_args.return_value = args
+    monkeypatch.setattr(main, "_build_parser", Mock(return_value=fake_parser))
+
+    fake_create_database = Mock()
+    monkeypatch.setattr(main, "create_database", fake_create_database)
+
+    main.main()
+
+    fake_create_database.assert_called_once_with(db_path=db_path)
+
+
+@pytest.mark.parametrize("success", [True, False])
+def test_main_load(monkeypatch, tmp_path, success):
+    db_path = tmp_path / "test.db"
+    args = Namespace(command="load", db_path=db_path)
+    start_date = date(2026, 8, 1)
+    end_date = date(2026, 8, 20)
+
+    fake_parser = Mock()
+    fake_parser.parse_args.return_value = args
+    monkeypatch.setattr(main, "_build_parser", Mock(return_value=fake_parser))
+
+    fake_resolve_load_request = Mock(return_value=(start_date, end_date, False, False))
+    monkeypatch.setattr(main, "_resolve_load_request", fake_resolve_load_request)
+
+    fake_get_db_connection = Mock()
+    monkeypatch.setattr(main, "get_db_connection", fake_get_db_connection)
+
+    fake_load_briefings = Mock(return_value=success)
+    monkeypatch.setattr(main, "load_briefings_between_dates", fake_load_briefings)
+
+    if success:
+        main.main()
+    else:
+        with pytest.raises(SystemExit) as exc_info:
+            main.main()
+        assert exc_info.value.code == 1
+
+    fake_resolve_load_request.assert_called_once()
+    fake_get_db_connection.assert_called_once()
+    fake_load_briefings.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "briefing_date,status",
+    [
+        (date(2026, 8, 20), None),
+        (None, "available"),
+    ],
+)
+def test_main_query(monkeypatch, tmp_path, briefing_date, status):
+    fake_parser = Mock()
+    fake_parser.parse_args.return_value = Namespace(
+        command="query",
+        db_path=tmp_path / "test.db",
+        date=briefing_date,
+        status=status,
+    )
+    monkeypatch.setattr(main, "_build_parser", Mock(return_value=fake_parser))
+    monkeypatch.setattr(main, "get_db_connection", Mock())
+
+    fake_query_by_date = Mock()
+    fake_query_by_status = Mock()
+    monkeypatch.setattr(main, "query_briefing_by_date", fake_query_by_date)
+    monkeypatch.setattr(main, "query_briefing_by_status", fake_query_by_status)
+
+    main.main()
+
+    if briefing_date is not None:
+        fake_query_by_date.assert_called_once()
+        fake_query_by_status.assert_not_called()
+    else:
+        fake_query_by_status.assert_called_once()
+        fake_query_by_date.assert_not_called()
+
+
+def test_main_stats(monkeypatch, tmp_path):
+    fake_parser = Mock()
+    fake_parser.parse_args.return_value = Namespace(command="stats", db_path=tmp_path / "test.db")
+    monkeypatch.setattr(main, "_build_parser", Mock(return_value=fake_parser))
+
+    fake_get_db_connection = Mock()
+    monkeypatch.setattr(main, "get_db_connection", fake_get_db_connection)
+
+    fake_show_stats = Mock()
+    monkeypatch.setattr(main, "show_stats", fake_show_stats)
+
+    main.main()
+
+    fake_get_db_connection.assert_called_once()
+    fake_show_stats.assert_called_once()
+
+
 def test_build_parser():
     """Test _build_parser creates parser with all subcommands."""
     parser = _build_parser()

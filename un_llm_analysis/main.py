@@ -14,12 +14,13 @@ The CLI follows a layered architecture:
 
 import argparse
 from datetime import date, datetime
+from pathlib import Path
 import sys
 from zoneinfo import ZoneInfo
 
 from loguru import logger
 
-from un_llm_analysis.config import MIN_SCRAPE_DATE
+from un_llm_analysis.config import BRIEFINGS_DB_PATH, MIN_SCRAPE_DATE
 from un_llm_analysis.database import (
     create_database,
     get_db_connection,
@@ -139,7 +140,7 @@ Scraped raw data location:
 
 --overwrite and --dry-run may be added to any form.
 """,
-        usage="%(prog)s [-h] [--overwrite] [--dry-run] (DATE [DATE] | --since DATE)",
+        usage="%(prog)s [-h] [--db-path PATH] [--overwrite] [--dry-run] (DATE [DATE] | --since DATE)",
         formatter_class=formatter,
     )
     load_parser.add_argument(
@@ -190,6 +191,15 @@ Scraped raw data location:
         help="Show database statistics.",
         description="Display statistics about the database contents.",
     )
+
+    for db_parser in (init_parser, load_parser, query_parser, stats_parser):
+        db_parser.add_argument(
+            "--db-path",
+            type=Path,
+            default=BRIEFINGS_DB_PATH,
+            metavar="PATH",
+            help="Path to the briefings database (default: %(default)s).",
+        )
 
     return parser
 
@@ -309,8 +319,8 @@ def main() -> None:
         logger.info("Update complete.")
 
     elif args.command == "init-db":
-        logger.info("Initializing database...")
-        create_database()
+        logger.info(f"Initializing database at {args.db_path} ...")
+        create_database(db_path=args.db_path)
         logger.info("Database initialized.")
 
     elif args.command == "load":
@@ -319,19 +329,23 @@ def main() -> None:
             f"Loading briefings from {start_date} to {end_date}, overwrite={overwrite}, dry_run={dry_run}..."
         )
         success = load_briefings_between_dates(
-            start_date, end_date, conn=get_db_connection(), overwrite=overwrite, dry_run=dry_run
+            start_date,
+            end_date,
+            conn=get_db_connection(db_path=args.db_path),
+            overwrite=overwrite,
+            dry_run=dry_run,
         )
         if not success:
             sys.exit(1)
 
     elif args.command == "query":
         if args.date:
-            query_briefing_by_date(args.date, conn=get_db_connection())
+            query_briefing_by_date(args.date, conn=get_db_connection(db_path=args.db_path))
         else:
-            query_briefing_by_status(args.status, conn=get_db_connection())
+            query_briefing_by_status(args.status, conn=get_db_connection(db_path=args.db_path))
 
     elif args.command == "stats":
-        show_stats(conn=get_db_connection())
+        show_stats(conn=get_db_connection(db_path=args.db_path))
 
 
 if __name__ == "__main__":  # pragma: no cover
