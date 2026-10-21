@@ -23,7 +23,7 @@ conn = get_db_connection()
 min_date, max_date = get_min_max_dates_with_table(conn=conn, table="sentiment_analysis")
 if min_date == "" and max_date == "":
     st.warning(
-        "No Sentiment and tone analysis data. You can populate the sentiment_analysis table using the code in `notebooks/sentiment_analysis/sentiment_analysis_tone1.2_fixed.ipynb`."
+        "No Sentiment and tone analysis data. You can populate the sentiment_analysis table using the code in `notebooks/sentiment_analysis/sentiment_analysis_tone.ipynb`."
     )
 
 st.sidebar.caption(
