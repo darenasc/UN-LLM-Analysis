@@ -6,28 +6,31 @@ import pytest
 
 from un_llm_analysis import database as db_module
 from un_llm_analysis.config import SCHEMA_DB
-from un_llm_analysis.database import (
-    Briefing,
+from un_llm_analysis.database import (  # Briefing,
     Section,
     _check_country_section_exists,
     check_country_section_model_exists,
+    count_successful_sections,
     create_database,
     delete_briefing,
     delete_from_issue,
     delete_from_sdg,
     delete_section,
     delete_sections,
+    get_analysis_run,
     get_briefing_by_date,
     get_briefing_by_id,
     get_briefing_by_url,
     get_briefing_id_by_url,
     get_briefing_id_from_date,
     get_briefings_between_dates,
+    get_completed_section_ids,
     get_countries_by_section_id,
     get_country_mentions_by_date,
     get_dates_with_briefings,
     get_db_connection,
     get_issues_between_dates,
+    get_latest_analysis_run,
     get_min_max_dates,
     get_min_max_dates_with_table,
     get_models,
@@ -36,12 +39,18 @@ from un_llm_analysis.database import (
     get_section_by_id,
     get_sections_between_dates,
     get_sections_by_briefing_id,
+    get_sections_for_sentiment_analysis,
+    get_sentiment_distribution,
+    get_sentiment_results,
+    get_tone_distribution,
+    insert_into_analysis_run,
     insert_into_briefing,
     insert_into_country,
     insert_into_issue,
     insert_into_sdg,
     insert_into_section,
     insert_section,
+    insert_sentiment_analysis,
     load_briefing_to_db,
     load_briefings_between_dates,
     query_briefing_by_date,
@@ -92,10 +101,10 @@ def test_get_db_connection(tmp_path):
         ("1990-12-20", 19901220),  # First website in WWW
     ],
 )
-def test__get_briefing_id_from_date(date, expected):
-    """Test _get_briefing_id_from_date."""
+def test_get_briefing_id_from_date(date, expected):
+    """Test get_briefing_id_from_date."""
     # GIVEN a 'YYYY-MM-DD' date
-    # WHEN calling `_get_briefing_id_from_date`
+    # WHEN calling `get_briefing_id_from_date`
     briefing_id = get_briefing_id_from_date(date=date)
 
     # THEN eval the transformation into integer YYYYMMDD
@@ -469,7 +478,7 @@ def test_get_sdgs_between_dates(conn, briefing_id, section_id, sdgs, model, crea
         (20260801, 2026080102, "['SDG3', 'SDG4']", "llama3.2", "2026-08-01"),
     ],
 )
-def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
+def test_get_min_max_dates_with_table_sdg(conn, briefing_id, section_id, sdgs, model, created_at):
     """Test retrieving min and max dates with SDG mentions."""
     table = "sdg"
     insert_into_sdg(
@@ -492,7 +501,7 @@ def test_get_min_max_dates_with_sdg(conn, briefing_id, section_id, sdgs, model, 
         (20260801, 2026080102, "Germany", "DE", "DEU", "qwen3.5:4b", "2026-08-01"),
     ],
 )
-def test_get_min_max_dates_with_country(
+def test_get_min_max_dates_with_table_country(
     conn, briefing_id, section_id, country, iso_2, iso_3, model, created_at
 ):
     """Test retrieving min and max dates with country mentions."""
@@ -542,7 +551,7 @@ def test_get_sdg_by_section_id(conn, briefing_id, section_id, sdgs, model, creat
         (20260801, 2026080102, ["SDG3", "SDG4"], "mistral", "2026-08-01", "mistral"),
     ],
 )
-def test_get_sdg_models(conn, briefing_id, section_id, sdgs, model, created_at, expected):
+def test_get_models_for_sdg(conn, briefing_id, section_id, sdgs, model, created_at, expected):
     """Test retrieving a list of LLM models from the sdg table."""
     insert_into_sdg(
         conn=conn,
@@ -652,23 +661,28 @@ def test_load_briefing_to_db_invalid_file(conn):
     assert result is False
 
 
-def test_load_between_dates_empty_range(conn):
+def test_load_briefings_between_dates_empty_range(conn):
     """Test load_between_dates with empty date range."""
     # GIVEN a database connection
     # WHEN using provided conn fixture (already has briefing_2026-08-25.json)
+    briefings_path = Path("tests/fixtures/briefings")
     result = load_briefings_between_dates(
-        start_date=date(2025, 9, 1), end_date=date(2025, 9, 30), conn=conn
+        start_date=date(2025, 9, 1),
+        end_date=date(2025, 9, 30),
+        conn=conn,
+        briefings_dir=briefings_path,
     )
 
     # THEN returns True (existing briefing in DB + no other files exist)
     assert result is True
 
 
-def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn, caplog) -> None:
+def test_load_briefings_between_dates_dry_run(conn, caplog) -> None:
     """Tests dry run using JSON files in `tests/fixtures`"""
     briefings_path = Path("tests/fixtures/briefings")
-    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
-    _ = load_briefings_between_dates(date(2026, 6, 12), date(2026, 8, 25), dry_run=True, conn=conn)
+    _ = load_briefings_between_dates(
+        date(2026, 6, 12), date(2026, 8, 25), dry_run=True, conn=conn, briefings_dir=briefings_path
+    )
     assert "DRY RUN - No changes will be made:" in caplog.text
     assert "Total: 75 dates requested." in caplog.text
     assert "[2026-06-12] Would load" in caplog.text
@@ -685,11 +699,12 @@ def test_dry_run_returns_true_and_does_not_load(monkeypatch, conn, caplog) -> No
         (date(2026, 8, 25), date(2026, 8, 25), True),
     ],
 )
-def test_all_succeed(start_date, end_date, expected, monkeypatch, conn):
+def test_load_briefings_between_dates_success(start_date, end_date, expected, conn):
     """Tests successful load of briefings to the database"""
     briefings_path = Path("tests/fixtures/briefings")
-    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
-    result = load_briefings_between_dates(start_date, end_date, conn=conn)
+    result = load_briefings_between_dates(
+        start_date, end_date, conn=conn, briefings_dir=briefings_path
+    )
     assert result is expected
 
 
@@ -701,12 +716,17 @@ def test_all_succeed(start_date, end_date, expected, monkeypatch, conn):
         (date(2026, 8, 26), date(2026, 8, 26), False),
     ],
 )
-def test_returns_false_on_failure(start_date, end_date, expected, monkeypatch, conn):
+def test_load_briefings_between_dates_returns_false_on_failure(
+    start_date, end_date, expected, monkeypatch, conn
+):
     """Tests unsuccessful load of briefings to the database"""
     monkeypatch.setattr(
         db_module, "_load_dates", lambda *args, **kwargs: [start_date.strftime("%Y-%m-%d")]
     )
-    result = load_briefings_between_dates(start_date, end_date, conn=conn)
+    briefings_path = Path("tests/fixtures/briefings")
+    result = load_briefings_between_dates(
+        start_date, end_date, conn=conn, briefings_dir=briefings_path
+    )
     assert result is expected
 
 
@@ -718,31 +738,16 @@ def test_returns_false_on_failure(start_date, end_date, expected, monkeypatch, c
         (date(2026, 8, 26), date(2026, 8, 26), "No JSON file for 2026-08-26, would skip"),
     ],
 )
-def test_missing_json_files_are_skipped_not_failed(
-    start_date, end_date, expected, monkeypatch, conn, caplog
+def test_load_briefings_between_dates_skips_missing_json_files(
+    start_date, end_date, expected, conn, caplog
 ):
     """Tests that correctly skips missing files"""
     briefings_path = Path("tests/fixtures/briefings")
-    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
-    _ = load_briefings_between_dates(start_date, end_date, dry_run=True, conn=conn)
+    _ = load_briefings_between_dates(
+        start_date, end_date, dry_run=True, conn=conn, briefings_dir=briefings_path
+    )
     assert "DRY RUN - No changes will be made:" in caplog.text
     assert expected in caplog.text
-
-
-@pytest.mark.parametrize(
-    "start_date,end_date,expected",
-    [
-        (date(2026, 6, 12), date(2026, 6, 12), True),
-        (date(2026, 6, 29), date(2026, 6, 29), True),
-        (date(2026, 8, 25), date(2026, 8, 25), True),
-    ],
-)
-def test_load_briefings_between_dates(start_date, end_date, expected, monkeypatch, conn, caplog):
-    """Tests loading briefings from JSON files to the database"""
-    briefings_path = Path("tests/fixtures/briefings")
-    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
-    result = load_briefings_between_dates(start_date, end_date, conn=conn)
-    assert expected == result
 
 
 @pytest.mark.parametrize(
@@ -818,11 +823,10 @@ def test_show_stats_with_data(conn, briefing, caplog):
         (date(2026, 8, 25), date(2026, 8, 25), "failed", []),
     ],
 )
-def test_get_dates_with_briefings(conn, monkeypatch, start_date, end_date, status, expected):
+def test_get_dates_with_briefings(conn, start_date, end_date, status, expected):
     """Tests retrieving the dates with brifings in the database given a status."""
     briefings_path = Path("tests/fixtures/briefings")
-    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
-    _ = load_briefings_between_dates(start_date, end_date, conn=conn)
+    _ = load_briefings_between_dates(start_date, end_date, conn=conn, briefings_dir=briefings_path)
     result = get_dates_with_briefings(conn=conn, status=status)
     assert result == expected
 
@@ -843,11 +847,10 @@ def test_get_dates_with_briefings(conn, monkeypatch, start_date, end_date, statu
         (date(2026, 8, 25), date(2026, 8, 25), "failed", (None, None)),
     ],
 )
-def test_get_min_max_dates(conn, monkeypatch, start_date, end_date, status, expected):
+def test_get_min_max_dates(conn, start_date, end_date, status, expected):
     """Tests retrieving the min and max dates with briefings of a given status."""
     briefings_path = Path("tests/fixtures/briefings")
-    monkeypatch.setattr(db_module, "BRIEFINGS_DIR", briefings_path)
-    _ = load_briefings_between_dates(start_date, end_date, conn=conn)
+    _ = load_briefings_between_dates(start_date, end_date, conn=conn, briefings_dir=briefings_path)
     result = get_min_max_dates(conn=conn, status=status)
     assert result == expected
 
@@ -988,3 +991,499 @@ def test__check_country_section_exists(
     )
     result = _check_country_section_exists(conn=conn, section_id=section_id, model=model_check)
     assert result is expected
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature",
+    [
+        ("analysis test 1", "llama3.2", "3.2", "1", "v4", "prompt test", 0),
+        ("analysis test 2", "llama3.2", "3.2", "1", "v4", "prompt test", 0),
+    ],
+)
+def test_insert_into_analysis_run(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+):
+    """Test inserting data into the analysis_run table."""
+    result = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    assert result == 1
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature,analysis_id",
+    [
+        ("analysis test 1", "llama3.2", "3.2", "1", "v4", "prompt test", 0, 1),
+        ("analysis test 2", "llama3.2", "3.2", "1", "v4", "prompt test", 0, 1),
+    ],
+)
+def test_get_analysis_run(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+    analysis_id,
+):
+    """Tests retrieving data from the analysis_run table."""
+    _ = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    result = get_analysis_run(conn=conn, analysis_id=analysis_id)
+    assert isinstance(result, sqlite3.Row)
+    assert result["analysis_id"] == 1
+    assert result["model_name"] == model_name
+
+
+@pytest.mark.parametrize(
+    "briefing_path,start_date,end_date,expected",
+    [
+        ("tests/fixtures/briefings/2026/2026-08/2026-08-25.json", "2026-08-25", "2026-08-25", 14),
+        ("tests/fixtures/briefings/2026/2026-06/2026-06-29.json", "2026-06-29", "2026-06-29", 13),
+        ("tests/fixtures/briefings/2026/2026-06/2026-06-12.json", "2026-06-12", "2026-06-12", 11),
+        ("tests/fixtures/briefings/2025/2025-01/2025-01-28.json", "2025-01-28", "2025-01-28", 9),
+    ],
+)
+def test_get_sections_for_sentiment_analysis(conn, briefing_path, start_date, end_date, expected):
+    """Test retrieving non empty sections for sentiment analysis."""
+    load_briefing_to_db(file_path=Path(briefing_path), conn=conn)
+    result_df = get_sections_for_sentiment_analysis(
+        conn=conn, start_date=start_date, end_date=end_date
+    )
+    assert result_df.shape[0] == expected
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature,analysis_id,briefing_id,section_id,briefing_date,sentiment,tone,status,error_message",
+    [
+        (
+            "analysis test 1",
+            "llama3.2",
+            "3.2",
+            "1",
+            "v4",
+            "prompt test",
+            0,
+            1,
+            20260901,
+            2026090101,
+            "2026-09-01",
+            "Positive",
+            "Neutral/Informational",
+            "success",
+            None,
+        )
+    ],
+)
+def test_insert_sentiment_analysis(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+    analysis_id,
+    briefing_id,
+    section_id,
+    briefing_date,
+    sentiment,
+    tone,
+    status,
+    error_message,
+):
+    """Test inserting data into sentiment_analysis table."""
+    # needs to insert into analysis_run first due foreign key constraint
+    _ = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    insert_sentiment_analysis(
+        conn=conn,
+        analysis_id=analysis_id,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        briefing_date=briefing_date,
+        sentiment=sentiment,
+        tone=tone,
+        status=status,
+        error_message=error_message,
+    )
+    result_ids = get_completed_section_ids(conn, analysis_id=analysis_id)
+    assert result_ids == {section_id}
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature,analysis_id,briefing_id,section_id,briefing_date,sentiment,tone,status,error_message,briefing_path",
+    [
+        (
+            "analysis test 1",
+            "llama3.2",
+            "3.2",
+            "1",
+            "v4",
+            "prompt test",
+            0,
+            1,
+            20260825,
+            2026082501,
+            "2026-09-01",
+            "Positive",
+            "Neutral/Informational",
+            "success",
+            None,
+            "tests/fixtures/briefings/2026/2026-08/2026-08-25.json",
+        )
+    ],
+)
+def test_get_sentiment_results(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+    analysis_id,
+    briefing_id,
+    section_id,
+    briefing_date,
+    sentiment,
+    tone,
+    status,
+    error_message,
+    briefing_path,
+):
+    """Test retrieving data of sentiment analysis."""
+    load_briefing_to_db(file_path=Path(briefing_path), conn=conn)
+    # needs to insert into analysis_run first due foreign key constraint
+    _ = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    insert_sentiment_analysis(
+        conn=conn,
+        analysis_id=analysis_id,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        briefing_date=briefing_date,
+        sentiment=sentiment,
+        tone=tone,
+        status=status,
+        error_message=error_message,
+    )
+    result_df = get_sentiment_results(conn=conn, analysis_id=analysis_id)
+    assert result_df.shape[0] == 1
+    assert result_df.iloc[0]["sentiment"] == sentiment
+    columns = [
+        "analysis_result_id",
+        "analysis_id",
+        "briefing_id",
+        "section_id",
+        "briefing_date",
+        "section_order",
+        "title",
+        "section_text",
+        "sentiment",
+        "tone",
+        "status",
+        "error_message",
+        "created_at",
+    ]
+    for column in columns:
+        assert column in result_df.columns
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature,analysis_id,briefing_id,section_id,briefing_date,sentiment,tone,status,error_message",
+    [
+        (
+            "analysis test 1",
+            "llama3.2",
+            "3.2",
+            "1",
+            "v4",
+            "prompt test",
+            0,
+            1,
+            20260901,
+            2026090101,
+            "2026-09-01",
+            "Positive",
+            "Neutral/Informational",
+            "success",
+            None,
+        )
+    ],
+)
+def test_get_sentiment_distribution(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+    analysis_id,
+    briefing_id,
+    section_id,
+    briefing_date,
+    sentiment,
+    tone,
+    status,
+    error_message,
+):
+    """Test retrieving sentiment data."""
+    # needs to insert into analysis_run first due foreign key constraint
+    _ = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    insert_sentiment_analysis(
+        conn=conn,
+        analysis_id=analysis_id,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        briefing_date=briefing_date,
+        sentiment=sentiment,
+        tone=tone,
+        status=status,
+        error_message=error_message,
+    )
+    result_df = get_sentiment_distribution(conn=conn, analysis_id=analysis_id)
+    assert "sentiment" in result_df.columns
+    assert "count" in result_df.columns
+    assert result_df.shape[0] == 1
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature,analysis_id,briefing_id,section_id,briefing_date,sentiment,tone,status,error_message",
+    [
+        (
+            "analysis test 1",
+            "llama3.2",
+            "3.2",
+            "1",
+            "v4",
+            "prompt test",
+            0,
+            1,
+            20260901,
+            2026090101,
+            "2026-09-01",
+            "Positive",
+            "Neutral/Informational",
+            "success",
+            None,
+        )
+    ],
+)
+def test_get_tone_distribution(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+    analysis_id,
+    briefing_id,
+    section_id,
+    briefing_date,
+    sentiment,
+    tone,
+    status,
+    error_message,
+):
+    """Test retrieving tone data."""
+    # needs to insert into analysis_run first due foreign key constraint
+    _ = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    insert_sentiment_analysis(
+        conn=conn,
+        analysis_id=analysis_id,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        briefing_date=briefing_date,
+        sentiment=sentiment,
+        tone=tone,
+        status=status,
+        error_message=error_message,
+    )
+    result_df = get_tone_distribution(conn, analysis_id=1)
+    assert "tone" in result_df.columns
+    assert "count" in result_df.columns
+    assert result_df.shape[0] == 1
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature,expected",
+    [
+        ("analysis test 1", "llama3.2", "3.2", "1", "v4", "prompt test", 0, 1),
+        ("analysis test 2", "llama3.2", "3.2", "1", "v4", "prompt test", 0, 1),
+    ],
+)
+def test_get_latest_analysis_run(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+    expected,
+):
+    """Test retrieving latest analysis"""
+    _ = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    result = get_latest_analysis_run(conn=conn, analysis_name=analysis_name)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature,analysis_id,briefing_id,section_id,briefing_date,sentiment,tone,status,error_message,expected",
+    [
+        (
+            "analysis test 1",
+            "llama3.2",
+            "3.2",
+            "1",
+            "v4",
+            "prompt test",
+            0,
+            1,
+            20260901,
+            2026090101,
+            "2026-09-01",
+            "Positive",
+            "Neutral/Informational",
+            "success",
+            None,
+            1,
+        ),
+        (
+            "analysis test 2",
+            "llama3.2",
+            "3.2",
+            "1",
+            "v4",
+            "prompt test",
+            0,
+            1,
+            20260901,
+            2026090101,
+            "2026-09-01",
+            "Positive",
+            "Neutral/Informational",
+            "error",
+            None,
+            0,
+        ),
+    ],
+)
+def test_count_successful_sections(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+    analysis_id,
+    briefing_id,
+    section_id,
+    briefing_date,
+    sentiment,
+    tone,
+    status,
+    error_message,
+    expected,
+):
+    """Test counting successful sections of sentiment analysis"""
+    _ = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    insert_sentiment_analysis(
+        conn=conn,
+        analysis_id=analysis_id,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        briefing_date=briefing_date,
+        sentiment=sentiment,
+        tone=tone,
+        status=status,
+        error_message=error_message,
+    )
+    result = count_successful_sections(conn=conn, analysis_id=analysis_id)
+    assert result == expected

@@ -139,7 +139,7 @@ def get_briefing_id_from_date(date: str) -> int:
     return briefing_date.year * 10000 + briefing_date.month * 100 + briefing_date.day
 
 
-def get_min_max_briefing_ids_from_dates(start_date: str, end_date: str) -> tuple[int, int]:
+def _get_min_max_briefing_ids_from_dates(start_date: str, end_date: str) -> tuple[int, int]:
     """Get the minimum and maximum briefing IDs for a given date range.
 
     Args:
@@ -295,7 +295,7 @@ def get_briefings_between_dates(
     Returns:
         list[Briefing]: Matching briefings, or an empty list if none are found.
     """
-    bounds = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    bounds = _get_min_max_briefing_ids_from_dates(start_date, end_date)
 
     briefing_rows = conn.execute(
         f"""
@@ -467,6 +467,8 @@ def get_sections_between_dates(
 ) -> list[Section]:
     """Retrieve sections between two dates.
 
+    "section_id, briefing_id, section_order, title, text"
+
     Args:
         conn (sqlite3.Connection): Database connection.
         start_date (str): Start date with format 'YYYY-MM-DD'.
@@ -475,7 +477,7 @@ def get_sections_between_dates(
     Returns:
         list[Section]: Matching sections, or an empty list if none are found.
     """
-    bounds = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    bounds = _get_min_max_briefing_ids_from_dates(start_date, end_date)
 
     rows = conn.execute(
         f"""
@@ -607,7 +609,7 @@ def get_sdgs_between_dates(
     Returns:
         pd.DataFrame: Data from the sdg table.
     """
-    min_briefing_id, max_briefing_id = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    min_briefing_id, max_briefing_id = _get_min_max_briefing_ids_from_dates(start_date, end_date)
 
     sql_query = """
         SELECT briefing_id, section_id, sdg, model, created_at
@@ -771,7 +773,7 @@ def get_issues_between_dates(
     Returns:
         pd.DataFrame: Data from the issue table.
     """
-    min_briefing_id, max_briefing_id = get_min_max_briefing_ids_from_dates(start_date, end_date)
+    min_briefing_id, max_briefing_id = _get_min_max_briefing_ids_from_dates(start_date, end_date)
 
     sql_query = """
         SELECT briefing_id, section_id, issue, model, created_at
@@ -804,7 +806,7 @@ def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:
                 insert_into_section(conn, briefing_id, briefing.sections)
         logger.info(f"Loaded briefing from {file_path}")
         return True
-    except Exception:
+    except FileNotFoundError:
         logger.exception(f"Error loading {file_path}")
         return False
 
@@ -815,6 +817,7 @@ def load_briefings_between_dates(
     conn: sqlite3.Connection,
     overwrite: bool = False,
     dry_run: bool = False,
+    briefings_dir: Path = BRIEFINGS_DIR,
 ) -> bool:
     """Load briefings from JSON files into database for a date range.
 
@@ -834,7 +837,7 @@ def load_briefings_between_dates(
     requested_dates = list(_dates_between(start_date, end_date))
 
     if dry_run:
-        _log_dry_run(requested_dates)
+        _log_dry_run(requested_dates=requested_dates, briefings_dir=briefings_dir)
         return True
 
     dates_to_load = _resolve_dates_to_load(
@@ -850,7 +853,7 @@ def load_briefings_between_dates(
         logger.info("All requested briefings already in database.")
         return True
 
-    failed_dates = _load_dates(conn=conn, dates_to_load=dates_to_load)
+    failed_dates = _load_dates(conn=conn, dates_to_load=dates_to_load, briefings_dir=briefings_dir)
 
     if failed_dates:
         logger.info(
@@ -862,12 +865,12 @@ def load_briefings_between_dates(
     return True
 
 
-def _log_dry_run(requested_dates: list[date]) -> None:
+def _log_dry_run(requested_dates: list[date], briefings_dir: Path = BRIEFINGS_DIR) -> None:
     """Log a preview of what load_between_dates would do, without loading anything."""
     logger.info("DRY RUN - No changes will be made:")
     for briefing_date in requested_dates:
         date_string = briefing_date.strftime("%Y-%m-%d")
-        file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+        file_path = briefings_dir / date_string[:4] / date_string[:7] / f"{date_string}.json"
         if not file_path.exists():
             logger.info(f"  - No JSON file for {date_string}, would skip")
         else:
@@ -902,12 +905,16 @@ def _resolve_dates_to_load(
     return [d for d in requested_dates if d not in existing_dates]
 
 
-def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str]:
+def _load_dates(
+    conn: sqlite3.Connection, dates_to_load: list[date], briefings_dir: Path = BRIEFINGS_DIR
+) -> list[str]:
     """Load each date's briefing JSON into the database.
 
     Args:
         conn (sqlite3.Connection): Open database connection.
         dates_to_load (list[date]): Dates to attempt loading.
+        briefings_dir (Path): Directory to search for JSON briefings.
+            Defatuls to BRIEFINGS_DIR.
 
     Returns:
         list[str]: Date strings (YYYY-MM-DD) that failed to load.
@@ -916,7 +923,7 @@ def _load_dates(conn: sqlite3.Connection, dates_to_load: list[date]) -> list[str
 
     for i, briefing_date in enumerate(dates_to_load):
         date_string = briefing_date.strftime("%Y-%m-%d")
-        file_path = BRIEFINGS_DIR / date_string[:4] / date_string[:7] / f"{date_string}.json"
+        file_path = briefings_dir / date_string[:4] / date_string[:7] / f"{date_string}.json"
 
         if not file_path.exists():
             logger.info(f"  - No JSON file for {date_string}, skipping")
@@ -1061,8 +1068,22 @@ def insert_into_analysis_run(
     prompt_version: str,
     prompt: str,
     temperature: float,
-) -> int:
-    """Create one sentiment/tone analysis run and return analysis_id."""
+) -> int | None:
+    """Create one sentiment/tone analysis run and return analysis_id.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        analysis_name (str): Name of the analysis.
+        model_name (str): LLM name.
+        model_version (str): Version of the LLM.
+        ollama_version (None | str): Ollama version.
+        prompt_version (str): Version of the prompt used.
+        prompt (str): Prompt used.
+        temperature (float): Temperature between 0 and 1.
+
+    Returns:
+        int | None: Last row id from the `analysis_run` table or None.
+    """
 
     cursor = conn.execute(
         """
@@ -1089,17 +1110,24 @@ def insert_into_analysis_run(
             datetime.now().isoformat(),
         ),
     )
-
     conn.commit()
 
-    return int(cursor.lastrowid)
+    return int(cursor.lastrowid) if cursor.lastrowid is not None else None
 
 
 def get_analysis_run(
     conn: sqlite3.Connection,
     analysis_id: int,
-):
-    """Return metadata for one analysis run."""
+) -> sqlite3.Row:
+    """Return metadata for one analysis run.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        analysis_id (int): Analysis id.
+
+    Returns:
+        sqlite3.Row: The first row from query to the `analysis_run` table.
+    """
 
     return conn.execute(
         """
@@ -1121,51 +1149,40 @@ def get_analysis_run(
 
 def get_sections_for_sentiment_analysis(
     conn: sqlite3.Connection,
-    start_date: str | None = None,
-    end_date: str | None = None,
+    start_date: str,
+    end_date: str,
 ) -> pd.DataFrame:
+    """Get the existing briefing sections that will be analysed.
+
+        Data comes from the project's existing briefing and section tables.
+
+        If start_date and end_date are provided, only sections belonging to
+        briefings within that date range are returned.
+
+    Args:
+        conn (sqlite3.Connection): Database connection
+        start_date (str): Start date to query sections for sentiment analysis.
+        end_date (str): End date to query sections for sentiment analysis.
+
+    Returns:
+        pd.DataFrame: Data with non empty sections to apply sentiment analysis
+            on them.
     """
-    Get the existing briefing sections that will be analysed.
-
-    Data comes from the project's existing briefing and section tables.
-
-    If start_date and end_date are provided, only sections belonging to
-    briefings within that date range are returned.
-    """
-
-    query = """
-        SELECT
-            s.section_id,
-            s.briefing_id,
-            b.briefing_date,
-            s.section_order,
-            s.title,
-            s.text AS section_text
-        FROM section AS s
-        JOIN briefing AS b
-            ON s.briefing_id = b.briefing_id
-        WHERE s.text IS NOT NULL
-          AND TRIM(s.text) != ''
-    """
-
-    params = []
-
-    if start_date is not None:
-        query += " AND b.briefing_date >= ?"
-        params.append(start_date)
-
-    if end_date is not None:
-        query += " AND b.briefing_date <= ?"
-        params.append(end_date)
-
-    query += " ORDER BY b.briefing_date, s.section_order"
-
-    cursor = conn.execute(query, params)
-    rows = cursor.fetchall()
-    column_names = [column[0] for column in cursor.description]
-    cursor.close()
-
-    df = pd.DataFrame(rows, columns=column_names)
+    bounds = _get_min_max_briefing_ids_from_dates(start_date, end_date)
+    query = f"""
+        SELECT 	s.section_id
+                , s.briefing_id
+                , b.briefing_date
+                , s.section_order
+                , s.title
+                , s.text as section_text
+        FROM briefing b INNER JOIN "section" s
+                ON b.briefing_id = s.briefing_id
+                AND b.briefing_id between {bounds[0]} and {bounds[1]}
+        WHERE   s."text" is not null
+                AND TRIM(s.text) != ''
+        ORDER BY b.briefing_date, s.section_order;"""
+    df = pd.read_sql(query, conn)
 
     if df.empty:
         return df
@@ -1185,9 +1202,15 @@ def get_completed_section_ids(
     conn: sqlite3.Connection,
     analysis_id: int,
 ) -> set[int]:
-    """
-    Return section IDs already successfully analysed
-    for this analysis run.
+    """Return section IDs already successfully analysed for this analysis run.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        analysis_id (int): Analysis id.
+
+    Returns:
+        set[int]: Set with successfully processed `section_id`s given an
+            `analysis_id`.
     """
 
     rows = conn.execute(
@@ -1214,8 +1237,7 @@ def insert_sentiment_analysis(
     status: str,
     error_message: str | None = None,
 ) -> None:
-    """
-    Store one sentiment/tone result.
+    """Store one sentiment/tone result.
 
     This matches the notebook's sentiment_analysis table:
         analysis_id
@@ -1227,10 +1249,26 @@ def insert_sentiment_analysis(
         status
         error_message
         created_at
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        analysis_id (int): Analysis ID.
+        briefing_id (int): Briefing ID.
+        section_id (int): Section ID.
+        briefing_date (str | None): Briefing date.
+        sentiment (str | None): Sentiment from the analysis. It can be
+            ["Positive", "Neutral", "Negative"]
+        tone (str | None): Tone from the analysis. It can take the values of:
+            "Diplomatic", "Concerned", "Critical", "Urgent", "Optimistic",
+            "Neutral/Informational", or "Constructive".
+        status (str): Status of the analysis. It can take the values of
+            'success' or 'error'.
+        error_message (str | None, optional): Error message in case the status
+            is equal to 'error'. Defaults to None.
     """
     # Normalize briefing date for SQLite
     if briefing_date is not None:
-        if hasattr(briefing_date, "strftime"):
+        if isinstance(briefing_date, datetime):
             briefing_date = briefing_date.strftime("%Y-%m-%d")
     else:
         briefing_date = str(briefing_date)
@@ -1269,9 +1307,16 @@ def get_sentiment_results(
     conn: sqlite3.Connection,
     analysis_id: int,
 ) -> pd.DataFrame:
-    """
-    Return sentiment/tone results together with the original
-    briefing and section information.
+    """Return sentiment/tone results together with the original briefing and
+    section information.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        analysis_id (int): Analysis ID.
+
+    Returns:
+        pd.DataFrame: Data with the results of the sentiment analysis stored in
+            the database.
     """
 
     query = """
@@ -1353,7 +1398,16 @@ def get_sentiment_distribution(
     conn: sqlite3.Connection,
     analysis_id: int,
 ) -> pd.DataFrame:
-    """Return sentiment counts for one analysis run."""
+    """Return sentiment counts for one analysis run.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        analysis_id (int): Sentiment analysis ID.
+
+    Returns:
+        pd.DataFrame: Frequency of the sentiments "Positive", "Neutral", and
+            "Negative".
+    """
 
     return pd.read_sql_query(
         """
@@ -1375,7 +1429,17 @@ def get_tone_distribution(
     conn: sqlite3.Connection,
     analysis_id: int,
 ) -> pd.DataFrame:
-    """Return tone counts for one analysis run."""
+    """Return tone counts for one analysis run.
+
+    Args:
+        conn (sqlite3.Connection): Database connection._
+        analysis_id (int): Sentiment analysis ID.
+
+    Returns:
+        pd.DataFrame: Frequency of the tones "Diplomatic", "Concerned",
+            "Critical", "Urgent", "Optimistic", "Neutral/Informational", and
+            "Constructive".
+    """
 
     return pd.read_sql_query(
         """
@@ -1394,9 +1458,16 @@ def get_tone_distribution(
 
 
 # Get the latest analysis run for the given analysis name.
-def get_latest_analysis_run(conn, analysis_name):
-    """
-    Get the latest analysis run for the given analysis name.
+def get_latest_analysis_run(conn: sqlite3.Connection, analysis_name: str) -> sqlite3.Row | None:
+    """Get the latest analysis run for the given analysis name.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        analysis_name (str): Name of the analysis.
+
+    Returns:
+        sqlite3.Row | None: Sentiment analysis ID or None if it there no record
+            for the given name of the analysis.
     """
 
     row = conn.execute(
@@ -1417,9 +1488,15 @@ def get_latest_analysis_run(conn, analysis_name):
 
 
 # Get count of successfully analysed sections for an analysis run.
-def count_successful_sections(conn, analysis_id):
-    """
-    Count successfully analysed sections for an analysis run.
+def count_successful_sections(conn: sqlite3.Connection, analysis_id: int) -> int:
+    """Count successfully analysed sections for an analysis run.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        analysis_id (int): Sentiment analysis ID.
+
+    Returns:
+        int: Number of sections successfully processed.
     """
 
     row = conn.execute(
@@ -1437,8 +1514,15 @@ def count_successful_sections(conn, analysis_id):
 
 def verify_sentiment_tables(
     conn: sqlite3.Connection,
-) -> list[str]:
-    """Return the analysis tables currently present in the database."""
+) -> list[str]:  # pragma: no cover
+    """Return the analysis tables currently present in the database.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+
+    Returns:
+        list[str]: Names of the tables that exists in the database.
+    """
 
     required = {
         "analysis_run",
