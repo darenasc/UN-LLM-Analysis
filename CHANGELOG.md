@@ -6,7 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
+###
+-
+
+## [2.3.0]
+
 ### Added
+
+- Sentiment and tone analysis dashboard with model and date range selection.
+- `--db-path` CLI option to specify a custom database location.
+- Unit tests for sentiment and tone database functions and CLI commands.
+
+### Changed
+
+- Allow `load_briefings_between_dates` and `_load_dates` to accept a custom `briefing_dir`.
+- Rename database functions and tests for clarity and remove a duplicate test.
+
+### Fixed
+
+- Fix missing DataFrame in the sentiment visualization notebook.
 
 ## [2.2.0]
 
