@@ -8,253 +8,150 @@
 
 Analysis of the language patterns and themes in [UN noon briefings](https://www.un.org/sg/en/content/noon-briefing-highlight) using large language models (LLMs). This project aims to identify trends and insights on global issues, policy developments, and emerging challenges, facilitating more informed decision-making and analysis.
 
-> **Note**: The communications about the project are in the
-> `#mentoring-project` channel on Correlaid's Slack.
 
-## Usage
+## Getting Started
 
-Requirements:
+### Requirements
 
 - [Python 3.12](https://www.python.org/downloads/release/python-31213/)
 - [`pipenv`](https://pipenv.pypa.io/en/latest/)
 
+
+### Installation
+
 ```bash
 git clone git@github.com:darenasc/correlaid-mentoring-project.git
 cd correlaid-mentoring-project
+
+# Install project and development dependencies from Pipfile
+pipenv install --dev
+
+# Activates the project's virtual environment
 pipenv shell
-pipenv install -d Pipfile
 ```
 
-### CLI scraper update
-Download UN noon briefings and save them as JSON.
+See the [CONTRIBUTING](./CONTRIBUTING.md) guide to set up the development environment and start contributing to the project.
+
+
+### Command-line interface (CLI)
+
+The `briefings` CLI provides commands for downloading, storing, and querying UN noon briefings.
+
+#### Scraping briefings
+
+Download UN noon briefings and save them as JSON files.
 
 ```bash
-# usage: scraper update [-h] [--overwrite] (DATE [DATE] | --since DATE)
-
-# Update briefing for a single date
-briefings update 2026-08-12
-
-# Update briefings for a date range
+# Download briefings within a date range
 briefings update 2026-08-01 2026-08-12
 
-# Update briefings since a given date:
+# Download briefings since a given date
 briefings update --since 2026-08-01
 ```
 
-### CLI scraper check
-Check if a briefing for a given date has already been downloaded and stored as JSON.
+Downloaded JSON files are stored in:
+
+ - `data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json`
+
+#### Managing the database
+
+Initialize, load, and query the SQLite database.
 
 ```bash
-# usage: scraper check [-h] DATE
-
-briefings check 2026-08-12
-```
-
-Scraped raw data location:
-  `data/raw/briefings/YYYY/YYYY-MM/YYYY-MM-DD.json`
-
-### CLI database
-
-Command line interface to initialise, load and query the database.
-
-```bash
+# Initialize the database
 briefings init-db
-briefings load 2026-08-12 2026-08-12
-briefings load --since 2026-08-12 --dry-run
-briefings load --since 2026-08-12
+
+# Load briefings into the database
+briefings load 2026-08-01 2026-08-12
+
+# Query briefings
 briefings query --date 2026-08-12
 briefings query --status available
+
+# Show database statistics
 briefings stats
 ```
 
-### Extractor module
+Use `briefings --help` or `briefings <command> --help` for more options.
 
-Extract structured content from a scraped briefing JSON file.
 
-```python
-from pathlib import Path
+## Analysis
 
-from un_llm_analysis.config import RAW_DATA_DIR
-from un_llm_analysis.extractor import extract_briefing
+The project uses LLMs to analyze UN noon briefings, focusing on:
 
-briefing = extract_briefing(RAW_DATA_DIR / "briefings" / "2026" / "2026-08" / "2026-08-12.json")
-```
-The extracted result includes speaker information, sections, and full text when available.
+- **SDG Mentions:** Identifying references to the UN Sustainable Development Goals (SDGs).
+- **Sentiment Analysis:** Classifying the sentiment and tone of briefing sections.
+- **Country Heatmap:** Visualizing country mentions using maps and heatmaps.
+- **Issue Proportion:** Tracking major global issues and their trends over time.
 
-See the [CONTRIBUTING](./CONTRIBUTING.md) document to setup the environment and
-start contributing to the project.
+Exploratory analyses, LLM experiments, and visualizations are available in the [Jupyter notebooks](./notebooks/).
 
-### `streamlit app`
 
-This project adds a streamlit app to visualise some of the data and analysis.
+## Dashboard
+
+The project includes a Streamlit dashboard for exploring UN noon briefings and their analysis results.
+
 Run the following command from the terminal to launch it.
 
 ```bash
-# Start a streamlit app
-
 streamlit run app/Dashboard.py
 ```
 
 The app will be running locally in http://localhost:8501
 
-#### Screeshots from the dashboard
 
-![alt text](figures/home.png)
-![alt text](figures/reader.png)
+**A Short Demo:**
+
+![Dashboard Demo](figures/dashboard-demo.gif)
+
 
 ## Documentation
 
-The project documentation is built with MkDocs.
+The project documentation is built with [MkDocs](https://www.mkdocs.org/).
+
 To view the documentation locally, run:
 
 ```bash
-pipenv run mkdocs serve -f docs/mkdocs.yml
+mkdocs serve -f docs/mkdocs.yml
 ```
 
-The documentation will be available in `http://127.0.0.1:8000/` in your browser.
+The documentation will be available in http://127.0.0.1:8000/ in your browser.
 
-See the [Usage](./docs/index.md) guide for the setup instructions.
+See the [Usage](./docs/docs/index.md) guide for the setup instructions.
 
-## Design
-
-- [Slides from the first meeting on 08.06.2026 "Volunteer Project Correlaid"](https://docs.google.com/presentation/d/1eMzWXqI4xPCCzbhxbL_EYkOfEE-uKAT6_fdOmvRROlI/edit?usp=sharing)
-- [Scoping Document](https://docs.google.com/document/d/1BXssHaiz7N6zIianLfSOAW3zsMlipRtTeRzJ5Ryj-jA/edit?usp=sharing) based on [Data Science Project Scoping Guide](https://datasciencepublicpolicy.org/our-work/tools-guides/data-science-project-scoping-guide/)
-
-## Planning
-
-A generic data science project will look like the following. In theory, the
-implementation part is planned to last between 4 to 10 weeks. The Gantt chart
-shows dependencies that, in practice, can progress in parallel with
-communication among the assigned people.
-
-```mermaid
-gantt
-    title A Generic timeline for a Data Science project
-    dateFormat YYYY-MM-DD
-    tickInterval 1month
-    section Preparation
-      First call: done, milestone, 2026-06-01, 0d
-      Kickoff: done, milestone, kickoff, 2026-06-08, 0d
-      Scoping: scoping, after kickoff, 14d
-      Scoping document: milestone, after scoping, 0d
-      Software stack: after scoping, 14d
-      Planning: planning, after scoping, 2w
-      Project Plan: milestone, plan, after planning, 0d
-    section Implementation
-      Data Exploration: exploration, after plan, 2w
-      Database Design: database, after exploration, 2w
-      Data Collection: collection, after exploration, 3w
-      LLM pipelines: llms, after database, 3w
-      LLM evaluation: evaluation, after llms, 2w
-      Data visualizations: dataviz, after collection, 2w
-    section Deployment
-      Deployment: deploy, after collection llms dataviz evaluation, 2w
-      Documentation: after deploy, 1w
-    Finish: milestone, after kickoff 4month
-    Correlcon: 2026-11-13, 3d
-```
-
-## Resources
-
-- [Noon briefing highlight](https://www.un.org/sg/en/content/noon-briefing-highlight)
-- [Data Science for Social Good Curriculum](https://dssg.github.io/hitchhikers-guide/curriculum/) with data science teaching material of multiple topics
-- Git
-  - [Learn git branching](https://learngitbranching.js.org) is an app to learn the basics of working with git
-  - [Git feature branch workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow) blogpost about a recommended way of working with git in collaborative projects
-  - [pre-commit](https://pre-commit.com) library to help with the maintainability of the repository
-- Web scraping
-  - [Beautiful Soup Documentation](https://beautiful-soup-4.readthedocs.io/en/latest/#) library to parse `HTML` code
-  - [Beautiful Soup tutorial](https://realpython.com/beautiful-soup-web-scraper-python/)
-  - [Another BeautifulSoup and Requests tutorial](https://medium.com/geekculture/part-1-crawling-a-website-using-beautifulsoup-and-requests-413ffb29dd8e)
-- LLM
-  - [Ollama](https://ollama.com/download) software to serve large language models locally
-  - [Using Ollama with Python: Step-by-Step Guide](https://cohorte.co/blog/using-ollama-with-python-step-by-step-guide)
-  - [Ollama in Colab notebook](https://colab.research.google.com/github/5aharsh/collama/blob/main/Ollama_Setup.ipynb), [medium article](https://medium.com/@abonia/running-ollama-in-google-colab-free-tier-545609258453)
-  - [langchain](https://docs.langchain.com/oss/python/langchain/overview) framework to create and operate agents
-  - [Introduction to langchain Python 1h course](https://academy.langchain.com/courses/foundation-introduction-to-langchain-python)
-  - [dspy](https://dspy.ai/getting-started/program-dont-prompt/) library to structure prompts to work with LLMs
-- Model evaluation
-  - [mlflow evaluation](https://mlflow.org/docs/latest/genai/eval-monitor/quickstart/) library with useful features when evaluating LLM results
-- Databases
-  - [sqlite3](https://realpython.com/ref/stdlib/sqlite3/) lightweight database included in Python.
-  - [sqlialchemy](https://docs.sqlalchemy.org/en/21/dialects/sqlite.html) library to interact with databases.
-- Data visualization
-  - [plotly](https://plotly.com/python/) to create plots and charts
-  - [plotly dash](https://dash.plotly.com/) to create dashboards using plotly
-- Testing
-  - [`pytest`](https://docs.pytest.org/en/stable/) framework for testing in Python.
-- Front-end
-  - [`streamlit`](https://streamlit.io) library to create web apps in a few steps
-  - [`gradio`](https://gradio.app) library, similar to streamlit, to create graphical user interfaces with programs
-- Documentation
-  - [mkdocs](https://www.mkdocs.org) library to generate documentation
-  - [Make a README](https://www.makeareadme.com) how to write a `README`
-  - [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) how to maintain a `CHANGELOG.md` for the project
-  - [Contributing guidelines](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors) information from GitHub
-  - [mermaid](https://mermaid.js.org/intro/) for markdown diagrams, useful to include in READMEs and documentation
-- Deployment
-  - [GitHub CI/CD](https://github.com/resources/articles/ci-cd) continuous integration and continuous deployment or delivery overview
-  - [GitHub actions](https://github.blog/enterprise-software/ci-cd/build-ci-cd-pipeline-github-actions-four-steps/) how to use GitHub actions to implement a pipeline for CI/CD
-  - [`streamlit` Community deployment](https://docs.streamlit.io/deploy/tutorials) option for an app created with streamlit
-- IDE and extensions
-  - [Visual Studio Code](https://code.visualstudio.com) using vscode is optional, if you have a preferred IDE you can use it for the project
-  - [autoDocstring](https://marketplace.visualstudio.com/items?itemName=njpwerner.autodocstring) Automatic docstring generation
-  - [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid) to support mermaid in markdown files
-  - [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) Code formatter
-  - [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) Python extension for vscode
-  - [SandDance for VSCode](https://marketplace.visualstudio.com/items?itemName=msrvida.vscode-sanddance) To explore data
-  - [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree) Show TODO, FIXME, etc. comment tags in a tree view.
 
 ## Project Organization
-<!-- autogenerated with cookiecutter-data-science, it will likely be removed towards the end of the project -->
+
 ```
-├── LICENSE            <- Open-source license if one is chosen
-├── Makefile           <- Makefile with convenience commands like `make data` or `make train`
-├── README.md          <- The top-level README for developers using this project.
-├── data
-│   ├── external       <- Data from third party sources.
-│   ├── interim        <- Intermediate data that has been transformed.
-│   ├── processed      <- The final, canonical data sets for modeling.
-│   │   └── database
-│   │      └── briefings.db.zip <- Database with 5 years of data
-│   └── raw            <- The original, immutable data dump.
-│      └── briefings   <- Folder that will store JSON files with briefings.
-│
-├── docs               <- A default mkdocs project; see www.mkdocs.org for details
-│
-├── models             <- Trained and serialized models, model predictions, or model summaries
-│
-├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                         the creator's initials, and a short `-` delimited description, e.g.
-│                         `1.0-jqp-initial-data-exploration`.
-│
-├── pyproject.toml     <- Project configuration file with package metadata for
-│                         un_llm_analysis and configuration for tools like black
-│
-├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-│   └── figures        <- Generated graphics and figures to be used in reporting
-│
-├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-│                         generated with `pip freeze > requirements.txt`
-│
-├── setup.cfg          <- Configuration file for flake8
-│
-└── un_llm_analysis   <- Source code for use in this project.
-    │
-    ├── __init__.py             <- Makes un_llm_analysis a Python module
-    │
-    ├── config.py               <- Store useful variables and configuration
-    │
-    ├── database.py             <- Scripts to load data to the database
-    │
-    ├── extractor.py            <- Scripts to extract information from briefings
-    │
-    ├── scraper.py              <- Scripts to download briefings from internet
+.
+├── app/                     # Streamlit dashboard
+│   └── pages/               # Dashboard pages
+├── database/                # Database schema
+├── docs/                    # MkDocs documentation
+├── figures/                 # Documentation images
+├── notebooks/               # Exploratory analysis
+├── scripts/                 # Utility scripts
+├── tests/                   # Automated tests
+├── un_llm_analysis/         # Core Python package
+│   ├── analysis/            # Analysis modules
+│   ├── database.py          # Database operations
+│   ├── extractor.py         # Briefing extraction
+│   ├── main.py              # CLI entry point
+│   └── scraper.py           # Web scraping
+├── CHANGELOG.md             # Version history
+├── CODE_OF_CONDUCT.md       # Community guidelines
+├── CONTRIBUTING.md          # Contribution guidelines
+├── LICENSE                  # Software license
+├── Makefile                 # Development commands
+├── Pipfile                  # Pipenv dependencies
+├── pyproject.toml           # Package and tool configuration
+└── README.md                # Project overview
 ```
+
 
 --------
 
-# Contributors
+## Contributors
 
 **Volunteers**: [Charles Mbayo](https://github.com/MathCodeLab1), [Daniel Wilkinson](https://github.com/daniel-lee-wilkinson), [Franz Song](https://github.com/yuanhes), [Josmy Mathew](https://github.com/josmyrose), and [Roxana Runcan](https://github.com/Roxana-Runcan)
 

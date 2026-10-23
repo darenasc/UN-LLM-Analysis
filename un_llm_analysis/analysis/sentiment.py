@@ -27,19 +27,17 @@ the small adapter functions in Section 2.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 import json
 import re
 import time
-
-from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import ollama
 from tqdm.auto import tqdm
 
 from un_llm_analysis.database import (
     count_successful_sections,
-    # get_analysis_run,
     get_completed_section_ids,
     get_db_connection,
     get_latest_analysis_run,
