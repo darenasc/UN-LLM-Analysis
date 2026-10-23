@@ -1,0 +1,51 @@
+
+## Resources
+
+- [Noon briefing highlight](https://www.un.org/sg/en/content/noon-briefing-highlight)
+- [Data Science for Social Good Curriculum](https://dssg.github.io/hitchhikers-guide/curriculum/) with data science teaching material of multiple topics
+- Git
+    - [Learn git branching](https://learngitbranching.js.org) is an app to learn the basics of working with git
+    - [Git feature branch workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow) blogpost about a recommended way of working with git in collaborative projects
+    - [pre-commit](https://pre-commit.com) library to help with the maintainability of the repository
+- Web scraping
+    - [Beautiful Soup Documentation](https://beautiful-soup-4.readthedocs.io/en/latest/#) library to parse `HTML` code
+    - [Beautiful Soup tutorial](https://realpython.com/beautiful-soup-web-scraper-python/)
+    - [Another BeautifulSoup and Requests tutorial](https://medium.com/geekculture/part-1-crawling-a-website-using-beautifulsoup-and-requests-413ffb29dd8e)
+- LLM
+    - [Ollama](https://ollama.com/download) software to serve large language models locally
+    - [Using Ollama with Python: Step-by-Step Guide](https://cohorte.co/blog/using-ollama-with-python-step-by-step-guide)
+    - [Ollama in Colab notebook](https://colab.research.google.com/github/5aharsh/collama/blob/main/Ollama_Setup.ipynb), [medium article](https://medium.com/@abonia/running-ollama-in-google-colab-free-tier-545609258453)
+    - [langchain](https://docs.langchain.com/oss/python/langchain/overview) framework to create and operate agents
+    - [Introduction to langchain Python 1h course](https://academy.langchain.com/courses/foundation-introduction-to-langchain-python)
+    - [dspy](https://dspy.ai/getting-started/program-dont-prompt/) library to structure prompts to work with LLMs
+- Model evaluation
+    - [mlflow evaluation](https://mlflow.org/docs/latest/genai/eval-monitor/quickstart/) library with useful features when evaluating LLM results
+- Databases
+    - [sqlite3](https://realpython.com/ref/stdlib/sqlite3/) lightweight database included in Python.
+    - [sqlialchemy](https://docs.sqlalchemy.org/en/21/dialects/sqlite.html) library to interact with databases.
+- Data visualization
+    - [plotly](https://plotly.com/python/) to create plots and charts
+    - [plotly dash](https://dash.plotly.com/) to create dashboards using plotly
+- Testing
+    - [`pytest`](https://docs.pytest.org/en/stable/) framework for testing in Python.
+- Front-end
+    - [`streamlit`](https://streamlit.io) library to create web apps in a few steps
+    - [`gradio`](https://gradio.app) library, similar to streamlit, to create graphical user interfaces with programs
+- Documentation
+    - [mkdocs](https://www.mkdocs.org) library to generate documentation
+    - [Make a README](https://www.makeareadme.com) how to write a `README`
+    - [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) how to maintain a `CHANGELOG.md` for the project
+    - [Contributing guidelines](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors) information from GitHub
+    - [mermaid](https://mermaid.js.org/intro/) for markdown diagrams, useful to include in READMEs and documentation
+- Deployment
+    - [GitHub CI/CD](https://github.com/resources/articles/ci-cd) continuous integration and continuous deployment or delivery overview
+    - [GitHub actions](https://github.blog/enterprise-software/ci-cd/build-ci-cd-pipeline-github-actions-four-steps/) how to use GitHub actions to implement a pipeline for CI/CD
+    - [`streamlit` Community deployment](https://docs.streamlit.io/deploy/tutorials) option for an app created with streamlit
+- IDE and extensions
+    - [Visual Studio Code](https://code.visualstudio.com) using vscode is optional, if you have a preferred IDE you can use it for the project
+    - [autoDocstring](https://marketplace.visualstudio.com/items?itemName=njpwerner.autodocstring) Automatic docstring generation
+    - [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid) to support mermaid in markdown files
+    - [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) Code formatter
+    - [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) Python extension for vscode
+    - [SandDance for VSCode](https://marketplace.visualstudio.com/items?itemName=msrvida.vscode-sanddance) To explore data
+    - [Todo Tree](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree) Show TODO, FIXME, etc. comment tags in a tree view.

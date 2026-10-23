@@ -46,6 +46,7 @@ ipython = "*"
 isort = "*"
 jupyterlab = "*"
 mkdocs-material = "*"
+mkdocs-panzoom-plugin = "*"
 mkdocstrings = {extras = ["python"], version = "*"}
 notebook = "*"
 pipfile = "*"
