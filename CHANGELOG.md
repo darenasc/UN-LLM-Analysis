@@ -13,10 +13,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
-## [2.3.1]
-
-### Changed
-
 - Restructure the README and add a dashboard demo.
 - Reorganize and expand the MkDocs documentation.
 - Move the sentiment analysis module into the `analysis` package.
