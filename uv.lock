@@ -3229,7 +3229,7 @@ wheels = [
 
 [[package]]
 name = "un-llm-analysis"
-version = "1.0.1"
+version = "3.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },

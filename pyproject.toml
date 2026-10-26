@@ -1,6 +1,6 @@
 [project]
 name = "un_llm_analysis"
-version = "1.0.1"
+version = "3.0.0"
 description = "Analysis of the UN noon briefings using LLMs."
 authors = [
     { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
