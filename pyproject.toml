@@ -73,7 +73,7 @@ dev = [
     "mkdocs-panzoom-plugin",
     "mkdocstrings[python]",
     "notebook",
-    "pre-commit",
+    "prek>=0.5.7",
     "pytest",
     "pytest-cov",
     "pytest-loguru",
