@@ -147,15 +147,16 @@ Environment Setup
 ```bash
 git clone git@github.com:darenasc/correlaid-mentoring-project.git
 cd correlaid-mentoring-project
-pipenv shell # to create or enter into the virtual environment
-pipenv install -d Pipfile # installs the libraries in the Pipfile of the repository
+
+uv sync # creates the virtual environment and installs dependencies
+source .venv/bin/activate # activates the virtual environment (Linux/macOS)
 ```
 
-`pipenv` is used in this project to manage the virtual environment. To install new libraries you can use the command `pipenv install`. More information about the [`pipenv` commands](https://pipenv.pypa.io/en/latest/commands.html).
+`uv` is used in this project to manage the virtual environment and dependencies. To install new libraries, you can use the command `uv add`. More information about the [uv commands](https://docs.astral.sh/uv/reference/cli/).
 
 ```bash
-pipenv install pandas # to install a library, in this case called pandas
-pipenv uninstall pandas # to uninstall a library, in this case called pandas
+uv add pandas # to install a library, in this case called pandas
+uv remove pandas # to uninstall a library, in this case called pandas
 ```
 
 Before start working on the Python code, make sure you create a new branch for your work, that is branched off from the `main` branch. With `git checkout main` you change to the main branch, and then make sure that you have the latest version of the repository with `git pull`.
@@ -208,14 +209,14 @@ Unit tests are developed using [`pytest`](https://docs.pytest.org/en/stable/).
 Install pytest and pytest-cov.
 
 ```bash
-pipenv install -d pytest pytest-cov
+uv add --dev pytest pytest-cov
 ```
 
-Install [pre-commit](https://pre-commit.com) as a dependency, then install the git hook scripts so checks run automatically before each commit.
+Install [prek](https://prek.j178.dev/) as a dependency, then install the git hook scripts so checks run automatically before each commit.
 
 ```bash
-pipenv install -d pre-commit
-pre-commit install # run before the next command:
+uv add --dev prek
+prek install
 ```
 
 #### Generating a Report

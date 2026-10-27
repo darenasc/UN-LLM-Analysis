@@ -10,7 +10,7 @@ UN noon briefing data.
 # Requirements:
 
 - [Python 3.12](https://www.python.org/downloads/release/python-31213/)
-- [`pipenv`](https://pipenv.pypa.io/en/latest/)
+- [`uv`](https://docs.astral.sh/uv/#installation)
 
 # Set up the project
 
@@ -18,8 +18,9 @@ UN noon briefing data.
 # Clone the repository and install dependencies
 git clone https://github.com/darenasc/correlaid-mentoring-project.git
 cd correlaid-mentoring-project
-pipenv shell
-pipenv install
+
+# Create the virtual environment and install dependencies
+uv sync
 ```
 
 # Usage
