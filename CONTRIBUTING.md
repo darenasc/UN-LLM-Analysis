@@ -29,6 +29,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
   - [Your First Code Contribution](#your-first-code-contribution)
   - [Testing](#testing)
     - [Installation](#installation)
+    - [Local checks with `prek`](#local-checks-with-prek)
     - [Generating a Report](#generating-a-report)
     - [Minimum Coverage Threshold](#minimum-coverage-threshold)
   - [Improving The Documentation](#improving-the-documentation)
@@ -145,7 +146,7 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/darena
 Environment Setup
 
 ```bash
-git clone git@github.com:darenasc/correlaid-mentoring-project.git
+git clone https://github.com/darenasc/correlaid-mentoring-project.git
 cd correlaid-mentoring-project
 
 uv sync # creates the virtual environment and installs dependencies
@@ -217,6 +218,12 @@ Install [prek](https://prek.j178.dev/) as a dependency, then install the git hoo
 ```bash
 uv add --dev prek
 prek install
+```
+
+#### Local checks with `prek`
+
+```bash
+prek run -a
 ```
 
 #### Generating a Report

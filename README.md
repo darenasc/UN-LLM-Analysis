@@ -20,7 +20,7 @@ Analysis of the language patterns and themes in [UN noon briefings](https://www.
 ### Installation
 
 ```bash
-git clone git@github.com:darenasc/correlaid-mentoring-project.git
+git clone https://github.com/darenasc/correlaid-mentoring-project.git
 cd correlaid-mentoring-project
 
 # Create the virtual environment and install dependencies
@@ -35,6 +35,18 @@ See the [CONTRIBUTING](./CONTRIBUTING.md) guide to set up the development enviro
 ### Command-line interface (CLI)
 
 The `briefings` CLI provides commands for downloading, storing, and querying UN noon briefings.
+
+```bash
+# Activate virtual environment to run the commands below
+# On Unix/macOS:
+source .venv/bin/activate
+
+# On Windows:
+.venv\Scripts\activate
+
+# Deactivate virtual environment
+deactivate
+```
 
 #### Scraping briefings
 

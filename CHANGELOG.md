@@ -6,8 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased
 
-###
--
+### Added
+
+- CLI command to download and run analysis for briefings in a single call
 
 ## [3.0.0]
 

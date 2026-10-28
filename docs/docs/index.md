@@ -25,6 +25,18 @@ uv sync
 
 # Usage
 
+```bash
+# Activate virtual environment to run the commands below
+# On Unix/macOS:
+source .venv/bin/activate
+
+# On Windows:
+.venv\Scripts\activate
+
+# Deactivate virtual environment
+deactivate
+```
+
 ## CLI scraper update
 
 Download UN noon briefings and save them as JSON.
