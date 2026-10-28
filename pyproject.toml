@@ -1,37 +1,92 @@
+[project]
+name = "un_llm_analysis"
+version = "3.0.0"
+description = "Analysis of the UN noon briefings using LLMs."
+authors = [
+    { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
+    { name = "Daniel Wilkinson" },
+    { name = "Diego Arenas", email = "darenasc@gmail.com" },
+    { name = "Franz Song", email = "justsyh@gmail.com" },
+    { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
+    { name = "Roxana Runcan", email = "runcanroxana@gmail.com" },
+]
+requires-python = "~=3.12.0"
+readme = "README.md"
+license = { file = "LICENSE" }
+maintainers = [
+    { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
+    { name = "Daniel Wilkinson" },
+    { name = "Diego Arenas", email = "darenasc@gmail.com" },
+    { name = "Franz Song", email = "justsyh@gmail.com" },
+    { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
+    { name = "Roxana Runcan", email = "runcanroxana@gmail.com" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "beautifulsoup4",
+    "folium>=0.12",
+    "geopandas",
+    "ipywidgets",
+    "jupyter",
+    "loguru",
+    "mapclassify",
+    "markdown",
+    "markdownify",
+    "matplotlib",
+    "mkdocs",
+    "mlflow",
+    "nltk",
+    "numpy",
+    "ollama",
+    "openai",
+    "pandas",
+    "pandas-stubs",
+    "pendulum",
+    "playwright",
+    "plotly",
+    "python-dotenv",
+    "scikit-learn",
+    "sqlalchemy",
+    "streamlit",
+    "streamlit-folium",
+    "wordcloud",
+]
+
+[project.scripts]
+briefings = "un_llm_analysis.main:main"
+
 [build-system]
 requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
-[project]
-name = "un_llm_analysis"
-version = "1.0.1"
-description = "Analysis of the UN noon briefings using LLMs."
-authors = [
-  { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
-  { name = "Daniel Wilkinson" },
-  { name = "Diego Arenas", email = "darenasc@gmail.com" },
-  { name = "Franz Song", email = "justsyh@gmail.com" },
-  { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
-  { name = "Roxana Runcan", email = "runcanroxana@gmail.com" },
+[dependency-groups]
+dev = [
+    "black",
+    "curl-cffi",
+    "ipython",
+    "isort",
+    "jupyterlab",
+    "mkdocs-material",
+    "mkdocs-panzoom-plugin",
+    "mkdocstrings[python]",
+    "notebook",
+    "prek>=0.5.7",
+    "pytest",
+    "pytest-cov",
+    "pytest-loguru",
+    "pytest-mock",
 ]
-maintainers = [
-  { name = "Charles Mbayo", email = "c.mbayo80@gmail.com" },
-  { name = "Daniel Wilkinson" },
-  { name = "Diego Arenas", email = "darenasc@gmail.com" },
-  { name = "Franz Song", email = "justsyh@gmail.com" },
-  { name = "Josmy Mathew", email = "josmyrose@gmail.com" },
-  { name = "Roxana Runcan", email = "runcanroxana@gmail.com" },
-]
-license = { file = "LICENSE" }
-readme = "README.md"
-classifiers = [
-  "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
-]
-requires-python = "~=3.12.0"
 
-[project.scripts]
-briefings = "un_llm_analysis.main:main"
+[tool.uv]
+package = true
+default-groups = "all"
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
 
 [tool.black]
 target-version = ["py312"]

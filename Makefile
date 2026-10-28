@@ -14,7 +14,7 @@ PYTHON_INTERPRETER = python
 ## Install Python dependencies
 .PHONY: requirements
 requirements:
-	pipenv install
+	uv sync
 
 
 
@@ -50,8 +50,8 @@ test:
 ## Set up Python interpreter environment
 .PHONY: create_environment
 create_environment:
-	pipenv --python $(PYTHON_VERSION)
-	@echo ">>> New pipenv created. Activate with:\npipenv shell"
+	uv venv --python $(PYTHON_VERSION)
+	@echo ">>> New virtual environment created. Activate with:\nsource .venv/bin/activate"
 
 
 
