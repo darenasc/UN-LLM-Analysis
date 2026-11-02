@@ -14,21 +14,20 @@ Analysis of the language patterns and themes in [UN noon briefings](https://www.
 ### Requirements
 
 - [Python 3.12](https://www.python.org/downloads/release/python-31213/)
-- [`pipenv`](https://pipenv.pypa.io/en/latest/)
+- [`uv`](https://docs.astral.sh/uv/#installation)
 
 
 ### Installation
 
 ```bash
-git clone git@github.com:darenasc/correlaid-mentoring-project.git
+git clone https://github.com/darenasc/correlaid-mentoring-project.git
 cd correlaid-mentoring-project
 
-# Install project and development dependencies from Pipfile
-pipenv install --dev
-
-# Activates the project's virtual environment
-pipenv shell
+# Create the virtual environment and install dependencies
+uv sync
 ```
+
+Use `uv run <command>` to execute commands in the project's virtual environment; or activate the virtual environment manually with `source .venv/bin/activate` (Linux/macOS).
 
 See the [CONTRIBUTING](./CONTRIBUTING.md) guide to set up the development environment and start contributing to the project.
 
@@ -36,6 +35,18 @@ See the [CONTRIBUTING](./CONTRIBUTING.md) guide to set up the development enviro
 ### Command-line interface (CLI)
 
 The `briefings` CLI provides commands for downloading, storing, and querying UN noon briefings.
+
+```bash
+# Activate virtual environment to run the commands below
+# On Unix/macOS:
+source .venv/bin/activate
+
+# On Windows:
+.venv\Scripts\activate
+
+# Deactivate virtual environment
+deactivate
+```
 
 #### Scraping briefings
 
@@ -143,9 +154,9 @@ See the [Usage](./docs/docs/index.md) guide for the setup instructions.
 ├── CONTRIBUTING.md          # Contribution guidelines
 ├── LICENSE                  # Software license
 ├── Makefile                 # Development commands
-├── Pipfile                  # Pipenv dependencies
 ├── pyproject.toml           # Package and tool configuration
-└── README.md                # Project overview
+├── README.md                # Project overview
+└── uv.lock                  # Locked dependency versions
 ```
 
 
