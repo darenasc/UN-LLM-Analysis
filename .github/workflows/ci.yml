@@ -36,4 +36,3 @@ jobs:
 
       - name: Documentation
         run: mkdocs gh-deploy --force
-
