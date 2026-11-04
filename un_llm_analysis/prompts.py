@@ -48,6 +48,54 @@ Here is a list of country and codes for reference:
 **Text to be Classified:**
 
 {text}
+
+"""
+# sentiment and tone analysis prompt
+prompt_version = "V4"
+VALID_SENTIMENTS = {"Positive", "Neutral", "Negative"}
+VALID_TONES = {
+    "Diplomatic",
+    "Concerned",
+    "Critical",
+    "Urgent",
+    "Optimistic",
+    "Neutral/Informational",
+    "Constructive",
+}
+ANALYSIS_PROMPT = """**Classification Task:**
+
+Classify the sentiment and primary tone of  the following text.
+SENTIMENT using exactly one label:
+- Positive: favorable developments, progress, success, support, or hope.
+- Neutral: factual reporting without clearly positive or negative evaluation.
+- Negative: adverse developments, harm, criticism, failure, or deterioration.
+
+Classify the PRIMARY TONE using exactly one label:
+- Diplomatic
+- Concerned
+- Critical
+- Urgent
+- Optimistic
+- Neutral/Informational
+- Constructive
+
+Rules:
+- Sentiment and tone are different. A negative situation can be reported neutrally.
+- Do not label text Negative only because it mentions conflict or a crisis.
+- Base both labels on the actual wording and overall message.
+- Choose the single most prominent tone.
+- Do not infer emotions that are not supported by the text.
+
+**Output Format:**
+
+Return only a valid JSON object with exactly these keys:
+
+{{"sentiment": "Neutral", "tone": "Neutral/Informational"}}
+
+**Text to be Classified:**
+
+{text}
+
 """
 
 
