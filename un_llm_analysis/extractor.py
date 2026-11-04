@@ -21,7 +21,8 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 
-from bs4 import BeautifulSoup, Comment, NavigableString, Tag
+from bs4 import BeautifulSoup
+from bs4.element import Comment, NavigableString, Tag
 
 from un_llm_analysis.scraper import FetchStatus
 
@@ -64,7 +65,7 @@ class ExtractedBriefing:
 
 @dataclass(frozen=True)
 class HardLine:
-    """A nonempty line separated by an explicit HTML boundary such as <br>, <p>, or <li>."""
+    """A nonempty line separated by an explicit HTML boundary such as `<br>`, `<p>`, or `<li>`."""
 
     text: str
     fully_bold: bool
