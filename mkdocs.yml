@@ -4,8 +4,8 @@ theme:
 site_name: "UN LLM Analysis - Correlaid Mentoring Project"
 site_description: Correlaid mentoring project 2026.
 site_author: Correlaid
-site_url: https://darenasc.github.io/correlaid-mentoring-project
-repo_url: https://github.com/darenasc/correlaid-mentoring-project/
+site_url: https://darenasc.github.io/UN-LLM-Analysis
+repo_url: https://github.com/darenasc/UN-LLM-Analysis/
 
 plugins:
   - search

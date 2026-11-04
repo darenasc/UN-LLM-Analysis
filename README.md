@@ -4,9 +4,12 @@
 [![CorrelAid](https://img.shields.io/badge/CorrelAid-Mentoring_Project-3776AB?&logo=python&logoColor=white)](https://correlaid.org/en/)
 [![UN Noon Briefings](https://img.shields.io/badge/-Noon_Briefings-009EDB?style=flat&logo=unitednations&logoColor=white)](https://www.un.org/sg/en/content/noon-briefing-highlight)
 [![Board](https://img.shields.io/badge/Board-black?logo=github)](https://github.com/users/darenasc/projects/6/views/2)
-[![Issues](https://img.shields.io/badge/Issues-black?logo=github)](https://github.com/darenasc/correlaid-mentoring-project/issues)
+[![Issues](https://img.shields.io/badge/Issues-black?logo=github)](https://github.com/darenasc/UN-LLM-Analysis/issues)
 
 Analysis of the language patterns and themes in [UN noon briefings](https://www.un.org/sg/en/content/noon-briefing-highlight) using large language models (LLMs). This project aims to identify trends and insights on global issues, policy developments, and emerging challenges, facilitating more informed decision-making and analysis.
+
+
+**Links:** [Documentation](https://darenasc.github.io/UN-LLM-Analysis/) | [Live Dashboard](https://un-llm-analysis.streamlit.app/)
 
 
 ## Getting Started
@@ -20,8 +23,8 @@ Analysis of the language patterns and themes in [UN noon briefings](https://www.
 ### Installation
 
 ```bash
-git clone https://github.com/darenasc/correlaid-mentoring-project.git
-cd correlaid-mentoring-project
+git clone https://github.com/darenasc/UN-LLM-Analysis.git
+cd UN-LLM-Analysis
 
 # Create the virtual environment and install dependencies
 uv sync
@@ -100,9 +103,9 @@ Exploratory analyses, LLM experiments, and visualizations are available in the [
 
 ## Dashboard
 
-The project includes a Streamlit dashboard for exploring UN noon briefings and their analysis results.
+The project includes a Streamlit dashboard for exploring UN noon briefings and their analysis results. You can explore the [live dashboard](https://un-llm-analysis.streamlit.app/).
 
-Run the following command from the terminal to launch it.
+You can also launch it locally using the following command from the terminal:
 
 ```bash
 streamlit run app/Dashboard.py
