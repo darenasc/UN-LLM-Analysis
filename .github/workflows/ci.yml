@@ -34,5 +34,12 @@ jobs:
       - name: Run tests
         run: uv run pytest
 
-      - name: Documentation
-        run: mkdocs gh-deploy --force
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: 3.x
+      - uses: actions/cache@v5
+        with:
+          key: ${{ github.ref }}
+          path: .cache
+      - run: mkdocs gh-deploy --force
