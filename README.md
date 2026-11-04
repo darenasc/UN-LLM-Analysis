@@ -126,7 +126,7 @@ The project documentation is built with [MkDocs](https://www.mkdocs.org/).
 To view the documentation locally, run:
 
 ```bash
-mkdocs serve -f docs/mkdocs.yml
+mkdocs serve -f mkdocs.yml
 ```
 
 The documentation will be available in http://127.0.0.1:8000/ in your browser.
