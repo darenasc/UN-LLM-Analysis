@@ -67,6 +67,23 @@ def test_run_sentiment_analysis(monkeypatch):
         "start_run",
         lambda **kwargs: mlflow_run,
     )
+    monkeypatch.setattr(
+        sentiment,
+        "_check_ollama_model_exists",
+        lambda model: True,
+    )
+    monkeypatch.setattr(
+        sentiment,
+        "run_model_prompt",
+        lambda **kwargs: {
+            "response": ('{"sentiment": "Neutral", ' '"tone": "Neutral/Informational"}')
+        },
+    )
+    monkeypatch.setattr(
+        sentiment,
+        "get_existing_sentiment_analysis",
+        lambda *args, **kwargs: pd.DataFrame(),
+    )
     monkeypatch.setattr(sentiment.mlflow, "log_params", MagicMock())
     monkeypatch.setattr(sentiment.mlflow, "log_text", MagicMock())
     monkeypatch.setattr(sentiment.mlflow, "log_metrics", MagicMock())
