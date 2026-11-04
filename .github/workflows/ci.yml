@@ -33,7 +33,7 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
-  
+
   deploy:
     runs-on: ubuntu-latest
     steps:
