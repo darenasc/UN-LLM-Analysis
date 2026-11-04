@@ -23,10 +23,6 @@ from un_llm_analysis.utils import _check_ollama_model_exists
 
 logger = logging.getLogger(__name__)
 
-# MLflow configuration
-mlflow.set_tracking_uri("http://127.0.0.1:5000")
-mlflow.set_experiment("sentiment and tone analysis")
-
 
 ## analysis checking
 def get_existing_sentiment_analysis(
@@ -189,7 +185,9 @@ def run_sentiment_analysis(
         # Initialize counters.
         success_count = 0
         error_count = 0
-
+        # MLflow configuration
+        mlflow.set_tracking_uri("http://127.0.0.1:5000")
+        mlflow.set_experiment("sentiment and tone analysis")
         # Start MLflow tracking.
         with mlflow.start_run(run_name=f"{model_name}-{prompt_version}"):
             mlflow.log_params(

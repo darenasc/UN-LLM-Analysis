@@ -57,7 +57,11 @@ def test_run_sentiment_analysis(monkeypatch):
     mlflow_run = MagicMock()
     mlflow_run.__enter__ = MagicMock(return_value=mlflow_run)
     mlflow_run.__exit__ = MagicMock(return_value=False)
-
+    monkeypatch.setattr(
+        sentiment.mlflow,
+        "set_experiment",
+        MagicMock(),
+    )
     monkeypatch.setattr(
         sentiment.mlflow,
         "start_run",
