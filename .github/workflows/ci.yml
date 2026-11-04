@@ -42,4 +42,4 @@ jobs:
         with:
           key: ${{ github.ref }}
           path: .cache
-      - run: uv run mkdocs gh-deploy --force
+      - run: uv run mkdocs gh-deploy --force docs/mkdocs.yml
