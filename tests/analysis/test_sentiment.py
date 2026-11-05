@@ -5,6 +5,21 @@ import pandas as pd
 import pytest
 
 from un_llm_analysis.analysis import sentiment
+from un_llm_analysis.database import SCHEMA_DB, create_database, get_db_connection
+
+
+@pytest.fixture
+def test_db(tmp_path):
+    """Create an isolated temporary database for testing."""
+
+    db_path = tmp_path / "test.db"
+
+    create_database(
+        db_path=db_path,
+        schema_path=SCHEMA_DB,
+    )
+
+    return db_path
 
 
 def test_get_existing_sentiment_analysis(monkeypatch):
@@ -50,7 +65,7 @@ def test_get_existing_sentiment_analysis(monkeypatch):
     assert result.iloc[0]["total_sections"] == 2
 
 
-def test_run_sentiment_analysis(monkeypatch):
+def test_run_sentiment_analysis(monkeypatch, test_db):
     """Test the main sentiment analysis workflow."""
 
     # Mock MLflow tracking
@@ -83,6 +98,11 @@ def test_run_sentiment_analysis(monkeypatch):
         sentiment,
         "get_existing_sentiment_analysis",
         lambda *args, **kwargs: pd.DataFrame(),
+    )
+    monkeypatch.setattr(
+        sentiment,
+        "get_db_connection",
+        lambda db_path=None: get_db_connection(test_db),
     )
     monkeypatch.setattr(sentiment.mlflow, "log_params", MagicMock())
     monkeypatch.setattr(sentiment.mlflow, "log_text", MagicMock())
