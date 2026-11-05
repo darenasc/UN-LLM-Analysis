@@ -25,7 +25,9 @@ st.title("Country Mentions")
 conn = get_db_connection()
 min_date, max_date = get_min_max_dates_with_table(conn=conn, table="country")
 if min_date == "" and max_date == "":
-    st.warning("No country mention data.")
+    st.warning(
+        "No country mention data. You can populate the sdg table using the code in `notebooks/country_data_generation/01_country_mentions.ipynb`."
+    )
     st.stop()
 
 st.sidebar.caption(f"Suggested SDG date range between: `{min_date}` and `{max_date}`")

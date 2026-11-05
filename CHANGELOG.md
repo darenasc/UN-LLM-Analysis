@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - CLI command to download and run analysis for briefings in a single call
 
+## [3.0.1]
+
+### Added
+
+- `country` table to demo database
+- One week of data to the analysis tables in the demo database
+- `playwright` install instruction to the README
+- Tooltip text of issues to the dashboard
+
 ## [3.0.0]
 
 ### Changed

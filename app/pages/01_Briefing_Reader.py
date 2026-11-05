@@ -2,6 +2,7 @@ from logos import CORRELAID_LOGO
 import streamlit as st
 
 from un_llm_analysis import database
+from un_llm_analysis.analysis.issue import SELECTED_ISSUES
 from un_llm_analysis.config import APP_DIR
 
 st.logo(
@@ -80,11 +81,13 @@ if briefing and briefing.sections:
                 issues["section_id"] == section.section_id, "issue"
             ].tolist()
             if relevant_issues:
-                issue_badges = " ".join(
-                    f"[:{badge_color["issue"]}-badge[{issue}]](/Issue_Proportion)"
-                    for issue in relevant_issues
-                )
-                st.markdown(issue_badges)
+                with st.container(horizontal=True, gap="xxsmall"):
+                    for issue in relevant_issues:
+                        st.markdown(
+                            f"[:{badge_color["issue"]}-badge[{issue}]](/Issue_Proportion)",
+                            help=SELECTED_ISSUES[issue],
+                        )
+
 
 else:
     st.write("Noon briefing not available.")

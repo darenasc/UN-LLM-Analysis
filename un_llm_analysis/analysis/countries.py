@@ -257,8 +257,7 @@ def _parse_country_response(text):
         result_parsed = ast.literal_eval(text)
     except ValueError:
         logger.error(f"Could not process {text}")
-    finally:
-        return result_parsed
+    return result_parsed
 
 
 def process_country_mentions(

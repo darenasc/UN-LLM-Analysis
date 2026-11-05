@@ -47,6 +47,10 @@ with col2:
 with col3:
     st.metric(label="Max Briefing Date", value=f"{max_date}")
 
+if min_date == "" and max_date == "":
+    st.warning(
+        "No SDG data. You can populate the sdg table using the code in `notebooks/SDG_mentions_in_briefings.ipynb`."
+    )
 
 if min_date and max_date:
     conn = database.get_db_connection()
