@@ -26,8 +26,8 @@ cd correlaid-mentoring-project
 # Create the virtual environment and install dependencies
 uv sync
 
-# Install playwright to crawl the briefings data
-uv run playwright install
+# Install playwright to crawl the briefing data
+uv run playwright install chromium
 ```
 
 Use `uv run <command>` to execute commands in the project's virtual environment; or activate the virtual environment manually with `source .venv/bin/activate` (Linux/macOS).
