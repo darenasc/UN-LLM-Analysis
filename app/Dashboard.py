@@ -29,7 +29,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
     layout="centered",
     menu_items={
-        "Report a bug": "https://github.com/darenasc/correlaid-mentoring-project/issues",
+        "Report a bug": "https://github.com/darenasc/UN-LLM-Analysis/issues",
         "About": """This project downloads and extract information from the [noon briefings](https://www.un.org/sg/en/content/noon-briefing-highlight) of the UN.""",
     },
 )

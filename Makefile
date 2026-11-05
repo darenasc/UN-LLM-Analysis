@@ -2,7 +2,7 @@
 # GLOBALS                                                                       #
 #################################################################################
 
-PROJECT_NAME = correlaid-mentoring-project
+PROJECT_NAME = UN-LLM-Analysis
 PYTHON_VERSION = 3.12
 PYTHON_INTERPRETER = python
 

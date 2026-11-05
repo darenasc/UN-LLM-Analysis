@@ -148,7 +148,7 @@ def formulate_issue_text(issues: dict = SELECTED_ISSUES) -> str:
     for issue, description in issues.items():
         issue_text += f"* **{issue}**: {description}\n"
 
-    issue_text += "\n(Refer to [Identifying Issues for Analysis of UN Briefings](https://github.com/darenasc/correlaid-mentoring-project/blob/main/notebooks/issue_analysis/01_identify_issues.ipynb) for details on how the issues used in the subsequent analysis are identified.)"
+    issue_text += "\n(Refer to [Identifying Issues for Analysis of UN Briefings](https://github.com/darenasc/UN-LLM-Analysis/blob/main/notebooks/issue_analysis/01_identify_issues.ipynb) for details on how the issues used in the subsequent analysis are identified.)"
 
     return issue_text.strip()
 

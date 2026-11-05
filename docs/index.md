@@ -16,8 +16,8 @@ UN noon briefing data.
 
 ```bash
 # Clone the repository and install dependencies
-git clone https://github.com/darenasc/correlaid-mentoring-project.git
-cd correlaid-mentoring-project
+git clone https://github.com/darenasc/UN-LLM-Analysis.git
+cd UN-LLM-Analysis
 
 # Create the virtual environment and install dependencies
 uv sync
