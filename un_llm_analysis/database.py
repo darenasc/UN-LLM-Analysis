@@ -1228,7 +1228,7 @@ def get_completed_section_ids(
 
 def insert_sentiment_analysis(
     conn: sqlite3.Connection,
-    analysis_id: int,
+    analysis_id: int | None,
     briefing_id: int,
     section_id: int,
     briefing_date: str | None,

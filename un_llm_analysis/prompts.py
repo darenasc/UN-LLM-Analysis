@@ -51,7 +51,7 @@ Here is a list of country and codes for reference:
 
 """
 # sentiment and tone analysis prompt
-prompt_version = "V4"
+sentiment_analysis_prompt_version = "V4"
 VALID_SENTIMENTS = {"Positive", "Neutral", "Negative"}
 VALID_TONES = {
     "Diplomatic",
@@ -62,7 +62,7 @@ VALID_TONES = {
     "Neutral/Informational",
     "Constructive",
 }
-ANALYSIS_PROMPT = """**Classification Task:**
+SENTIMENT_ANALYSIS_PROMPT = """**Classification Task:**
 
 Classify the sentiment and primary tone of  the following text.
 SENTIMENT using exactly one label:

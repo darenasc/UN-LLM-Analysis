@@ -1,7 +1,7 @@
 import json
-import logging
 import sqlite3
 
+from loguru import logger
 import mlflow
 import pandas as pd
 from tqdm import tqdm
@@ -13,15 +13,13 @@ from un_llm_analysis.database import (
     insert_sentiment_analysis,
 )
 from un_llm_analysis.prompts import (
-    ANALYSIS_PROMPT,
+    SENTIMENT_ANALYSIS_PROMPT,
     VALID_SENTIMENTS,
     VALID_TONES,
-    prompt_version,
     run_model_prompt,
+    sentiment_analysis_prompt_version,
 )
 from un_llm_analysis.utils import _check_ollama_model_exists
-
-logger = logging.getLogger(__name__)
 
 
 ## analysis checking
@@ -120,11 +118,37 @@ def run_sentiment_analysis(
     temperature: float = 0,
     overwrite: bool = False,
 ) -> dict:
-    """Run sentiment and tone analysis with MLflow tracking."""
+    """Run sentiment and tone analysis with MLflow tracking.
+
+    Returns a summary with the results of the analysis with all or some of the
+    following fields:
+    - "status"
+    - "analysis_id"
+    - "model"
+    - "successful_sections"
+    - "failed_sections"
+    - "start_date"
+    - "end_date"
+
+    Args:
+        section_data (pd.DataFrame): Section data from briefings to be analysed.
+        start_date (str): Start date of the analysis in format 'YYYY-MM-DD'.
+        end_date (str): End date of the analysis in format 'YYYY-MM-DD'.
+        model_name (_type_, optional): Name of the LLM to be used with Ollama.
+            The model must exists in your local Ollama server.
+            Defaults to "llama3.2:latest".
+        temperature (float, optional): Temperature to use to query the LLM.
+            Defaults to 0. Cero minimises variations in the answers.
+        overwrite (bool, optional): Whether or not to overwrite previous results.
+            Defaults to False.
+
+    Returns:
+        dict: Summary with the results of the analysis.
+    """
 
     # Validate Ollama model before database operations.
     if not _check_ollama_model_exists(model=model_name):
-        logger.error(f"Cannot run sentiment analysis. " f"Model '{model_name}' is not available.")
+        logger.error(f"Cannot run sentiment analysis. Model '{model_name}' is not available.")
 
         return {
             "status": "failed",
@@ -151,8 +175,7 @@ def run_sentiment_analysis(
         # Skip if matching results already exist.
         if not overwrite and not existing_results.empty:
             logger.info(
-                f"Skipping analysis: {model_name} already has results "
-                f"for {start_date} to {end_date}."
+                f"Skipping analysis: {model_name} already has results for {start_date} to {end_date}."
             )
 
             return {
@@ -167,7 +190,7 @@ def run_sentiment_analysis(
             raise ValueError("No briefing sections available for analysis.")
 
         logger.info(
-            f"Starting sentiment analysis using {model_name} " f"from {start_date} to {end_date}."
+            f"Starting sentiment analysis using {model_name} from {start_date} to {end_date}."
         )
 
         # Create a new analysis run in the database.
@@ -177,8 +200,8 @@ def run_sentiment_analysis(
             model_name=model_name,
             model_version=model_name,
             ollama_version=None,
-            prompt_version=prompt_version,
-            prompt=ANALYSIS_PROMPT,
+            prompt_version=sentiment_analysis_prompt_version,
+            prompt=SENTIMENT_ANALYSIS_PROMPT,
             temperature=temperature,
         )
 
@@ -189,11 +212,11 @@ def run_sentiment_analysis(
         mlflow.set_tracking_uri("http://127.0.0.1:5000")
         mlflow.set_experiment("sentiment and tone analysis")
         # Start MLflow tracking.
-        with mlflow.start_run(run_name=f"{model_name}-{prompt_version}"):
+        with mlflow.start_run(run_name=f"{model_name}-{sentiment_analysis_prompt_version}"):
             mlflow.log_params(
                 {
                     "model": model_name,
-                    "prompt_version": prompt_version,
+                    "prompt_version": sentiment_analysis_prompt_version,
                     "temperature": temperature,
                     "n_sections": len(section_data),
                     "start_date": start_date,
@@ -204,7 +227,7 @@ def run_sentiment_analysis(
 
             # Log the prompt template.
             mlflow.log_text(
-                ANALYSIS_PROMPT,
+                SENTIMENT_ANALYSIS_PROMPT,
                 "prompts/analysis_prompt.txt",
             )
 
@@ -230,7 +253,7 @@ def run_sentiment_analysis(
                         raise ValueError("Section text is empty.")
 
                     # Construct the prompt.
-                    prompt = ANALYSIS_PROMPT.format(
+                    prompt = SENTIMENT_ANALYSIS_PROMPT.format(
                         text=section_text,
                     )
 
@@ -283,8 +306,7 @@ def run_sentiment_analysis(
                     error_count += 1
 
                     logger.error(
-                        f"Analysis failed for section "
-                        f"{section.get('section_id')}: {error_message}"
+                        f"Analysis failed for section {section.get('section_id')}: {error_message}"
                     )
 
                 # Save each result, including failures.
@@ -318,9 +340,7 @@ def run_sentiment_analysis(
         }
 
         logger.info(
-            f"Analysis run {analysis_id} finished: "
-            f"{success_count} successful, "
-            f"{error_count} failed."
+            f"Analysis run {analysis_id} finished: {success_count} successful, {error_count} failed."
         )
 
         return summary

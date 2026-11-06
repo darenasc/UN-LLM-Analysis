@@ -22,7 +22,7 @@ def test_db(tmp_path):
     return db_path
 
 
-def test_get_existing_sentiment_analysis(monkeypatch):
+def test_get_existing_sentiment_analysis(monkeypatch, conn):
     """Test the existing sentiment analysis function."""
 
     sample_results = pd.DataFrame(
@@ -51,7 +51,7 @@ def test_get_existing_sentiment_analysis(monkeypatch):
     )
 
     result = sentiment.get_existing_sentiment_analysis(
-        conn=None,
+        conn=conn,
         start_date="2026-11-01",
         end_date="2026-11-02",
         model_name="llama3.2:latest",
