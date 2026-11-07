@@ -42,6 +42,7 @@ from un_llm_analysis.database import (  # Briefing,
     get_sections_for_sentiment_analysis,
     get_sentiment_distribution,
     get_sentiment_results,
+    get_sentiment_results_between_dates,
     get_tone_distribution,
     insert_into_analysis_run,
     insert_into_briefing,
@@ -1230,6 +1231,78 @@ def test_get_sentiment_results(
     ]
     for column in columns:
         assert column in result_df.columns
+
+
+@pytest.mark.parametrize(
+    "analysis_name,model_name,model_version,ollama_version,prompt_version,prompt,temperature,analysis_id,briefing_id,section_id,briefing_date,sentiment,tone,status,error_message,briefing_path",
+    [
+        (
+            "analysis test 1",
+            "llama3.2",
+            "3.2",
+            "1",
+            "v4",
+            "prompt test",
+            0,
+            1,
+            20260825,
+            2026082501,
+            "2026-09-01",
+            "Positive",
+            "Neutral/Informational",
+            "success",
+            None,
+            "tests/fixtures/briefings/2026/2026-08/2026-08-25.json",
+        )
+    ],
+)
+def test_get_sentiment_results_between_dates(
+    conn,
+    analysis_name,
+    model_name,
+    model_version,
+    ollama_version,
+    prompt_version,
+    prompt,
+    temperature,
+    analysis_id,
+    briefing_id,
+    section_id,
+    briefing_date,
+    sentiment,
+    tone,
+    status,
+    error_message,
+    briefing_path,
+):
+    """Test retrieving sentiment analysis between dates."""
+    load_briefing_to_db(file_path=Path(briefing_path), conn=conn)
+    # needs to insert into analysis_run first due foreign key constraint
+    _ = insert_into_analysis_run(
+        conn=conn,
+        analysis_name=analysis_name,
+        model_name=model_name,
+        model_version=model_version,
+        ollama_version=ollama_version,
+        prompt_version=prompt_version,
+        prompt=prompt,
+        temperature=temperature,
+    )
+    insert_sentiment_analysis(
+        conn=conn,
+        analysis_id=analysis_id,
+        briefing_id=briefing_id,
+        section_id=section_id,
+        briefing_date=briefing_date,
+        sentiment=sentiment,
+        tone=tone,
+        status=status,
+        error_message=error_message,
+    )
+    result_df = get_sentiment_results_between_dates(
+        conn=conn, start_date=briefing_date, end_date=briefing_date
+    )
+    assert result_df.shape[0] == 1
 
 
 @pytest.mark.parametrize(
