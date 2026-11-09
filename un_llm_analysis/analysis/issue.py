@@ -6,6 +6,13 @@ import pandas as pd
 import pendulum
 import plotly.express as px
 
+from un_llm_analysis.config import BRIEFINGS_DB_PATH
+from un_llm_analysis.database import (
+    get_db_connection,
+    get_issues_between_dates,
+    get_sections_between_dates,
+)
+
 SELECTED_ISSUES = {
     "ISSUE-1": "Israel-Palestine conflict, Gaza and the Occupied Palestinian Territory",
     "ISSUE-2": "War in Ukraine and its direct security and humanitarian consequences",
@@ -47,6 +54,54 @@ def get_issue_text(issues: dict = SELECTED_ISSUES) -> str:
         issue_text += f"* {issue} {description}\n"
 
     return issue_text.strip()
+
+
+def get_section_data(start_date: str, end_date: str) -> pd.DataFrame:
+    """Get the section data from the database within the specified date range.
+    Args:
+        start_date (str): Start date with ISSUEs.
+        end_date (str): End date with ISSUEs.
+    Returns:
+        pd.DataFrame: DataFrame with the section data.
+    """
+    # Get the data in the database within the specified date range
+    with get_db_connection(BRIEFINGS_DB_PATH) as conn:
+        sections = get_sections_between_dates(conn=conn, start_date=start_date, end_date=end_date)
+
+    # Get the section data from the briefings and store it in a DataFrame
+    section_data = pd.DataFrame(
+        [
+            {
+                "section_id": section.section_id,
+                "briefing_id": section.briefing_id,
+                "section_title": section.title,
+                "section_text": section.text,
+            }
+            for section in sections
+        ],
+        columns=["section_id", "briefing_id", "section_title", "section_text"],
+    )
+
+    return section_data
+
+
+def get_issue_data(model: str, issues: list[str], start_date: str, end_date: str) -> pd.DataFrame:
+    """Get the issue data from the database within the specified date range.
+    Args:
+        model (str): Model used to extract relevant ISSUEs.
+        issues (list[str]): List of selected issues to extract.
+        start_date (str): Start date with ISSUEs.
+        end_date (str): End date with ISSUEs.
+    Returns:
+        pd.DataFrame: DataFrame with the issue data.
+    """
+    with get_db_connection() as conn:
+        issue_data = get_issues_between_dates(conn=conn, start_date=start_date, end_date=end_date)
+
+    issue_data = issue_data[(issue_data["model"] == model) & (issue_data["issue"].isin(issues))]
+    issue_data["date"] = pd.to_datetime(issue_data["briefing_id"].astype(str), format="%Y%m%d")
+
+    return issue_data
 
 
 def calculate_issue_stats(

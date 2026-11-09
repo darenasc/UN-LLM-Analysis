@@ -10,14 +10,14 @@ from un_llm_analysis.analysis.issue import (
     PlotLevel,
     calculate_issue_counts,
     calculate_issue_stats,
+    get_issue_data,
+    get_section_data,
 )
 from un_llm_analysis.config import BRIEFINGS_DB_PATH
 from un_llm_analysis.database import (
     get_db_connection,
-    get_issues_between_dates,
     get_min_max_dates_with_table,
     get_models,
-    get_sections_between_dates,
 )
 
 st.logo(
@@ -38,34 +38,6 @@ if min_date == "" and max_date == "":
 st.sidebar.caption(f"Suggested ISSUE date range between: `{min_date}` and `{max_date}`")
 start_date = st.sidebar.date_input("Start date", min_date or datetime.now())
 end_date = st.sidebar.date_input("End date", max_date or datetime.now())
-
-
-def get_data(model: str, issues: list[str], start_date: str, end_date: str):
-    # Get the data in the database within the specified date range
-    with get_db_connection(BRIEFINGS_DB_PATH) as conn:
-        sections = get_sections_between_dates(conn=conn, start_date=start_date, end_date=end_date)
-
-    # Get the section data from the briefings and store it in a DataFrame
-    section_data = pd.DataFrame(
-        [
-            {
-                "section_id": section.section_id,
-                "briefing_id": section.briefing_id,
-                "section_title": section.title,
-                "section_text": section.text,
-            }
-            for section in sections
-        ],
-        columns=["section_id", "briefing_id", "section_title", "section_text"],
-    )
-
-    with get_db_connection() as conn:
-        issue_data = get_issues_between_dates(conn=conn, start_date=start_date, end_date=end_date)
-
-    issue_data = issue_data[(issue_data["model"] == model) & (issue_data["issue"].isin(issues))]
-    issue_data["date"] = pd.to_datetime(issue_data["briefing_id"].astype(str), format="%Y%m%d")
-
-    return section_data, issue_data
 
 
 def create_plot(
@@ -163,7 +135,12 @@ all_issues = list(SELECTED_ISSUES.keys())
 
 issue_choice = st.sidebar.multiselect("Issues", all_issues, default=all_issues, select_all=True)
 
-section_data, issue_data = get_data(
+section_data = get_section_data(
+    start_date=start_date.strftime("%Y-%m-%d"),
+    end_date=end_date.strftime("%Y-%m-%d"),
+)
+
+issue_data = get_issue_data(
     model=model_choice,
     issues=issue_choice,
     start_date=start_date.strftime("%Y-%m-%d"),
@@ -179,7 +156,7 @@ figs = create_plot(
     issue_data=issue_data,
     start_date=start_date.strftime("%Y-%m-%d"),
     end_date=end_date.strftime("%Y-%m-%d"),
-    level=level_choice,
+    level=level_choice,  # type: ignore
 )
 
 if figs:
