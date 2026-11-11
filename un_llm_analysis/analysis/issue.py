@@ -1,17 +1,27 @@
 """Module to extract relevant ISSUEs for the sections of the briefings and insert them into the database."""
 
+import ast
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+import sqlite3
 from typing import Literal
 
+from loguru import logger
+import mlflow
+from openai import OpenAI
 import pandas as pd
 import pendulum
-import plotly.express as px
 
 from un_llm_analysis.config import BRIEFINGS_DB_PATH
 from un_llm_analysis.database import (
     get_db_connection,
+    get_issue_by_section_id,
     get_issues_between_dates,
     get_sections_between_dates,
+    insert_into_issue,
 )
+from un_llm_analysis.prompts import ISSUE_MAPPING_PROMPT
+from un_llm_analysis.utils import _check_ollama_model_exists
 
 SELECTED_ISSUES = {
     "ISSUE-1": "Israel-Palestine conflict, Gaza and the Occupied Palestinian Territory",
@@ -41,6 +51,24 @@ SELECTED_ISSUES = {
 }
 
 PlotLevel = Literal["day", "week", "month", "year"]
+
+
+@dataclass(frozen=True)
+class GenerationConfig:
+    temperature: float = 0
+    seed: int = 42
+    reasoning_effort: Literal["none", "low", "medium", "high"] = "none"
+    max_completion_tokens: int = 128
+
+
+def _create_ollama_client(
+    base_url: str = "http://localhost:11434/v1",
+    api_key: str = "dummy",
+) -> OpenAI:
+    return OpenAI(
+        base_url=base_url,
+        api_key=api_key,
+    )
 
 
 def get_issue_text(issues: dict = SELECTED_ISSUES) -> str:
@@ -192,3 +220,109 @@ def calculate_issue_counts(issue_data: pd.DataFrame) -> pd.DataFrame:
     )
 
     return issue_counts
+
+
+def _parse_issue_response(issues: str) -> list[str] | None:
+    """Parse an LLM response and filter out invalid issues.
+
+    Args:
+        issues: Raw text returned by the LLM.
+
+    Returns:
+        A list of valid issues, or None if parsing fails.
+    """
+    try:
+        parsed_issues = ast.literal_eval(issues)
+    except (ValueError, SyntaxError):
+        return None
+
+    if not isinstance(parsed_issues, list):
+        return None
+
+    return [
+        issue
+        for issue in parsed_issues
+        if isinstance(issue, str) and issue in SELECTED_ISSUES.keys()
+    ]
+
+
+def map_issue_to_sections(
+    start_date: str,
+    end_date: str,
+    conn: sqlite3.Connection,
+    model: str = "qwen3.5:4b",
+    prompt: str = ISSUE_MAPPING_PROMPT,
+    config: GenerationConfig = GenerationConfig(),
+    overwrite: bool = False,
+) -> None:
+    if not _check_ollama_model_exists(model=model):
+        logger.warning(f"Issues cannot be processed using the '{model}' model.")
+        return
+
+    section_data = get_section_data(start_date=start_date, end_date=end_date)
+
+    generation_params = asdict(config)
+
+    with _create_ollama_client() as client, mlflow.start_run(run_name=model):
+        # Log model-level experiment settings
+        mlflow.log_params(
+            {
+                "model": model,
+                **generation_params,
+                "n_sections": len(section_data),
+            }
+        )
+
+        for _, section in section_data.iterrows():
+
+            # Skip already processed sections
+            if not overwrite and get_issue_by_section_id(
+                conn=conn,
+                section_id=section.section_id,
+                model=model,
+            ):
+                logger.info(f"Issue section {section.section_id} by {model} already exists")
+                continue
+
+            section_text = f"**{section.section_title}**\n\n" f"{section.section_text}"
+
+            response = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt.format(
+                            section_text=section_text,
+                            issue_definitions=get_issue_text(SELECTED_ISSUES),
+                        ),
+                    }
+                ],
+                **generation_params,
+            )
+
+            # Set the section_id as a trace tag
+            trace_id = mlflow.get_last_active_trace_id(thread_local=True)
+            mlflow.flush_trace_async_logging()
+            if trace_id is not None:
+                mlflow.set_trace_tag(
+                    trace_id,
+                    "section_id",
+                    str(section.section_id),
+                )
+
+            issues = _parse_issue_response(response.choices[0].message.content)
+
+            if not issues:
+                logger.warning(f"No issues returned for section {section.section_id}")
+                continue
+
+            insert_into_issue(
+                conn=conn,
+                briefing_id=section.briefing_id,
+                section_id=section.section_id,
+                issues=issues,
+                model=model,
+                created_at=datetime.fromtimestamp(response.created, tz=timezone.utc).isoformat(
+                    timespec="seconds"
+                ),
+            )

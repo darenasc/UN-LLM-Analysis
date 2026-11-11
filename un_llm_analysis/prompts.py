@@ -98,7 +98,6 @@ Return only a valid JSON object with exactly these keys:
 
 """
 
-ISSUE_MAPPING_PROMPT_VERSION = "v4"
 ISSUE_MAPPING_PROMPT = """**Task**
 
 Identify the most relevant issue for the text below.

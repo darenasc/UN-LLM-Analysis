@@ -695,7 +695,7 @@ def insert_into_issue(
     conn: sqlite3.Connection,
     briefing_id: int,
     section_id: int,
-    issues: str,
+    issues: list[str],
     model: str,
     created_at: str,
     verbose: bool = True,
@@ -706,14 +706,11 @@ def insert_into_issue(
         conn (sqlite3.Connection): Connection to the database.
         briefing_id (int): Id of the briefing.
         section_id (int): Id of the section (briefing_id * 100 + section_order)
-        issues (str): Text with list of ISSUE codes. "['ISSUE-1', ..., 'ISSUE-24']"
+        issues (list[str]): List of ISSUE codes. ['ISSUE-1', ..., 'ISSUE-24']
         model (str): Model name.
         created_at (str): Date of the processing.
         verbose (bool, optional): Show logging of the process. Defaults to True.
     """
-    parsed_issues = ast.literal_eval(issues)
-    if parsed_issues is None:
-        return
     sql_insert = """
         INSERT INTO issue (briefing_id, section_id, issue, model, created_at)
         VALUES(?, ?, ?, ?, ?)
@@ -724,7 +721,7 @@ def insert_into_issue(
 
         conn.executemany(
             sql_insert,
-            [(briefing_id, section_id, issue, model, created_at) for issue in parsed_issues],
+            [(briefing_id, section_id, issue, model, created_at) for issue in issues],
         )
 
     if verbose:
@@ -786,6 +783,30 @@ def get_issues_between_dates(
         conn,
         params=(min_briefing_id, max_briefing_id),
     )
+
+
+def get_issue_by_section_id(
+    conn: sqlite3.Connection, section_id: int, model: str = "qwen3.5:4b"
+) -> list[str]:
+    """Return a list of issues given a section_id.
+
+    Args:
+        conn (sqlite3.Connection): Connection to the database.
+        section_id (int): Section id in the database.
+        model (str): Model used to extract issues from section.
+
+    Returns:
+        list[str]: List with issues, or empty list if no issues.
+    """
+    rows = conn.execute(
+        """
+        SELECT issue FROM issue
+        WHERE section_id = ? AND model = ?
+        """,
+        (section_id, model),
+    ).fetchall()
+
+    return [row["issue"] for row in rows]
 
 
 def load_briefing_to_db(file_path: Path, conn: sqlite3.Connection) -> bool:

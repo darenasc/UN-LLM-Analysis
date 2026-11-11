@@ -106,8 +106,8 @@ def extract_sdg_mentions_from_sections(
         for briefing in briefings:
             if len(briefing.sections) > 0:
                 for i, section in enumerate(briefing.sections, start=1):
-                    briefing_id = briefing.briefing_id
-                    section_id = section.section_id
+                    briefing_id = get_briefing_id_from_date(briefing.briefing_date)
+                    section_id = briefing_id * 100 + i
 
                     if not overwrite and get_sdg_by_section_id(
                         conn=conn, section_id=section_id, model=model

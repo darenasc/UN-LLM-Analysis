@@ -13,7 +13,6 @@ from un_llm_analysis.analysis.issue import (
     get_issue_data,
     get_section_data,
 )
-from un_llm_analysis.config import BRIEFINGS_DB_PATH
 from un_llm_analysis.database import (
     get_db_connection,
     get_min_max_dates_with_table,
@@ -125,6 +124,27 @@ def formulate_issue_text(issues: dict = SELECTED_ISSUES) -> str:
     return issue_text.strip()
 
 
+def get_default_level(start_date: str, end_date: str) -> PlotLevel:
+    """Get the default level for the plot based on the date range."""
+
+    range_days = (
+        datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")
+    ).days
+
+    minimum_steps = 5  # Minimum number of steps to display in the plot
+
+    if range_days >= 365 * minimum_steps:
+        default_level: PlotLevel = "year"
+    elif range_days >= 30 * minimum_steps:
+        default_level = "month"
+    elif range_days >= 7 * minimum_steps:
+        default_level = "week"
+    else:
+        default_level = "day"
+
+    return default_level
+
+
 models = get_models(conn=conn, table="issue")
 model_choice = st.sidebar.selectbox(
     "Model",
@@ -147,8 +167,13 @@ issue_data = get_issue_data(
     end_date=end_date.strftime("%Y-%m-%d"),
 )
 
+default_level = get_default_level(
+    start_date=start_date.strftime("%Y-%m-%d"),
+    end_date=end_date.strftime("%Y-%m-%d"),
+)
+
 level_choice = st.sidebar.pills(
-    "Plot by", options=["day", "week", "month", "year"], default="month"
+    "Plot by", options=["day", "week", "month", "year"], default=default_level
 )
 
 figs = create_plot(
