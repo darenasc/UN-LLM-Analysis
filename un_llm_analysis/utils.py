@@ -1,6 +1,6 @@
 import argparse
 from collections.abc import Iterator
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from loguru import logger
 import ollama

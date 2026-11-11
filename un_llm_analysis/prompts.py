@@ -98,6 +98,38 @@ Return only a valid JSON object with exactly these keys:
 
 """
 
+ISSUE_MAPPING_PROMPT = """**Task**
+
+Identify the most relevant issue for the text below.
+
+**Issue Definitions**
+
+{issue_definitions}
+
+**Text**
+
+{section_text}
+
+**Decision Rules**
+
+- Assign one issue by default.
+- Return None if none of the issue definitions clearly apply.
+- Assign two issues only if the text contains two distinct substantive topics and each independently matches an issue definition.
+- Never assign more than two issues.
+- Do not assign a second issue only because it is mentioned as background, consequence, or context.
+
+**Output Format**
+
+Return exactly one of the following forms:
+
+None
+['ISSUE-<number>']
+['ISSUE-<number>', 'ISSUE-<number>']
+
+Do not return ['None'].
+Do not include any explanation or additional text.
+"""
+
 
 def run_model_prompt(model: str, prompt: str, think: bool = False, temperature: float = 0):
     """Run a prompt in an Ollama model.
