@@ -1,6 +1,8 @@
 """Module to extract relevant ISSUEs for the sections of the briefings and insert them into the database."""
 
 import ast
+from collections.abc import Generator
+from contextlib import contextmanager, nullcontext
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 import sqlite3
@@ -12,9 +14,7 @@ from openai import OpenAI
 import pandas as pd
 import pendulum
 
-from un_llm_analysis.config import BRIEFINGS_DB_PATH
 from un_llm_analysis.database import (
-    get_db_connection,
     get_issue_by_section_id,
     get_issues_between_dates,
     get_sections_between_dates,
@@ -61,7 +61,7 @@ class GenerationConfig:
     max_completion_tokens: int = 128
 
 
-def _create_ollama_client(
+def _create_ollama_client(  # pragma: no cover
     base_url: str = "http://localhost:11434/v1",
     api_key: str = "dummy",
 ) -> OpenAI:
@@ -84,17 +84,17 @@ def get_issue_text(issues: dict = SELECTED_ISSUES) -> str:
     return issue_text.strip()
 
 
-def get_section_data(start_date: str, end_date: str) -> pd.DataFrame:
+def get_section_data(conn: sqlite3.Connection, start_date: str, end_date: str) -> pd.DataFrame:
     """Get the section data from the database within the specified date range.
     Args:
+        conn (sqlite3.Connection): Database connection.
         start_date (str): Start date with ISSUEs.
         end_date (str): End date with ISSUEs.
     Returns:
         pd.DataFrame: DataFrame with the section data.
     """
     # Get the data in the database within the specified date range
-    with get_db_connection(BRIEFINGS_DB_PATH) as conn:
-        sections = get_sections_between_dates(conn=conn, start_date=start_date, end_date=end_date)
+    sections = get_sections_between_dates(conn=conn, start_date=start_date, end_date=end_date)
 
     # Get the section data from the briefings and store it in a DataFrame
     section_data = pd.DataFrame(
@@ -113,9 +113,12 @@ def get_section_data(start_date: str, end_date: str) -> pd.DataFrame:
     return section_data
 
 
-def get_issue_data(model: str, issues: list[str], start_date: str, end_date: str) -> pd.DataFrame:
+def get_issue_data(
+    conn: sqlite3.Connection, model: str, issues: list[str], start_date: str, end_date: str
+) -> pd.DataFrame:
     """Get the issue data from the database within the specified date range.
     Args:
+        conn (sqlite3.Connection): Database connection.
         model (str): Model used to extract relevant ISSUEs.
         issues (list[str]): List of selected issues to extract.
         start_date (str): Start date with ISSUEs.
@@ -123,8 +126,7 @@ def get_issue_data(model: str, issues: list[str], start_date: str, end_date: str
     Returns:
         pd.DataFrame: DataFrame with the issue data.
     """
-    with get_db_connection() as conn:
-        issue_data = get_issues_between_dates(conn=conn, start_date=start_date, end_date=end_date)
+    issue_data = get_issues_between_dates(conn=conn, start_date=start_date, end_date=end_date)
 
     issue_data = issue_data[(issue_data["model"] == model) & (issue_data["issue"].isin(issues))]
     issue_data["date"] = pd.to_datetime(issue_data["briefing_id"].astype(str), format="%Y%m%d")
@@ -246,35 +248,78 @@ def _parse_issue_response(issues: str) -> list[str] | None:
     ]
 
 
-def map_issue_to_sections(
-    start_date: str,
-    end_date: str,
-    conn: sqlite3.Connection,
-    model: str = "qwen3.5:4b",
-    prompt: str = ISSUE_MAPPING_PROMPT,
-    config: GenerationConfig = GenerationConfig(),
-    overwrite: bool = False,
-) -> None:
-    if not _check_ollama_model_exists(model=model):
-        logger.warning(f"Issues cannot be processed using the '{model}' model.")
-        return
-
-    section_data = get_section_data(start_date=start_date, end_date=end_date)
-
-    generation_params = asdict(config)
-
-    with _create_ollama_client() as client, mlflow.start_run(run_name=model):
-        # Log model-level experiment settings
+@contextmanager
+def _mlflow_run(model: str, generation_params: dict) -> Generator[None]:
+    """Context manager to create an MLflow run and log parameters."""
+    with mlflow.start_run(run_name=model):
         mlflow.log_params(
             {
                 "model": model,
                 **generation_params,
-                "n_sections": len(section_data),
             }
         )
+        yield
 
+
+def _tag_section_trace(section_id: int) -> None:
+    """Tag the current MLflow trace with the section_id."""
+    trace_id = mlflow.get_last_active_trace_id(thread_local=True)
+    mlflow.flush_trace_async_logging()
+
+    if trace_id is not None:
+        mlflow.set_trace_tag(trace_id, "section_id", str(section_id))
+
+
+def _get_issues_from_llm(
+    client: OpenAI,
+    model: str,
+    prompt: str,
+    generation_params: dict,
+) -> tuple[list[str] | None, str]:
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+        **generation_params,
+    )
+
+    issues = _parse_issue_response(response.choices[0].message.content)
+
+    created_at = datetime.fromtimestamp(response.created, tz=timezone.utc).isoformat(
+        timespec="seconds"
+    )
+
+    return issues, created_at
+
+
+def map_issue_to_sections(
+    conn: sqlite3.Connection,
+    start_date: str,
+    end_date: str,
+    model: str = "qwen3.5:4b",
+    prompt: str = ISSUE_MAPPING_PROMPT,
+    config: GenerationConfig = GenerationConfig(),
+    overwrite: bool = False,
+    use_mlflow: bool = False,
+) -> None:
+    """Map issues to sections and insert them into the database."""
+
+    if not _check_ollama_model_exists(model=model):
+        logger.warning(f"Issues  cannot be processed using the '{model}' model.")
+        return
+
+    section_data = get_section_data(conn=conn, start_date=start_date, end_date=end_date)
+
+    generation_params = asdict(config)
+
+    mlflow_context = _mlflow_run(model, generation_params) if use_mlflow else nullcontext()
+
+    with _create_ollama_client() as client, mlflow_context:
         for _, section in section_data.iterrows():
-
             # Skip already processed sections
             if not overwrite and get_issue_by_section_id(
                 conn=conn,
@@ -286,31 +331,18 @@ def map_issue_to_sections(
 
             section_text = f"**{section.section_title}**\n\n" f"{section.section_text}"
 
-            response = client.chat.completions.create(
+            issues, created_at = _get_issues_from_llm(
+                client=client,
                 model=model,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt.format(
-                            section_text=section_text,
-                            issue_definitions=get_issue_text(SELECTED_ISSUES),
-                        ),
-                    }
-                ],
-                **generation_params,
+                prompt=prompt.format(
+                    section_text=section_text, issue_definitions=get_issue_text()
+                ),
+                generation_params=generation_params,
             )
 
-            # Set the section_id as a trace tag
-            trace_id = mlflow.get_last_active_trace_id(thread_local=True)
-            mlflow.flush_trace_async_logging()
-            if trace_id is not None:
-                mlflow.set_trace_tag(
-                    trace_id,
-                    "section_id",
-                    str(section.section_id),
-                )
-
-            issues = _parse_issue_response(response.choices[0].message.content)
+            if use_mlflow:
+                # Set the section_id as a trace tag
+                _tag_section_trace(section.section_id)
 
             if not issues:
                 logger.warning(f"No issues returned for section {section.section_id}")
@@ -322,7 +354,5 @@ def map_issue_to_sections(
                 section_id=section.section_id,
                 issues=issues,
                 model=model,
-                created_at=datetime.fromtimestamp(response.created, tz=timezone.utc).isoformat(
-                    timespec="seconds"
-                ),
+                created_at=created_at,
             )

@@ -155,12 +155,15 @@ all_issues = list(SELECTED_ISSUES.keys())
 
 issue_choice = st.sidebar.multiselect("Issues", all_issues, default=all_issues, select_all=True)
 
+
 section_data = get_section_data(
+    conn=conn,
     start_date=start_date.strftime("%Y-%m-%d"),
     end_date=end_date.strftime("%Y-%m-%d"),
 )
 
 issue_data = get_issue_data(
+    conn=conn,
     model=model_choice,
     issues=issue_choice,
     start_date=start_date.strftime("%Y-%m-%d"),
