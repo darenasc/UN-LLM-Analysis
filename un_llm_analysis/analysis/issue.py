@@ -55,6 +55,8 @@ PlotLevel = Literal["day", "week", "month", "year"]
 
 @dataclass(frozen=True)
 class GenerationConfig:
+    """Configuration for LLM generation parameters."""
+
     temperature: float = 0
     seed: int = 42
     reasoning_effort: Literal["none", "low", "medium", "high"] = "none"
@@ -65,6 +67,16 @@ def _create_ollama_client(  # pragma: no cover
     base_url: str = "http://localhost:11434/v1",
     api_key: str = "dummy",
 ) -> OpenAI:
+    """Create an OpenAI client for the Ollama API.
+
+    Args:
+        base_url (str): Base URL for the Ollama API.
+        api_key (str): API key for the Ollama API.
+
+    Returns:
+        OpenAI: An instance of the OpenAI client configured for the Ollama API.
+    """
+
     return OpenAI(
         base_url=base_url,
         api_key=api_key,
@@ -74,9 +86,13 @@ def _create_ollama_client(  # pragma: no cover
 def get_issue_text(issues: dict = SELECTED_ISSUES) -> str:
     """Generate text with the selected issues to pass to the prompt.
 
+    Args:
+        issues (dict): Dictionary of selected issues and their descriptions.
+
     Returns:
         str: Text with all selected issue descriptions.
     """
+
     issue_text = ""
     for issue, description in issues.items():
         issue_text += f"* {issue} {description}\n"
@@ -86,13 +102,16 @@ def get_issue_text(issues: dict = SELECTED_ISSUES) -> str:
 
 def get_section_data(conn: sqlite3.Connection, start_date: str, end_date: str) -> pd.DataFrame:
     """Get the section data from the database within the specified date range.
+
     Args:
         conn (sqlite3.Connection): Database connection.
         start_date (str): Start date with ISSUEs.
         end_date (str): End date with ISSUEs.
+
     Returns:
         pd.DataFrame: DataFrame with the section data.
     """
+
     # Get the data in the database within the specified date range
     sections = get_sections_between_dates(conn=conn, start_date=start_date, end_date=end_date)
 
@@ -117,15 +136,18 @@ def get_issue_data(
     conn: sqlite3.Connection, model: str, issues: list[str], start_date: str, end_date: str
 ) -> pd.DataFrame:
     """Get the issue data from the database within the specified date range.
+
     Args:
         conn (sqlite3.Connection): Database connection.
         model (str): Model used to extract relevant ISSUEs.
         issues (list[str]): List of selected issues to extract.
         start_date (str): Start date with ISSUEs.
         end_date (str): End date with ISSUEs.
+
     Returns:
         pd.DataFrame: DataFrame with the issue data.
     """
+
     issue_data = get_issues_between_dates(conn=conn, start_date=start_date, end_date=end_date)
 
     issue_data = issue_data[(issue_data["model"] == model) & (issue_data["issue"].isin(issues))]
@@ -140,6 +162,7 @@ def calculate_issue_stats(
     level: PlotLevel = "month",
 ) -> pd.DataFrame:
     """Calculate issue lengths, frequencies, and proportions by time period."""
+
     section_df = section_data.copy()
     issue_df = issue_data.copy()
 
@@ -214,6 +237,7 @@ def calculate_issue_stats(
 
 def calculate_issue_counts(issue_data: pd.DataFrame) -> pd.DataFrame:
     """Calculate issue_counts from issue_data"""
+
     issue_counts = (
         issue_data["issue"]
         .value_counts()
@@ -276,6 +300,7 @@ def _get_issues_from_llm(
     prompt: str,
     generation_params: dict,
 ) -> tuple[list[str] | None, str]:
+    """Get issues from the LLM based on the provided prompt and generation parameters."""
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -306,7 +331,18 @@ def map_issue_to_sections(
     overwrite: bool = False,
     use_mlflow: bool = False,
 ) -> None:
-    """Map issues to sections and insert them into the database."""
+    """Map issues to sections and insert them into the database.
+
+    Args:
+        conn (sqlite3.Connection): Database connection.
+        start_date (str): Start date for the mapping.
+        end_date (str): End date for the mapping.
+        model (str): Model to use for the mapping.
+        prompt (str): Prompt to use for the mapping.
+        config (GenerationConfig): Configuration for LLM generation parameters.
+        overwrite (bool): Whether to overwrite existing mappings.
+        use_mlflow (bool): Whether to log the process with MLflow.
+    """
 
     if not _check_ollama_model_exists(model=model):
         logger.warning(f"Issues  cannot be processed using the '{model}' model.")
