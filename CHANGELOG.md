@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - CLI command to download and run analysis for briefings in a single call
 
+## [3.0.2]
+
+### Added
+- Unit tests for issue mapping.
+
+### Changed
+- Extract reusable notebook code into functions.
+- Reorganize issue mapping code for better maintainability.
+- Clean up unused imports and dependencies.
+
 ## [3.0.1]
 
 ### Added
